@@ -1,0 +1,19 @@
+﻿@page
+@model Assistant.Pages.Account.GoToKeycloakModel
+@{
+    Layout = null; // чистая страница без авторизации и лэйаута
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0;url=@Model.TargetUrl" />
+    <title>Redirecting…</title>
+</head>
+<body>
+    <p>Redirecting to Keycloak… If nothing happens, <a href="@Model.TargetUrl">click here</a>.</p>
+    <script>
+        location.replace("@Model.TargetUrl");
+    </script>
+</body>
+</html>

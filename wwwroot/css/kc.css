@@ -1,0 +1,482 @@
+﻿/* =============================
+   Keycloak Shell — Global CSS
+   ============================= */
+
+/* Tokens */
+:root {
+    --kc-bg: #0b0d12;
+    --kc-card-bg: rgba(14,20,32,.92);
+    --kc-card-bg-2: rgba(14,20,32,.92);
+    --kc-border: rgba(255,255,255,.08);
+    --kc-border-strong: rgba(255,255,255,.12);
+    --kc-ink: #e5e7eb;
+    --kc-ink-dim: #94a3b8;
+    --kc-accent-1: #7c3aed; /* violet */
+    --kc-accent-2: #6366f1; /* indigo */
+
+    --kc-card-border: var(--kc-border);
+    --kc-chip-bg: rgba(255,255,255,.06);
+    --kc-chip-border: var(--kc-border-strong);
+}
+
+/* Background */
+.bg-dark-pattern {
+    background-color: var(--kc-bg);
+    background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), radial-gradient(700px 420px at 12% -10%, rgba(99,102,241,0.08), transparent 60%), radial-gradient(900px 520px at 100% 110%, rgba(45,212,191,0.06), transparent 65%);
+    background-size: 18px 18px, 32px 32px, auto, auto;
+    background-position: 0 0, 8px 10px, center, center;
+}
+
+/* ===== Glass Header ===== */
+.kc-header {
+    position: relative;
+    overflow: hidden;
+    background: rgba(13,16,23,.55);
+    border: 1px solid var(--kc-border);
+    border-radius: 1rem;
+    backdrop-filter: blur(12px) saturate(1.15);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    box-shadow: 0 18px 50px rgba(0,0,0,.35);
+}
+    /* glowing frame */
+    .kc-header::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 1rem;
+        padding: 1px;
+        pointer-events: none;
+        background: linear-gradient(135deg, rgba(45,212,191,.35), rgba(99,102,241,.35));
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+    }
+/* aurora blobs */
+@keyframes kc-floatGlow {
+    0% {
+        transform: translateY(0)
+    }
+
+    50% {
+        transform: translateY(8px)
+    }
+
+    100% {
+        transform: translateY(0)
+    }
+}
+
+.glow-blob {
+    animation: kc-floatGlow 6s ease-in-out infinite;
+}
+
+/* ===== Cards / Panels ===== */
+.kc-card {
+    position: relative;
+    background: linear-gradient(180deg, var(--kc-card-bg), var(--kc-card-bg-2));
+    border: 1px solid var(--kc-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 28px rgba(0,0,0,.25);
+}
+
+.kc-card--hover:hover {
+    box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(124,58,237,.18);
+}
+
+/* optional neon top stripe like on Index cards */
+.kc-card--accent::after {
+    content: "";
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 0;
+    height: 3px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(124,58,237,.55), rgba(45,212,191,.35));
+    opacity: .75;
+}
+
+/* ===== Inputs / Selects ===== */
+.kc-input 
+{
+    background: #0a0f18 !important;
+    border: 1px solid var(--kc-border-strong);
+    color: var(--kc-ink);
+}
+
+    .kc-input:focus 
+    {
+        outline: none;
+        border-color: rgba(255,255,255,.25);
+    }
+
+    .kc-input::placeholder 
+    {
+        color: rgba(226,232,240,.6);
+    }
+
+.kc-select 
+{
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 12px;
+    background-position: right 12px center;
+}
+
+
+/* inp-with-prefix */
+.prefix-wrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--kc-card-border);
+    background: rgba(255,255,255,.05);
+    border-radius: .75rem;
+    overflow: hidden;
+}
+
+.prefix-chip {
+    padding: .5rem .65rem;
+    background: rgba(99,102,241,.15);
+    color: var(--kc-ink);
+    white-space: nowrap;
+    border-right: 1px solid var(--kc-border);
+}
+
+.prefix-input {
+    flex: 1;
+    background: transparent;
+    outline: none;
+    padding: .55rem .75rem;
+    color: var(--kc-ink);
+}
+
+/* ===== Chips ===== */
+.kc-chip,
+.chip {
+    font-size: 12px;
+    border-radius: 9999px;
+    padding: 4px 8px;
+    background: var(--kc-chip-bg);
+    border: 1px solid var(--kc-chip-border);
+    color: var(--kc-ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .kc-chip button, .chip button {
+        opacity: .8;
+    }
+
+        .kc-chip button:hover, .chip button:hover {
+            opacity: 1;
+        }
+
+/* ===== Switch ===== */
+.kc-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.kc-switch .track {
+    width: 46px;
+    height: 26px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.14);
+    position: relative;
+    transition: background .2s, border-color .2s;
+}
+
+.kc-switch .dot {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: #fff;
+    transition: transform .2s;
+}
+
+.kc-switch input:checked + .track {
+    background: linear-gradient(135deg, var(--kc-accent-1), var(--kc-accent-2));
+    border-color: rgba(124,58,237,.4);
+}
+
+    .kc-switch input:checked + .track .dot {
+        transform: translateX(20px);
+    }
+
+/* ===== Buttons ===== */
+.btn-primary {
+    position: relative;
+    border-radius: .75rem;
+    background: #3D357A;
+    color: #fff;
+    padding: .55rem 1rem;
+    transition: box-shadow .25s ease, transform .1s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.btn-danger {
+    position: relative;
+    border-radius: .75rem;
+    background: #3D2E2A;
+    color: #fff;
+    padding: .55rem 1rem;
+    transition: box-shadow .25s ease, transform .1s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+
+.btn-danger:hover 
+{
+    transform: translateY(-1px);
+    box-shadow: 0 5px 5px rgba(224,107,107,.30);
+}
+
+.btn-primary:hover 
+{
+    transform: translateY(-1px);
+    box-shadow: 0 5px 5px rgba(99,102,241,.30);
+}
+
+.btn-subtle {
+    border-radius: .75rem;
+    background: rgba(255,255,255,.06);
+    color: var(--kc-ink);
+    padding: .5rem .9rem;
+    border: 1px solid var(--kc-border-strong);
+}
+
+    .btn-subtle:hover {
+        background: rgba(255,255,255,.10);
+    }
+
+/* ===== Forms / Tables ===== */
+.kc-disabled {
+    opacity: .5;
+    filter: saturate(.7);
+    pointer-events: none;
+}
+
+.kc-th {
+    font-size: .75rem;
+    color: var(--kc-ink-dim);
+}
+
+.form-row 
+{
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: .5rem 1rem;
+    align-items: center;
+}
+.form-row_small 
+{
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: .5rem 1rem;
+    align-items: center;
+}
+
+@media (max-width:640px) 
+{
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== Tabs (client-side) ===== */
+.tab-btn {
+    padding: .45rem .8rem;
+    border-radius: .6rem;
+    border: 1px solid var(--kc-border);
+    background: rgba(255,255,255,.06);
+    color: var(--kc-ink);
+    font-size: .9rem;
+}
+
+    .tab-btn:hover {
+        background: rgba(255,255,255,.10);
+    }
+
+    .tab-btn.active {
+        background: rgba(124,58,237,.18);
+        border-color: rgba(124,58,237,.35);
+    }
+
+/* ===== Wizard helpers (Create page) ===== */
+.wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+}
+
+.wizard-right {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    margin-left: auto;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: #cbd5e1;
+}
+
+    .step .dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 9999px;
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.16);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .step.active .dot {
+        background: linear-gradient(135deg, var(--kc-accent-1), var(--kc-accent-2));
+        color: #fff;
+        border-color: transparent;
+    }
+
+    .step.done .dot {
+        background: rgba(34,197,94,.25);
+        color: #a7f3d0;
+        border-color: transparent;
+    }
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+}
+
+.hint {
+    font-size: .85rem;
+    color: var(--kc-ink-dim);
+}
+
+.kc-mini {
+    font-size: .8rem;
+    color: #a1a1aa;
+}
+
+/* small helpers */
+.err {
+    color: #fca5a5;
+    font-size: .8rem;
+    margin-top: .25rem;
+    display: none;
+}
+
+    .err.show {
+        display: block;
+    }
+.step {
+    gap: .35rem;
+}
+
+    .step .label {
+        font-size: .75rem;
+        line-height: 1.1;
+    }
+#app {
+    will-change: opacity;
+}
+
+.fade-enter {
+    opacity: 0;
+}
+
+.fade-enter-active {
+    opacity: 1;
+    transition: opacity .18s ease-in;
+}
+
+.fade-leave {
+    opacity: 1;
+}
+
+.fade-leave-active {
+    opacity: 0;
+    transition: opacity .16s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app {
+        transition: none !important;
+    }
+
+    .fade-enter-active, .fade-leave-active {
+        transition: none !important;
+    }
+}
+
+
+
+.kc-toast {
+    position: fixed;
+    right: 1rem;
+    top: 1rem;
+    z-index: 1000;
+    display: flex;
+    gap: .75rem;
+    align-items: flex-start;
+    background: rgba(17, 24, 39, .98);
+    color: var(--kc-ink);
+    border: 1px solid var(--kc-border-strong);
+    border-radius: .75rem;
+    padding: .875rem 1rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    max-width: 36rem;
+}
+
+.kc-toast-error {
+    border-color: rgba(239,68,68,.45);
+}
+
+.kc-toast-success {
+    border-color: rgba(34,197,94,.45);
+}
+
+.kc-toast-icon {
+    font-weight: 700;
+    margin-top: .1rem;
+}
+
+.kc-toast-title {
+    font-weight: 600;
+    margin-bottom: .25rem;
+}
+
+.kc-toast-close {
+    margin-left: .5rem;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.kc-toast .validation-summary-errors ul {
+    margin: .25rem 0 0 1.25rem;
+}

@@ -1,0 +1,99 @@
+﻿@* Pages/Shared/_Layout.cshtml *@
+<!doctype html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] ?? "Keycloak Shell")</title>
+
+    <!-- Tailwind для прототипа -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="~/css/kc.css" asp-append-version="true" />
+
+    @RenderSection("Head", required: false)
+</head>
+<body class="min-h-screen bg-dark-pattern text-slate-100 relative">
+    <!-- ЧИСТАЯ шапка без блюра-фона -->
+    <header class="mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+        <a asp-page="/Index" class="font-semibold tracking-wider text-slate-200">ASSISTANT</a>
+
+        <div class="flex items-center gap-2">
+            <span class="text-lg text-slate-300">Hello, @User.Identity!.Name</span>
+            <form method="post" asp-page="/Account/Logout">
+                <button class="rounded-xl px-3 py-1.5 text-sm bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10">
+                    Sign out
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <main id="app" class="container mx-auto px-4 md:px-6 py-6">
+        @RenderBody()
+    </main>
+    <script>
+        (() => 
+        {
+          document.addEventListener('keydown', e => 
+          { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); }, true);
+          const app = document.getElementById('app');
+          if (!app) return;
+
+          const DURATION = 100;
+
+          // Плавное появление (на pageshow тоже — для back/forward cache)
+          function enter() {
+            app.classList.add('fade-enter');
+            requestAnimationFrame(() => app.classList.add('fade-enter-active'));
+          }
+          window.addEventListener('pageshow', enter, { once: true });
+          enter();
+
+          // Хелперы навигации
+          const sameOrigin = (href) => {
+            try { return new URL(href, location.href).origin === location.origin; }
+            catch { return false; }
+          };
+          function findAnchor(evt) {
+            // более надёжно: смотрим event path (capture), потом closest
+            const path = evt.composedPath ? evt.composedPath() : [];
+            let a = path.find(el => el && el.tagName === 'A');
+            if (!a && evt.target?.closest) a = evt.target.closest('a');
+            return a || null;
+          }
+          function shouldIntercept(a) {
+            if (!a || !a.href) return false;
+            if (a.target && a.target !== '') return false;
+            if (a.hasAttribute('download')) return false;
+            if (!sameOrigin(a.href)) return false;
+            const u = new URL(a.href, location.href);
+            const cur = new URL(location.href);
+            // не перехватываем якоря внутри той же страницы
+            if (u.pathname === cur.pathname && u.search === cur.search && u.hash) return false;
+            // не перехватываем переход "на ту же самую" страницу (без изменений)
+            if (u.pathname === cur.pathname && u.search === cur.search && !u.hash) return false;
+            return true;
+          }
+
+          // Плавный выход и только потом переход
+          function leave(to) {
+            app.classList.remove('fade-enter', 'fade-enter-active');
+            app.classList.add('fade-leave');
+            requestAnimationFrame(() => {
+              app.classList.add('fade-leave-active');
+              setTimeout(() => { location.href = to; }, DURATION);
+            });
+          }
+
+          // Перехватываем клики в CAPTURE-фазе (чтобы точно сработало раньше других слушателей)
+          document.addEventListener('click', (e) => {
+            const a = findAnchor(e);
+            if (!shouldIntercept(a)) return;
+            e.preventDefault();
+            leave(a.href);
+          }, true);
+        })();
+    </script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,737 @@
+﻿@page
+@model Assistant.Pages.Clients.CreateModel
+@{
+    ViewData["Title"] = "Create client";
+}
+
+<div class="space-y-5">
+    <!-- Хедер -->
+    <div class="kc-header p-5 md:p-6 relative overflow-hidden">
+        <div class="absolute inset-0 pointer-events-none">
+            <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
+                 style="background: radial-gradient(60% 60% at 50% 50%, rgba(16,185,129,.6), rgba(59,130,246,.4))"></div>
+            <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
+                 style="background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35))"></div>
+        </div>
+        <div class="relative flex items-center justify-between">
+            <div>
+                <a asp-page="/Index" class="text-slate-400 text-sm hover:text-slate-200">&larr; Back to Clients</a>
+                <h1 class="mt-1 text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(99,102,241,0.25)]">Create client</h1>
+                <p class="text-slate-300 text-sm">Пошаговый мастер создания клиента Keycloak.</p>
+            </div>
+            <div class="text-slate-400 text-sm">Realm: <span class="text-slate-200" id="realmHeader">—</span></div>
+        </div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="kc-card md:max-w-[1000px] mx-auto">
+        <div class="p-5">
+            <div class="grid grid-cols-7 gap-1">
+                <div class="step" id="stepHead1"><div class="dot">1</div><div class="label">Realm</div></div>
+                <div class="step" id="stepHead2"><div class="dot">2</div><div class="label">Basics</div></div>
+                <div class="step" id="stepHead3"><div class="dot">3</div><div class="label">System info</div></div>
+                <div class="step" id="stepHead4"><div class="dot">4</div><div class="label">Flows</div></div>
+                <div class="step" id="stepHead5"><div class="dot">5</div><div class="label">Redirect URIs</div></div>
+                <div class="step" id="stepHead6"><div class="dot">6</div><div class="label">Local roles</div></div>
+                <div class="step" id="stepHead7"><div class="dot">7</div><div class="label">Service roles</div></div>
+            </div>
+            <div class="mt-3 divider"></div>
+        </div>
+
+        <form method="post" id="createForm" class="p-5" asp-page-handler="Create">
+            <!-- hidden -->
+            <input type="hidden" asp-for="ClientId" id="hidClientId" />
+            <input type="hidden" asp-for="Description" id="hidDesc" />
+            <input type="hidden" asp-for="ClientAuth" id="hidClientAuth" />
+            <input type="hidden" asp-for="FlowStandard" id="hidFlowStandard" />
+            <input type="hidden" asp-for="FlowService" id="hidFlowService" />
+            <input type="hidden" asp-for="RedirectUrisJson" id="hidRedirects" />
+            <input type="hidden" asp-for="LocalRolesJson" id="hidLocalRoles" />
+            <input type="hidden" asp-for="ServiceRolesJson" id="hidServiceRoles" />
+            <input type="hidden" asp-for="AppName" id="hidAppName" />
+            <input type="hidden" asp-for="AppUrl" id="hidAppUrl" />
+            <input type="hidden" asp-for="ServiceOwner" id="hidServiceOwner" />
+            <input type="hidden" asp-for="ServiceManager" id="hidServiceManager" />
+
+            <!-- Шаг 1: Realm -->
+            <div class="space-y-4" id="step-1" data-step="1">
+                <div class="text-slate-200 font-semibold text-lg">1. Выбор Realm</div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <!-- Слева: селект + что такое realm -->
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Realm</label>
+                        <select asp-for="Realm" asp-items="Model.RealmOptions" id="realmSelect" class="kc-input kc-select kc-select-dark rounded-xl px-3 py-2 text-sm w-full"></select>
+                        <div id="errRealm" class="err">Выберите realm.</div>
+
+                        <div class="hint mt-3">
+                            <div class="text-slate-300 mb-1 font-medium">Что такое Realm?</div>
+                            Изолированная область Keycloak со своими пользователями, ролями и клиентами.
+                            Объекты разных реалмов не пересекаются.
+                        </div>
+                    </div>
+
+                    <!-- Справа: описание выбранного реалма -->
+                    <div class="kc-card p-4">
+                        <div class="text-slate-300 mb-1 font-medium" id="realmDescTitle">Описание реалма</div>
+                        <div class="text-slate-400 text-sm" id="realmDescBody">Описание реалма отсутствует.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Шаг 2: Basics -->
+            <div class="space-y-4 hidden" id="step-2" data-step="2">
+                <div class="text-slate-200 font-semibold text-lg">2. Client basics</div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Client ID</label>
+                        <div class="prefix-wrap">
+                            <span class="prefix-chip" id="cidPrefix">app-bank-</span>
+                            <input id="cidInput" class="prefix-input" maxlength="25" placeholder="my-service" value="@(Model.ClientId != null && Model.ClientId.StartsWith("app-bank-")? Model.ClientId.Substring("app-bank-".Length): (Model.ClientId ?? ""))" />
+                        </div>
+                        <div id="errCid" class="err">Укажите Client ID (часть после префикса).</div>
+                        <div class="hint mt-1">Префикс <b>app-bank-</b> помогает соблюдать корпоративный стандарт.</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Description <span class="text-slate-500">(необязательно)</span></label>
+                        <input id="descInput" value="@(Model.Description ?? "")" maxlength="64" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="Краткое описание клиента" />
+                        <div class="hint mt-1">Например: «Веб-приложение для платежей».</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Шаг 3: System info (АС) -->
+            <div class="space-y-4 hidden" id="step-3" data-step="3">
+                <div class="text-slate-200 font-semibold text-lg">3. Сведения об АС</div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Название АС <span class="text-rose-500">*</span></label>
+                        <input id="appName" value="@(Model.AppName ?? "")" maxlength="40" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="Напр., «Платёжный сервис»" />
+                        <div id="errAppName" class="err">Укажите название АС.</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Ссылка на АС</label>
+                        <input id="appUrl" value="@(Model.AppUrl ?? "")" maxlength="100" type="url" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="https://example.company/app" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Владелец сервиса</label>
+                        <input id="serviceOwner" value="@(Model.ServiceOwner ?? "")" maxlength="25" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="ФИО" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Менеджер сервиса</label>
+                        <input id="serviceManager" value="@(Model.ServiceManager ?? "")" maxlength="30" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="ФИО" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Шаг 4: Flows -->
+            <div class="space-y-4 hidden" id="step-4" data-step="4">
+                <div class="text-slate-200 font-semibold text-lg">4. Выбор Flow</div>
+
+                <div class="kc-card p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-slate-200">Client Authentication</div>
+                            <div class="hint">Включайте для <i>confidential</i> клиентов (бэкенды). Нужен <b>client_secret</b> или ключ. Выключено — публичный клиент (SPA/мобильный).</div>
+                        </div>
+                        <label class="kc-switch inline-flex items-center">
+                            <input type="checkbox" id="swClientAuth" @(Model.ClientAuth ? "checked" : "") />
+                            <div class="track"><span class="dot"></span></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="kc-card p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-slate-200">Standard flow (Authorization Code)</div>
+                            <div class="hint">Для логинов через браузер. Даёт токен взамен кода авторизации, Требует <b>Redirect URI</b>.</div>
+                        </div>
+                        <label class="kc-switch inline-flex items-center">
+                            <input type="checkbox" id="swStandard" @(Model.FlowStandard ? "checked" : "") />
+                            <div class="track"><span class="dot"></span></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="kc-card p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-slate-200">Service account (Client Credentials)</div>
+                            <div class="hint">Для интеграций «машина-машина» без пользователя. Роли задают права доступа к API.</div>
+                        </div>
+                        <label class="kc-switch inline-flex items-center">
+                            <input type="checkbox" id="swService" @(Model.FlowService ? "checked" : "") />
+                            <div class="track"><span class="dot"></span></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Шаг 5: Redirect URIs -->
+            <div class="space-y-3 hidden" id="step-5" data-step="5">
+                <div class="text-slate-200 font-semibold text-lg">5. Redirect URIs</div>
+                <div class="hint">Нужны для <b>Standard flow</b>: сюда Keycloak возвращает пользователя после логина. указать домен обязательно, далее можно использовать * для разрешения любых путей.</div>
+                <div class="kc-mini mt-1">Пример: <code>https://localhost:8080/*</code>.</div>
+                <div id="redirList" class="flex flex-wrap gap-2"></div>
+                <div class="flex gap-2">
+                    <input id="redirInput" maxlength="100" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="https://app.example.com/callback" />
+                    <button type="button" class="btn-subtle" onclick="addRedirect()">Add</button>
+                </div>
+            </div>
+
+            <!-- Шаг 6: Local roles -->
+            <div class="space-y-3 hidden" id="step-6" data-step="6">
+                <div class="text-slate-200 font-semibold text-lg">6. Local roles</div>
+                <div class="hint">Создаются на этом клиенте для назначения другим клиентам/пользователям для доступа.</div>
+                <div id="locList" class="flex flex-wrap gap-2"></div>
+                <div class="flex gap-2">
+                    <input id="locInput" maxlength="25" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" />
+                    <button type="button" class="btn-subtle" onclick="addLocal()">Add</button>
+                </div>
+            </div>
+            <!-- Шаг 7: Service roles -->
+            <div class="space-y-4 hidden" data-step="7">
+                <div class="text-slate-200 font-semibold text-lg">6. Service roles</div>
+                <div class="hint">
+                    Назначают роли <b>других сервисов</b> (клиентов). Сначала найдите сервис по <code>clientId</code>, затем добавляйте его роли.
+                </div>
+
+                <!-- Выбранные роли (чипсы) -->
+                <div id="svcList" class="flex flex-wrap gap-2 mb-2"></div>
+
+                <!-- Поиск клиента: ТОЛЬКО по кнопке -->
+                <div class="relative space-y-2">
+                    <div class="flex gap-2 items-center">
+                        <input id="svcSearchInput"
+                               class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
+                               placeholder="например: app-bank-cdi или 'cdi'" />
+                        <button type="button" id="svcSearchBtn" class="btn-subtle">Найти</button>
+                    </div>
+
+                    <!-- Выпадающий список найденных клиентов -->
+                    <div id="svcSearchDd"
+                         class="absolute z-20 mt-1 w-full md:w-[420px] kc-card p-2 hidden"></div>
+                </div>
+
+                <!-- Выбранный клиент + роли -->
+                <div id="svcChosen" class="hidden space-y-3">
+                    <div class="flex items-center gap-3">
+                        <span class="kc-tag" id="svcChosenTag"></span>
+                        <button type="button" class="btn-link underline text-slate-300" id="svcChange">Сменить сервис</button>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex gap-2 items-center">
+                            <input id="svcRoleFilter"
+                                   class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
+                                   placeholder="фильтр по имени роли...">
+                            <button type="button" id="svcRoleRefresh" class="btn-subtle">Найти</button>
+                        </div>
+
+                        <!-- Список ролей выбранного клиента -->
+                        <div id="svcRoleList" class="grid md:grid-cols-2 gap-2"></div>
+
+                        <div>
+                            <button type="button" id="btnMoreRoles" class="btn-subtle hidden">Показать ещё</button>
+                        </div>
+
+                        <div id="svcErr" class="err"></div>
+                        <div class="kc-mini">Клик по роли добавляет её в список выше. Формат: <code>clientId: roleName</code>.</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Навигация -->
+            <div class="wizard-nav mt-6">
+                <button type="button" class="btn-subtle" id="btnPrev">Back</button>
+                <div class="wizard-right">
+                    <button type="button" class="btn-subtle" id="btnSkip" style="display:none">Skip</button>
+                    <button type="button" class="btn-primary" id="btnNext">Next</button>
+                    <button type="submit" class="btn-primary" id="btnCreate" style="display:none">Create client</button>
+                </div>
+            </div>
+        </form>
+        @if (!ViewContext.ViewData.ModelState.IsValid)
+        {
+            <div class="kc-toast kc-toast-error" id="formErrorToast" role="alert">
+                <div class="kc-toast-icon">!</div>
+                <div class="kc-toast-body">
+                    <div class="kc-toast-title">Не удалось создать клиента</div>
+                    <div asp-validation-summary="All" class="validation-summary-errors"></div>
+                </div>
+                <button type="button" class="kc-toast-close" aria-label="Закрыть"
+                        onclick="this.closest('.kc-toast').remove()">
+                    ×
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts
+{
+    @if (Model.StepToShow > 0)
+    {
+        <script>window.__stepToShow = @Model.StepToShow;</script>
+    }
+    <script>
+        (function()
+        {
+          // ---- DOM helpers
+          const $  = (s)=>document.querySelector(s);
+          const $$ = (s)=>Array.from(document.querySelectorAll(s));
+          const idForRealm = "@Html.IdFor(m => m.Realm)";
+
+          // ---- Data from server (realm → displayName)
+          const realmDescriptions = @Html.Raw(string.IsNullOrWhiteSpace(Model.RealmMapJson) ? "{}" : Model.RealmMapJson);
+
+          // ---- Elements
+          const realmSelect   = $('#realmSelect');
+          const realmTitleEl  = $('#realmDescTitle');
+          const realmBodyEl   = $('#realmDescBody');
+
+          const btnPrev   = $('#btnPrev');
+          const btnNext   = $('#btnNext');
+          const btnCreate = $('#btnCreate');
+          const btnSkip   = $('#btnSkip'); // оставим, но прячем, он почти не нужен
+          if (btnSkip) btnSkip.style.display = 'none';
+
+          // Basics
+          const cidPrefix = 'app-bank-';
+          const cidInput  = $('#cidInput');
+          const errCid    = $('#errCid');
+          const descInput = $('#descInput');
+
+          // Flows
+          const swClientAuth = $('#swClientAuth');
+          const swStandard   = $('#swStandard');
+          const swService    = $('#swService');
+
+          // AC (шаг 3)
+          const appNameInput = $('#appName');
+          const appUrlInput  = $('#appUrl');
+          const ownerInput   = $('#serviceOwner');
+          const managerInput = $('#serviceManager');
+          const errAppName   = $('#errAppName');
+
+          // Redirects / Local / Service roles (чипы)
+          const redirInput = $('#redirInput'), redirList = $('#redirList');
+          const locInput   = $('#locInput'),   locList   = $('#locList');
+          const svcClient  = $('#svcClient'),  svcRole   = $('#svcRole'), svcList = $('#svcList');
+
+          // Hidden fields (BindProperty)
+          const hidClientId      = $('#hidClientId');
+          const hidDesc          = $('#hidDesc');
+          const hidClientAuth    = $('#hidClientAuth');
+          const hidFlowStandard  = $('#hidFlowStandard');
+          const hidFlowService   = $('#hidFlowService');
+          const hidRedirects     = $('#hidRedirects');
+          const hidLocalRoles    = $('#hidLocalRoles');
+          const hidServiceRoles  = $('#hidServiceRoles');
+          const hidAppName       = $('#hidAppName');
+          const hidAppUrl        = $('#hidAppUrl');
+          const hidServiceOwner  = $('#hidServiceOwner');
+          const hidServiceManager= $('#hidServiceManager');
+
+          // ---- Chips data
+         const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
+         const locals   = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
+         const svcRoles = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
+            renderChips(redirList, redirs);
+            renderChips(locList,  locals);
+            renderChips(svcList,  svcRoles);
+
+          // ---- Panels & headers (динамически, без “магических” массивов)
+          const panels = $$('[data-step]');
+          const heads  = $$('[id^="stepHead"]');
+          const stepNum = (el)=> +el.getAttribute('data-step') || +el.id.replace('stepHead','');
+
+          // Условия включения шагов
+          const predicates =
+          {
+            5: ()=> swStandard?.checked ?? true,
+            7: ()=> swService?.checked  ?? false,
+          };
+
+          const enabledSteps = () =>
+          {
+            const nums = panels.map(stepNum).sort((a,b)=>a-b);
+            return nums.filter(n => (predicates[n] ? predicates[n]() : true));
+          };
+
+          // ---- Realm description (без сетевых запросов)
+          function updateRealmDesc()
+          {
+            const id = realmSelect?.value || '';
+            if (realmTitleEl) realmTitleEl.textContent = id || 'Описание реалма';
+            if (realmBodyEl)  realmBodyEl.textContent  = realmDescriptions[id] || 'Описание реалма отсутствует.';
+            const realmHeader = document.getElementById('realmHeader');
+            if (realmHeader) realmHeader.textContent = id || '—';
+          }
+
+          // ---- Validation
+          const trim = (v)=> (v||'').trim();
+          function validateStep(n)
+          {
+            $('#errRealm')?.classList.remove('show');
+            errCid?.classList.remove('show');
+            errAppName?.classList.remove('show');
+
+            if (n===1)
+            {
+              if (!trim(realmSelect?.value)){ $('#errRealm')?.classList.add('show'); realmSelect?.focus(); return false; }
+            }
+            if (n===2)
+            {
+              if (!trim(cidInput?.value)){ errCid?.classList.add('show'); cidInput?.focus(); return false; }
+            }
+            if (n===3)
+            {
+              if (!trim(appNameInput?.value)){ errAppName?.classList.add('show'); appNameInput?.focus(); return false; }
+            }
+            return true;
+          }
+
+          // ---- Step engine
+          let current = 0;
+
+          function setHeaderStates(en){
+            const min = en[0], max = en[en.length-1];
+            heads.forEach(h=>{
+              const n = stepNum(h);
+              const isEnabled = en.includes(n);
+              h.style.opacity = isEnabled ? '1' : '.45';
+              h.classList.toggle('active', isEnabled && n===current);
+              h.classList.toggle('done',   isEnabled && n<current && n>=min);
+            });
+          }
+
+          function showStep(requested){
+            const en = enabledSteps();
+            if (en.length===0) return;
+
+            // подобрать ближайший доступный
+            let target = en.includes(requested) ? requested : en.find(x=>x>=requested) ?? en[en.length-1];
+            current = target;
+
+            // панели
+            panels.forEach(p => p.classList.toggle('hidden', stepNum(p)!==current));
+
+            // хэдэры/“кружки”
+            setHeaderStates(en);
+
+            // кнопки
+            const i = en.indexOf(current);
+            const isFirst = (i===0), isLast = (i===en.length-1);
+            btnPrev && (btnPrev.style.display = isFirst ? 'none' : '');
+            btnNext && (btnNext.style.display = isLast  ? 'none' : '');
+            btnCreate && (btnCreate.style.display = isLast ? '' : 'none');
+          }
+
+          function gotoRelative(delta)
+          {
+            // валидация только при движении вперёд
+            if (delta>0 && !validateStep(current)) return;
+            const en = enabledSteps();
+            const i  = en.indexOf(current);
+            const j  = Math.max(0, Math.min(en.length-1, i + delta));
+            showStep(en[j]);
+          }
+
+          // клики по “кружкам” с защитой: нельзя перепрыгнуть через невалидные
+          heads.forEach(h=>{
+            h.addEventListener('click', ()=>{
+              const en = enabledSteps();
+              const target = stepNum(h);
+              if (!en.includes(target)) return; // выключен — не кликаем
+              // провалидируем все предыдущие доступные
+              for (const s of en){
+                if (s===target) break;
+                if (!validateStep(s)){ showStep(s); return; }
+              }
+              showStep(target);
+            });
+          });
+
+          // переключатели влияют на доступность шагов
+          [swStandard, swService].forEach(el=> el?.addEventListener('change', ()=>{
+            const en = enabledSteps();
+            // если текущий выключили — прыгнем на ближайший доступный
+            if (!en.includes(current)) showStep(en[en.length-1]);
+            else showStep(current); // просто перерисовать состояния
+          }));
+
+          // навигация
+          btnPrev?.addEventListener('click', (e)=>{ e.preventDefault(); gotoRelative(-1); });
+          btnNext?.addEventListener('click', (e)=>{ e.preventDefault(); gotoRelative(1); });
+
+          // Realm live
+          if (realmSelect)
+          {
+            updateRealmDesc();
+            realmSelect?.addEventListener('change', updateRealmDesc);
+          }
+
+          // Chips helpers
+          function renderChips(listEl, arr){
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            arr.forEach((v, idx) => {
+              const span = document.createElement('span');
+              span.className = 'chip';
+              span.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
+              span.querySelector('button')
+                  .addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(listEl, arr); });
+              listEl.appendChild(span);
+            });
+          }
+          window.addRedirect = function(){
+            const v = trim(redirInput?.value); if(!v) return;
+            redirs.push(v); redirInput.value=''; renderChips(redirList, redirs);
+          };
+          window.addLocal = function(){
+            const v = trim(locInput?.value); if(!v) return;
+            locals.push(v); locInput.value=''; renderChips(locList, locals);
+          };
+          window.addServiceRole = function()
+          {
+            const c = svcClient?.value, r = svcRole?.value; if(!c||!r) return;
+            const v = `${c}: ${r}`; svcRoles.push(v); renderChips(svcList, svcRoles);
+          };
+
+          // Submit
+          document.getElementById('createForm')?.addEventListener('submit', (e)=>
+          {
+            if (!validateStep(1) || !validateStep(2) || !validateStep(3)){
+              e.preventDefault();
+              if (!validateStep(1)) return showStep(1);
+              if (!validateStep(2)) return showStep(2);
+              if (!validateStep(3)) return showStep(3);
+            }
+
+            const suffix   = trim(cidInput?.value);
+            const clientId = cidPrefix + suffix;
+
+            hidClientId.value       = clientId;
+            hidDesc.value           = trim(descInput?.value);
+            hidClientAuth.value     = swClientAuth?.checked ? 'true':'false';
+            hidFlowStandard.value   = swStandard?.checked   ? 'true':'false';
+            hidFlowService.value    = swService?.checked    ? 'true':'false';
+
+            hidRedirects.value      = JSON.stringify(redirs);
+            hidLocalRoles.value     = JSON.stringify(locals);
+            hidServiceRoles.value   = JSON.stringify(svcRoles);
+
+            hidAppName.value        = trim(appNameInput?.value);
+            hidAppUrl.value         = trim(appUrlInput?.value);
+            hidServiceOwner.value   = trim(ownerInput?.value);
+            hidServiceManager.value = trim(managerInput?.value);
+          });
+
+          // старт: на первом доступном шаге
+        const _srv = Number(window.__stepToShow || 0);
+        const _en  = enabledSteps();
+        const _start = (_srv > 0 && _en.length) ? (_en.includes(_srv) ? _srv : (_en.find(x => x >= _srv) ?? _en[_en.length - 1])): (_en[0] ?? 1);showStep(_start);
+
+
+
+
+
+
+
+                (() => {
+          // --- изоляция и безопасные helpers
+          const $  = (s, r=document)=>r.querySelector(s);
+          const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+          const el = (t, cls, html)=>{ const n=document.createElement(t); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
+          const safe = fn => (...a)=>{ try { return fn(...a); } catch(e){ console.error('[ServiceRolesUI]', e); } };
+
+          // --- DOM (ищем только в шаге 7, чтобы не влиять на другие части)
+          const step = document.querySelector('[data-step="7"]');
+          if (!step) return;
+
+          const realmEl = document.getElementById("@Html.IdFor(m => m.Realm)") || $('#realmSelect') || $('select[name="Realm"]');
+          const hidRoles = document.getElementById("@Html.IdFor(m => m.ServiceRolesJson)") || $('#hidServiceRoles') || $('input[name="ServiceRolesJson"]');
+
+          const svcList        = $('#svcList', step);
+          const svcSearchInput = $('#svcSearchInput', step);
+          const svcSearchBtn   = $('#svcSearchBtn', step);
+          const svcSearchDd    = $('#svcSearchDd', step);
+
+          const svcChosen      = $('#svcChosen', step);
+          const svcChosenTag   = $('#svcChosenTag', step);
+          const svcChangeBtn   = $('#svcChange', step);
+
+          const svcRoleFilter  = $('#svcRoleFilter', step);
+          const svcRoleRefresh = $('#svcRoleRefresh', step);
+          const svcRoleList    = $('#svcRoleList', step);
+          const btnMoreRoles   = $('#btnMoreRoles', step);
+          const svcErr         = $('#svcErr', step);
+
+          // --- состояние (локальное; не конфликтует с внешними переменными)
+          const PAGE_URL = '@Url.Page(null)';
+          const state = {
+            roles: [],                 // "clientId: roleName"
+            currentClient: null,       // { id, clientId, name? }
+            page: 0, size: 50, more: false, q: '',
+            cacheClients: new Map(),   // query → [{id,clientId,name}]
+            cacheRoles: new Map()      // key(clientId|q|page) → [roleName]
+          };
+          const realm = ()=> (realmEl?.value ?? '').trim();
+
+          // --- утилиты
+          async function fetchJson(url, opts){
+            const r = await fetch(url, {headers:{'Accept':'application/json'}, ...opts});
+            if(!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          }
+          function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; }
+          function showDd(){ if(!svcSearchDd) return; svcSearchDd.classList.remove('hidden'); }
+
+          // --- persist/restore
+          function persist(){ if(hidRoles) hidRoles.value = JSON.stringify(state.roles); }
+          function renderChips(){
+            if(!svcList) return;
+            svcList.innerHTML = '';
+            for (const s of state.roles){
+              const chip = el('div','kc-chip'); chip.textContent = s;
+              const x = el('button','kc-chip-x','×'); x.type='button'; x.title='Удалить';
+              x.addEventListener('click', safe(()=>{
+                const i = state.roles.indexOf(s);
+                if(i>=0){ state.roles.splice(i,1); renderChips(); persist(); }
+              }));
+              chip.appendChild(x);
+              svcList.appendChild(chip);
+            }
+          }
+          // восстановление из hidden (не бросаем ошибок)
+          safe(()=>{
+            const raw = hidRoles?.value || '[]';
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) for (const v of arr) if (typeof v === 'string' && !state.roles.includes(v)) state.roles.push(v);
+            renderChips();
+          })();
+
+          // --- поиск клиентов (по кнопке)
+          async function searchClients(query){
+            const q = (query||'').trim();
+            if (!q){ hideDd(); return; }
+            if (state.cacheClients.has(q)){ renderClientDd(state.cacheClients.get(q)); return; }
+            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(realm())}&q=${encodeURIComponent(q)}&first=0&max=20`;
+            const data = await fetchJson(url); // [{id,clientId,name?}]
+            state.cacheClients.set(q, data || []);
+            renderClientDd(data || []);
+          }
+          function renderClientDd(items){
+            if(!svcSearchDd) return;
+            if (!items?.length){ svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Ничего не найдено</div>`; showDd(); return; }
+            svcSearchDd.innerHTML = '';
+            for (const it of items){
+              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
+              line.type='button';
+              line.textContent = [it.clientId, it.name].filter(Boolean).join(' — ');
+              line.addEventListener('click', safe(()=> selectClient(it)));
+              svcSearchDd.appendChild(line);
+            }
+            showDd();
+          }
+          svcSearchBtn?.addEventListener('click', safe(()=> searchClients(svcSearchInput?.value)));
+          document.addEventListener('click', safe((e)=>{
+            if (!svcSearchDd) return;
+            if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
+          }));
+
+          // --- выбор клиента
+          function selectClient(it){
+            state.currentClient = { id: it.id, clientId: it.clientId, name: it.name };
+            if (svcChosenTag) svcChosenTag.textContent = [it.clientId, it.name].filter(Boolean).join(' — ');
+            svcChosen?.classList.remove('hidden');
+            hideDd();
+            if (svcSearchInput) svcSearchInput.value = it.clientId;
+
+            state.page = 0; state.q = (svcRoleFilter?.value || '').trim();
+            if (svcRoleList) svcRoleList.innerHTML = '';
+            loadRoles({append:false});
+          }
+          svcChangeBtn?.addEventListener('click', safe(()=>{
+            state.currentClient = null;
+            svcChosen?.classList.add('hidden');
+            svcSearchInput?.focus();
+          }));
+
+          // --- роли выбранного клиента
+          async function loadRoles({append}){
+            if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
+            if (!state.currentClient) return;
+
+            const key = `${state.currentClient.clientId}|${state.q}|${state.page}`;
+            try{
+              let roles;
+              if (state.cacheRoles.has(key)){
+                roles = state.cacheRoles.get(key);
+              } else {
+                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(realm())}&first=${state.page*state.size}&max=${state.size}` + (state.q?`&q=${encodeURIComponent(state.q)}`:'');
+                roles = await fetchJson(url); // ["roleA","roleB",...]
+                state.cacheRoles.set(key, roles || []);
+              }
+              renderRoles(roles || [], {append});
+              state.more = (roles?.length || 0) === state.size;
+              btnMoreRoles?.classList.toggle('hidden', !state.more);
+            }catch(e){
+              if (svcErr){ svcErr.textContent = `Не удалось загрузить роли: ${e.message}`; svcErr.classList.add('show'); }
+            }
+          }
+          function renderRoles(roles, {append}){
+            if (!svcRoleList) return;
+            if (!append) svcRoleList.innerHTML = '';
+            if (!roles.length){
+              if (!append) svcRoleList.innerHTML = `<div class="px-2 py-1 text-slate-400">Ролей не найдено</div>`;
+              return;
+            }
+            for (const name of roles){
+              const item = el('button','kc-card px-3 py-2 hover:bg-slate-700 text-left');
+              item.type = 'button';
+              item.textContent = name;
+              item.title = 'Добавить роль';
+              item.addEventListener('click', safe(()=>{
+                if (!state.currentClient) return;
+                const val = `${state.currentClient.clientId}: ${name}`;
+                if (!state.roles.includes(val)){
+                  state.roles.push(val);
+                  renderChips();
+                  persist();
+                }
+              }));
+              svcRoleList.appendChild(item);
+            }
+          }
+
+          // --- фильтр и пагинация
+          svcRoleRefresh?.addEventListener('click', safe(()=>{
+            state.q = (svcRoleFilter?.value || '').trim();
+            state.page = 0;
+            loadRoles({append:false});
+          }));
+          btnMoreRoles?.addEventListener('click', safe(()=>{
+            state.page += 1;
+            loadRoles({append:true});
+          }));
+
+        })();
+
+
+
+
+
+
+        })();
+    </script>
+
+}

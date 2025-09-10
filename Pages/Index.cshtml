@@ -1,0 +1,144 @@
+﻿@page
+@model Assistant.Pages.IndexModel
+@{
+    ViewData["Title"] = "Clients";
+
+    // Нормализация окружений для чипов
+    string MapEnv(string v) => (v ?? "").Trim().ToLowerInvariant() switch
+    {
+        "prod" or "production" => "PROD",
+        "stage" or "staging" => "STAGE",
+        "test" => "TEST",
+        "dev" or "development" => "TEST",
+        _ => (v ?? "").ToUpperInvariant()
+    };
+
+    IEnumerable<string> Envs(string raw)
+        => string.IsNullOrWhiteSpace(raw)
+            ? Enumerable.Empty<string>()
+            : raw.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                 .Select(MapEnv)
+                 .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    // Цветовые пресеты для «контур-линий»
+    string EnvBarGradient(string env) => (env ?? "").ToUpperInvariant() switch
+    {
+        "PROD" => "from-fuchsia-500/70 to-pink-500/70",
+        "STAGE" => "from-amber-400/80 to-orange-500/70",
+        "TEST" => "from-emerald-400/80 to-teal-500/70",
+        _ => "from-slate-500/60 to-slate-400/60"
+    };
+
+    // Заглушки описаний до интеграции с Keycloak (client.description)
+    var descriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["admin-console"] = "Keycloak administration console.",
+        ["employee-portal"] = "Internal portal for employees.",
+        ["svc-api"] = "Technical service client (machine to machine).",
+        ["mobile-app"] = "Mobile application OIDC client.",
+        ["my-app"] = "Sample web application.",
+        ["web-client"] = "Public web client.",
+        ["payments"] = "Payments subsystem client.",
+        ["cicd"] = "CI/CD integration client.",
+        ["client-app"] = "Generic application client."
+    };
+    string DescFor(string clientId)
+        => descriptions.TryGetValue(clientId ?? "", out var d) ? d : "Description from Keycloak (stub)";
+}
+
+<!-- Шапка как на Details/Index — стеклянная, с аурами -->
+<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-5">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(16,185,129,.6), rgba(59,130,246,.4))"></div>
+        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35))"></div>
+    </div>
+
+    <div class="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h3 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(99,102,241,0.25)]">
+            Мои клиенты
+        </h3>
+
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            <form method="get"
+                  class="flex items-center gap-2 kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[420px] focus-within:border-white/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input name="q" value="@Model.Q" placeholder="Search clients..."
+                       class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
+            </form>
+
+            <a asp-page="/Clients/Create" class="btn-primary">
+                Создать клиента
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Clients.Any())
+{
+    <div class="kc-card p-10 text-center">
+        <div class="text-slate-200 text-lg font-semibold mb-1">Нет клиентов</div>
+        <div class="text-slate-400 text-sm">Попробуйте другой поиск или создайте нового клиента.</div>
+    </div>
+}
+else
+{
+    <!-- Сетка карточек клиентов -->
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @foreach (var c in Model.Clients)
+        {
+            // один раз материализуем, чтобы не итерировать несколько раз
+            var envList = Envs(c.Realm).ToList();
+
+            <a asp-page="/Clients/Details" asp-route-realm="@c.Realm" asp-route-clientId="@c.ClientId" class="block group">
+                <div class="kc-card kc-card--hover p-5 h-44 overflow-hidden transition relative">
+                    <!-- лёгкая подсветка по ховеру -->
+                    <div class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500"
+                         style="background:
+                                         radial-gradient(480px 140px at 60% 18%, rgba(45,212,191,.12), transparent 70%),
+                                         radial-gradient(520px 180px at 10% 100%, rgba(99,102,241,.10), transparent 75%)"></div>
+
+                    <!-- Контур-линия окружений (внизу карточки) -->
+                    @if (envList.Any())
+                    {
+                        <div class="absolute inset-x-0 top-0 h-[4px] flex overflow-hidden">
+                            @foreach (var e in envList)
+                            {
+                                <span class="flex-1 h-full bg-gradient-to-r @EnvBarGradient(e)"></span>
+                            }
+                        </div>
+                    }
+
+                    <div class="relative h-full flex flex-col">
+                        <!-- Заголовок + статус -->
+                        <div class="flex items-start justify-between">
+                            <div class="text-slate-100 font-semibold text-lg truncate">@c.ClientId</div>
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px]
+                                                 @(c.Enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")
+                                                 border border-white/10">
+                                @(c.Enabled ? "Enabled" : "Disabled")
+                            </span>
+                        </div>
+
+                        <!-- Описание -->
+                        <div class="text-slate-300/90 text-[15px] mt-1 line-clamp-2">
+                            @DescFor(c.ClientId)
+                        </div>
+
+                        <!-- Окружения (чипы) -->
+                        <div class="mt-auto pt-3 flex items-center gap-2 flex-wrap">
+                            @foreach (var e in envList)
+                            {
+                                <span class="kc-chip">@e</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+}

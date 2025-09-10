@@ -1,0 +1,576 @@
+﻿@page
+@model Assistant.Pages.Clients.DetailsModel
+@{
+    ViewData["Title"] = "Client details";
+    var client = Model.Client; // заглушка: используем, если есть
+    string clientId = client?.ClientId ?? Model.ClientId ?? "app-bank-sample";
+    string realm = client?.Realm ?? Model.Realm ?? "internal-bank-idm";
+    bool enabled = client?.Enabled ?? true;
+    bool clientAuthInit = client?.ClientAuth ?? true;
+    bool standardInit = client?.StandardFlow ?? true;
+    bool serviceInit = client?.ServiceAccount ?? false;
+    string description = client?.Description ?? "Description from Keycloak (stub)";
+}
+
+
+<!-- Хедер -->
+<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-5">
+    <div class="flex items-center">
+        <a asp-page="/Index" class="text-slate-400 text-sm hover:text-slate-200">&larr; Back to Clients</a>
+        <div class="ml-auto text-slate-400 text-sm">Realm: <span class="text-slate-200">@realm</span></div>
+    </div>
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(16,185,129,.6), rgba(59,130,246,.4))"></div>
+        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35))"></div>
+    </div>
+
+    <div class="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(99,102,241,0.25)]">@clientId</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-md text-slate-200">Status</span>
+            <label class="kc-switch inline-flex items-center">
+                <input type="checkbox" id="swEnabled" @(enabled ? "checked" : "") />
+                <span class="track"><span class="dot"></span></span>
+            </label>
+            <span id="lblEnabled" class="text-sm text-slate-300">@((enabled) ? "Enabled" : "Disabled")</span>
+        </div>
+    </div>
+</div>
+
+<!-- Вкладки -->
+<div class="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Client tabs">
+    <button type="button" class="tab-btn active" data-tab="Overview" role="tab" aria-selected="true">Overview</button>
+    <button type="button" class="tab-btn" data-tab="Roles" role="tab">Roles</button>
+    <button type="button" class="tab-btn" data-tab="ServiceRoles" role="tab">Service Roles</button>
+    <button type="button" class="tab-btn" data-tab="Scopes" role="tab">Scopes</button>
+    <button type="button" class="tab-btn" data-tab="Flows" role="tab">Flows</button>
+    <button type="button" class="tab-btn" data-tab="Credentials" role="tab">Credentials</button>
+    <button type="button" class="tab-btn" data-tab="Endpoints" role="tab">Endpoints</button>
+    <button type="button" class="tab-btn" data-tab="Events" role="tab">Events</button>
+
+
+    <div class="ml-auto flex items-center gap-2">
+        <button type="submit" class="btn-danger" title="Удалить клиента" aria-label="Delete">
+            <!-- trash icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+            </svg>
+        </button>
+        <button type="submit" class="btn-primary" id="btnSave" title="Сохранить изменения" aria-label="Save">
+            <!-- floppy/save icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7z" />
+                <path d="M17 3v4H7V3" />
+                <path d="M7 13h10v8H7z" />
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- Контент вкладок -->
+<div class="space-y-4">
+    <!-- OVERVIEW -->
+    <div class="tab-pane" data-tab="Overview" role="tabpanel">
+        <div class="kc-card p-5 kc-hover">
+            <div class="grid md:grid-cols-2 md:gap-x-[9.375rem]">
+                <div class="space-y-3 justify-self-center w-full">
+                    <div class="form-row_small">
+                        <label class="text-sm text-slate-400">Client ID</label>
+                        <input id="ovClientId" class="kc-input rounded-xl px-3 py-2 text-sm" value="@clientId" />
+                    </div>
+                    <div class="form-row_small">
+                        <label class="text-sm text-slate-400">Description</label>
+                        <input id="ovDesc" class="kc-input rounded-xl px-3 py-2 text-sm" value="@description" placeholder="Description..." />
+                    </div>
+                </div>
+
+                <div class="space-y-3 justify-self-center w-full">
+                    <div class="form-row">
+                        <label class="text-sm text-slate-400">Client Authentication</label>
+                        <label class="kc-switch inline-flex items-center">
+                            <input type="checkbox" id="swClientAuth" @(clientAuthInit ? "checked" : "")>
+                            <span class="track"><span class="dot"></span></span>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label class="text-sm text-slate-400">Standard flow</label>
+                        <label class="kc-switch inline-flex items-center">
+                            <input type="checkbox" id="swStandard" @(standardInit ? "checked" : "")>
+                            <span class="track"><span class="dot"></span></span>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label class="text-sm text-slate-400">Service account</label>
+                        <label class="kc-switch inline-flex items-center">
+                            <input type="checkbox" id="swService" @(serviceInit ? "checked" : "")>
+                            <span class="track"><span class="dot"></span></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Redirect URIs — дизейблится при Standard=false -->
+        <div id="redirectPanel" class="kc-card p-5 kc-hover mt-3">
+            <div class="text-slate-200 font-semibold mb-2">Redirect URIs</div>
+            <div id="redirList" class="flex flex-wrap gap-2 mb-2"></div>
+            <div class="flex gap-2">
+                <input id="redirInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="https://app.example.com/callback/*" />
+                <button type="button" class="btn-subtle" id="btnAddRedirect">Add</button>
+            </div>
+            <div class="kc-th mt-2">Требуется, когда включён Standard flow.</div>
+        </div>
+    </div>
+
+    <!-- ROLES -->
+    <div class="tab-pane hidden" data-tab="Roles" role="tabpanel">
+        <div class="kc-card p-5 kc-hover">
+            <div class="text-slate-200 font-semibold mb-3">Local roles</div>
+            <div id="locList" class="flex flex-wrap gap-2 mb-2"></div>
+            <div class="flex gap-2">
+                <input id="locInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" />
+                <button type="button" class="btn-subtle" id="btnAddLocal">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SERVICE ROLES -->
+    <div class="tab-pane hidden" data-tab="ServiceRoles" role="tabpanel">
+        <div class="kc-card p-5 kc-hover">
+            <div class="text-slate-200 font-semibold mb-3">Service roles</div>
+            <div class="kc-th mb-2">Назначают роли других сервисов сервисному аккаунту текущего клиента.</div>
+
+            <div id="svcList" class="flex flex-wrap gap-2 mb-3"></div>
+            <div class="flex flex-col md:flex-row gap-2 md:items-center">
+                <select id="svcClient" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full md:w-[360px]">
+                    <option value="">Выберите сервис…</option>
+                </select>
+                <select id="svcRole" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full md:w-[360px]">
+                    <option value="">Выберите роль…</option>
+                </select>
+                <button type="button" class="btn-subtle" id="btnAddServiceRole">Add</button>
+            </div>
+
+            <div class="kc-mini mt-2">Примеры: <code>files-api: api.files.read</code>, <code>billing-api: api.billing.write</code>.</div>
+        </div>
+    </div>
+
+    <!-- SCOPES -->
+    <div class="tab-pane hidden" data-tab="Scopes" role="tabpanel">
+        <div class="kc-card p-5 kc-hover">
+            <div class="text-slate-200 font-semibold mb-3">Default scopes</div>
+            <div class="kc-th mb-2">Список скопов по умолчанию (заглушка).</div>
+            <div id="scopesList" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <!-- FLOWS -->
+    <div class="tab-pane hidden" data-tab="Flows" role="tabpanel">
+        <div class="kc-card p-5 kc-hover">
+            <div class="text-slate-200 font-semibold mb-3">Browser flow</div>
+            <div class="kc-th mb-2">Назначение кастомного browser flow (заглушка).</div>
+            <select id="flowSelect" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full md:w-[360px]">
+                <option>bank-browser-flow</option>
+                <option>strict-browser-flow</option>
+                <option>default-browser</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- CREDENTIALS -->
+    <div class="tab-pane hidden" data-tab="Credentials" role="tabpanel">
+        <div class="kc-card p-5 kc-hover">
+            <div class="text-slate-200 font-semibold mb-3">Credentials</div>
+            <div class="grid md:grid-cols-2 md:gap-x-[9.375rem]">
+                <div class="form-row_small justify-self-center w-full">
+                    <label class="text-sm text-slate-400">Client ID</label>
+                    <div class="flex gap-2 items-center">
+                        <input id="credClientId" class="kc-input rounded-xl px-3 py-2 text-sm w-full" value="@clientId" readonly />
+                        <button class="btn-subtle" id="btnCopyClientId" title="Копировать" aria-label="Копировать">
+                            <!-- copy icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small justify-self-center w-full">
+                    <label class="text-sm text-slate-400">Secret key</label>
+                    <div class="flex gap-2 items-center">
+                        <input id="credSecret" class="kc-input rounded-xl px-3 py-2 text-sm w-full" value="••••••••••••••" />
+                        <button class="btn-subtle" id="btnCopyClientId" title="Копировать" aria-label="Копировать">
+                            <!-- copy icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                        </button>
+                        <button class="btn-danger" id="btnRegenSecret" title="Перегенерировать" aria-label="Перегенерировать">
+                            <!-- refresh icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12a9 9 0 1 1-3-6.7" />
+                                <path d="M21 3v6h-6" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENDPOINTS -->
+    @{
+        var issuer = $"https://keycloak.example.com/realms/{realm}";
+        var auth = $"{issuer}/protocol/openid-connect/auth";
+        var token = $"{issuer}/protocol/openid-connect/token";
+        var user = $"{issuer}/protocol/openid-connect/userinfo";
+        var jwks = $"{issuer}/protocol/openid-connect/certs";
+        var logout = $"{issuer}/protocol/openid-connect/logout";
+        var intros = $"{issuer}/protocol/openid-connect/token/introspect";
+        var revoke = $"{issuer}/protocol/openid-connect/revoke";
+        // опционально (если включено в KC):
+        var device = $"{issuer}/protocol/openid-connect/auth/device";
+        var reg = $"{issuer}/clients-registrations/openid-connect";
+    }
+    <div class="tab-pane hidden" data-tab="Endpoints" role="tabpanel">
+        <div class="kc-card p-5 kc-hover" id="endpoints">
+            <div class="text-slate-200 font-semibold mb-3">Endpoints</div>
+
+            <div class="grid md:grid-cols-2 gap-3">
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">Issuer</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-issuer" value="@issuer" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-issuer" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">Authorization</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-auth" value="@auth" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-auth" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">Token</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-token" value="@token" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-token" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">UserInfo</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-user" value="@user" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-user" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">JWKS</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-jwks" value="@jwks" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-jwks" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">Logout</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-logout" value="@logout" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-logout" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">Introspection</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-intros" value="@intros" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-intros" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">Revocation</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-revoke" value="@revoke" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-revoke" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row_small">
+                    <label class="text-sm text-slate-400">Device Auth</label>
+                    <div class="flex gap-2 items-center">
+                        <input class="kc-input rounded-xl px-3 py-2 text-sm w-full" id="ep-device" value="@device" readonly />
+                        <button type="button" class="btn-subtle" data-copy="#ep-device" title="Copy" aria-label="Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kc-th mt-2">Пути приведены для примера. Подставьте ваш <code>Keycloak BaseUrl</code> и <code>realm</code>.</div>
+        </div>
+    </div>
+
+    <!-- EVENTS -->
+    <div class="tab-pane hidden" data-tab="Events" role="tabpanel">
+        <div class="kc-card p-5 kc-hover">
+            <div class="flex items-center justify-between mb-3">
+                <div class="text-slate-200 font-semibold">Events</div>
+                <div class="text-xs text-slate-400">Created: @(DateTime.Now.AddDays(-5).ToString("g")) by admin</div>
+            </div>
+
+            <div class="grid md:grid-cols-5 gap-2 mb-10">
+                <select id="evFilterType" class="kc-input kc-select rounded-xl px-3 py-2 text-sm">
+                    <option value="">All types</option>
+                </select>
+                <input id="evFrom" type="date" class="kc-input rounded-xl px-3 py-2 text-sm" />
+                <input id="evTo" type="date" class="kc-input rounded-xl px-3 py-2 text-sm" />
+                <input id="evUser" placeholder="User" class="kc-input rounded-xl px-3 py-2 text-sm" />
+                <input id="evIp" placeholder="IP адрес" class="kc-input rounded-xl px-3 py-2 text-sm" />
+            </div>
+
+            <div class="grid grid-cols-12 gap-2 kc-th px-1">
+                <div class="col-span-3">Type</div>
+                <div class="col-span-3">Date</div>
+                <div class="col-span-3">User</div>
+                <div class="col-span-3">IP адрес</div>
+            </div>
+            <div id="eventsRows" class="mt-1"></div>
+            <div id="eventsPager"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function(){
+          // ---------- Вкладки ----------
+          const btns  = document.querySelectorAll('.tab-btn');
+          const panes = document.querySelectorAll('.tab-pane');
+
+          function showTab(tab){
+            panes.forEach(p => p.classList.toggle('hidden', p.dataset.tab !== tab));
+            btns.forEach(b => {
+              const active = (b.dataset.tab === tab);
+              b.classList.toggle('active', active);
+              b.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            history.replaceState(null, '', '#tab=' + encodeURIComponent(tab));
+            localStorage.setItem('kc.details.tab', tab);
+            if (tab === 'Events' && !window.__eventsInited){ if (typeof window.initEvents==='function') window.initEvents(); window.__eventsInited=true; }
+          }
+          const m = location.hash.match(/tab=([^&]+)/);
+          const start = m ? decodeURIComponent(m[1]) : (localStorage.getItem('kc.details.tab') || 'Overview');
+          btns.forEach(b => b.addEventListener('click', ()=> showTab(b.dataset.tab)));
+          showTab(start);
+
+          // ---------- Состояние формы ----------
+          const redirs   = [];
+          const locals   = [];
+          const svcRoles = [];
+
+          // Redirect URIs
+          const swStandard = document.getElementById('swStandard');
+          const redirectPanel = document.getElementById('redirectPanel');
+          const redirInput = document.getElementById('redirInput');
+          const redirList  = document.getElementById('redirList');
+          const btnAddRedirect = document.getElementById('btnAddRedirect');
+
+          function renderChips(el, arr){
+            el.innerHTML = '';
+            arr.forEach((v, idx)=>{
+              const chip = document.createElement('span');
+              chip.className = 'kc-chip';
+              chip.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
+              chip.querySelector('button').addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr); });
+              el.appendChild(chip);
+            });
+          }
+          btnAddRedirect?.addEventListener('click', ()=>{
+            const v = (redirInput.value||'').trim(); if(!v) return;
+            redirs.push(v); redirInput.value=''; renderChips(redirList, redirs);
+          });
+
+          function updateRedirectDisabled(){
+            const on = swStandard?.checked;
+            redirectPanel.classList.toggle('kc-disabled', !on);
+            [redirInput, btnAddRedirect].forEach(x => x && (x.disabled = !on));
+            redirectPanel.querySelectorAll('button').forEach(b => b.disabled = !on);
+          }
+          swStandard?.addEventListener('change', updateRedirectDisabled);
+          updateRedirectDisabled();
+
+          // Local roles
+          const locInput = document.getElementById('locInput');
+          const locList  = document.getElementById('locList');
+          document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
+            const v = (locInput.value||'').trim(); if(!v) return;
+            locals.push(v); locInput.value=''; renderChips(locList, locals);
+          });
+
+          // Service roles (демо)
+          const svcClient = document.getElementById('svcClient');
+          const svcRole   = document.getElementById('svcRole');
+          const svcList   = document.getElementById('svcList');
+          const svcSource = {
+            "billing-api":   ["api.billing.read","api.billing.write"],
+            "analytics-api": ["api.analytics.read","api.analytics.write"],
+            "files-api":     ["api.files.read","api.files.write"]
+          };
+          function fillServiceSources(){
+            if (!svcClient) return;
+            svcClient.innerHTML = '<option value="">Выберите сервис…</option>';
+            Object.keys(svcSource).forEach(c => svcClient.add(new Option(c,c)));
+            fillRoles();
+          }
+          function fillRoles(){
+            if (!svcRole) return;
+            const c = svcClient.value;
+            svcRole.innerHTML = '<option value="">Выберите роль…</option>';
+            (svcSource[c]||[]).forEach(r => svcRole.add(new Option(r,r)));
+          }
+          svcClient?.addEventListener('change', fillRoles);
+          fillServiceSources();
+          document.getElementById('btnAddServiceRole')?.addEventListener('click', ()=>{
+            const c = svcClient.value, r = svcRole.value; if (!c || !r) return;
+            const v = `${c}: ${r}`; svcRoles.push(v); renderChips(svcList, svcRoles);
+          });
+
+          // ---------- Events (ленивая инициализация) ----------
+          window.initEvents = function(){
+            const pageSize = 10;
+            const TYPES = ["CLIENT_CREATED","CLIENT_UPDATED","ROLE_ADDED","ROLE_REMOVED","SCOPE_ASSIGNED","LOGIN","LOGOUT","TOKEN_EXCHANGED"];
+            const USERS = ["alice","bob","charlie","svc-deploy","svc-ci","admin"];
+            const rowsEl  = document.getElementById('eventsRows');
+            const pagerEl = document.getElementById('eventsPager');
+            const selType = document.getElementById('evFilterType');
+            const inFrom  = document.getElementById('evFrom');
+            const inTo    = document.getElementById('evTo');
+            const inUser  = document.getElementById('evUser');
+            const inIp    = document.getElementById('evIp');
+
+            const rand = n => Math.floor(Math.random()*n);
+            function gen(n=40){
+              const now = Date.now(), arr=[];
+              for (let i=0;i<n;i++){
+                const minsBack = rand(60*24*7);
+                const at = new Date(now - minsBack*60000);
+                const ip = `10.${rand(255)}.${rand(255)}.${1+rand(254)}`;
+                arr.push({ type:TYPES[rand(TYPES.length)], at, user:USERS[rand(USERS.length)], ip });
+              }
+              return arr.sort((a,b)=> b.at - a.at);
+            }
+            const all = gen(40);
+            Array.from(new Set(all.map(e=>e.type))).forEach(t=> selType.add(new Option(t,t)));
+
+            let page = 1;
+            const fmt = d => d.toLocaleString();
+
+            function applyFilters(data){
+              const t  = selType.value;
+              const uf = (inUser.value||'').trim().toLowerCase();
+              const ip = (inIp.value||'').trim();
+              const df = inFrom.value ? new Date(inFrom.value) : null;
+              const dt = inTo.value   ? new Date(inTo.value)   : null;
+
+              return data.filter(e=>{
+                if (t && e.type !== t) return false;
+                if (uf && !e.user.toLowerCase().includes(uf)) return false;
+                if (ip && !e.ip.includes(ip)) return false;
+                if (df && e.at < df) return false;
+                if (dt && e.at > new Date(dt.getTime() + 24*3600*1000 - 1)) return false;
+                return true;
+              });
+            }
+
+            function render(){
+              const data = applyFilters(all);
+              const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+              if (page > totalPages) page = totalPages;
+
+              rowsEl.innerHTML = '';
+              const slice = data.slice((page-1)*pageSize, page*pageSize);
+              slice.forEach(e=>{
+                rowsEl.insertAdjacentHTML('beforeend', `
+                  <div class="grid grid-cols-12 gap-2 text-sm py-2 border-b border-white/5 px-1">
+                    <div class="col-span-3 text-slate-200">${e.type}</div>
+                    <div class="col-span-3 text-slate-300">${fmt(e.at)}</div>
+                    <div class="col-span-3 text-slate-300">${e.user}</div>
+                    <div class="col-span-3 text-slate-400">${e.ip}</div>
+                  </div>
+                `);
+              });
+
+              pagerEl.innerHTML = '';
+              if (totalPages > 1){
+                const mk = (label,target,disabled=false,active=false)=>
+                  `<a class="rounded-lg px-3 py-1 text-sm border border-white/10 ${active?'bg-white/10 text-white':(disabled?'pointer-events-none opacity-50':'bg-white/5 hover:bg-white/10')}"
+                      href="#tab=Events" data-page="${target}">${label}</a>`;
+                const inner = [
+                  mk('Prev', Math.max(1,page-1), page===1),
+                  ...Array.from({length: totalPages}, (_,i)=> mk(String(i+1), i+1, false, i+1===page)),
+                  mk('Next', Math.min(totalPages,page+1), page===totalPages)
+                ].join('');
+                pagerEl.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-center gap-1 mt-4">${inner}</div>`);
+                pagerEl.querySelectorAll('a[data-page]').forEach(a => a.addEventListener('click', (ev)=>{ ev.preventDefault(); page = parseInt(a.dataset.page,10); render(); }));
+              }
+            }
+
+            [selType, inFrom, inTo, inUser, inIp].forEach(el=>{
+              el?.addEventListener('input', ()=>{ page=1; render(); });
+              el?.addEventListener('change', ()=>{ page=1; render(); });
+            });
+
+            render();
+          };
+
+          // ---------- Сбор данных перед Save ----------
+          const saveForm = document.getElementById('saveForm');
+          function collect()
+          {
+            // базовые
+            document.getElementById('hidClientId').value       = (document.getElementById('ovClientId').value||'').trim();
+            document.getElementById('hidDescription').value    = (document.getElementById('ovDesc').value||'').trim();
+            document.getElementById('hidClientAuth').value     = document.getElementById('swClientAuth').checked ? 'true' : 'false';
+            document.getElementById('hidStandardFlow').value   = document.getElementById('swStandard').checked ? 'true' : 'false';
+            document.getElementById('hidServiceAccount').value = document.getElementById('swService').checked ? 'true' : 'false';
+            // массивы
+            document.getElementById('hidRedirects').value    = JSON.stringify(redirs);
+            document.getElementById('hidLocalRoles').value   = JSON.stringify(locals);
+            document.getElementById('hidServiceRoles').value = JSON.stringify(svcRoles);
+          }
+          saveForm?.addEventListener('submit', collect);
+        })();
+    </script>
+}
