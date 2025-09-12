@@ -19,6 +19,6 @@ namespace Assistant.Services
         };
 
         public Task<IReadOnlyList<ClientSummary>> GetClientsForUser(ClaimsPrincipal user, CancellationToken ct = default)
-            => Task.FromResult(All); // потом заменим на Keycloak Admin API
+            => Task.FromResult(All);
     }
 }

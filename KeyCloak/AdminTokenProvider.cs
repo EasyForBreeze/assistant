@@ -15,6 +15,9 @@ namespace Assistant.KeyCloak
         private string? _token;
         private DateTimeOffset _expiresAt;
 
+        private bool TokenValid =>
+            !string.IsNullOrEmpty(_token) && DateTimeOffset.UtcNow < _expiresAt.AddSeconds(-30);
+
         public AdminTokenProvider(IOptions<AdminApiOptions> opt, IHttpClientFactory factory)
         {
             _opt = opt.Value;
@@ -23,14 +26,13 @@ namespace Assistant.KeyCloak
 
         public async Task<string> GetAccessTokenAsync(CancellationToken ct = default)
         {
-            // небольшой запас, чтобы не промахнуться по сроку
-            if (!string.IsNullOrEmpty(_token) && DateTimeOffset.UtcNow < _expiresAt.AddSeconds(-30))
+            if (TokenValid)
                 return _token!;
 
             await _lock.WaitAsync(ct);
             try
             {
-                if (!string.IsNullOrEmpty(_token) && DateTimeOffset.UtcNow < _expiresAt.AddSeconds(-30))
+                if (TokenValid)
                     return _token!;
 
                 var baseUrl = _opt.BaseUrl.TrimEnd('/');
