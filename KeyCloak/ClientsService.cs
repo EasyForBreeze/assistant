@@ -247,12 +247,20 @@ namespace Assistant.KeyCloak
                 ?? throw new InvalidOperationException("Cannot resolve created client id.");
 
             // 2) Локальные роли
-            if (spec.LocalRoles?.Count > 0)
-                await EnsureLocalRolesAsync(spec.Realm, createdId, spec.LocalRoles, ct);
+            try
+            {
+                if (spec.LocalRoles?.Count > 0)
+                    await EnsureLocalRolesAsync(spec.Realm, createdId, spec.LocalRoles, ct);
 
-            // 3) Service roles → назначаем на сервис-аккаунт нового клиента
-            if (spec.ServiceAccount && spec.ServiceRoles?.Count > 0)
-                await AssignServiceRolesToServiceAccountAsync(spec.Realm, createdId, spec.ServiceRoles, ct);
+                // 3) Service roles → назначаем на сервис-аккаунт нового клиента
+                if (spec.ServiceAccount && spec.ServiceRoles?.Count > 0)
+                    await AssignServiceRolesToServiceAccountAsync(spec.Realm, createdId, spec.ServiceRoles, ct);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Клиент '{spec.ClientId}' создан, но при назначении ролей произошла ошибка: {ex.Message}", ex);
+            }
 
             return createdId;
         }
@@ -265,21 +273,26 @@ namespace Assistant.KeyCloak
 
             foreach (var name in roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var payload = new { name = name.Trim() };
-
-                var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
-                var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
-
-                var resp = await PostJsonWithFallback(http, urlNew, urlLegacy, payload, ct);
-
-                if (resp.StatusCode == HttpStatusCode.Conflict)
+                try
                 {
-                    // роль уже существует — ок
-                    resp.Dispose();
-                    continue;
+                    var payload = new { name = name.Trim() };
+
+                    var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
+                    var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
+
+                    using var resp = await PostJsonWithFallback(http, urlNew, urlLegacy, payload, ct);
+
+                    if (resp.StatusCode == HttpStatusCode.Conflict)
+                    {
+                        // роль уже существует — ок
+                        continue;
+                    }
+                    await EnsureAuthOrThrow(resp);
                 }
-                await EnsureAuthOrThrow(resp);
-                resp.Dispose();
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Локальная роль '{name}' не назначена: {ex.Message}", ex);
+                }
             }
         }
 
@@ -311,28 +324,30 @@ namespace Assistant.KeyCloak
                     .FirstOrDefault(c => string.Equals(c.ClientId, srcClientId, StringComparison.OrdinalIgnoreCase));
                 if (srcClient == null) throw new InvalidOperationException($"Client '{srcClientId}' not found.");
 
-                // соберём представления ролей
-                var roleReps = new List<KcRoleRep>();
+                var mapNewBase = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
+                var mapLegacyBase = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
+
                 foreach (var roleName in g.Select(x => x.Role.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
-                    var getRoleNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
-                    var getRoleLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+                    try
+                    {
+                        var getRoleNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+                        var getRoleLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
 
-                    var rr = await GetAsyncWithFallback(http, getRoleNew, getRoleLegacy, ct);
-                    await EnsureAuthOrThrow(rr);
-                    var rep = await ReadJson<KcRoleRep>(rr, ct) ?? new KcRoleRep { Name = roleName };
-                    rep.ClientRole = true;
-                    rep.ContainerId = srcClient.Id;
-                    roleReps.Add(rep);
+                        using var rr = await GetAsyncWithFallback(http, getRoleNew, getRoleLegacy, ct);
+                        await EnsureAuthOrThrow(rr);
+                        var rep = await ReadJson<KcRoleRep>(rr, ct) ?? new KcRoleRep { Name = roleName };
+                        rep.ClientRole = true;
+                        rep.ContainerId = srcClient.Id;
+
+                        using var mapResp = await PostJsonWithFallback(http, mapNewBase, mapLegacyBase, new[] { rep }, ct);
+                        await EnsureAuthOrThrow(mapResp);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException($"Сервисная роль '{roleName}' клиента '{srcClientId}' не назначена: {ex.Message}", ex);
+                    }
                 }
-
-                // POST маппинг на пользователя сервис-аккаунта
-                var mapNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
-                var mapLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
-
-                var mapResp = await PostJsonWithFallback(http, mapNew, mapLegacy, roleReps, ct);
-                await EnsureAuthOrThrow(mapResp);
-                mapResp.Dispose();
             }
         }
 
