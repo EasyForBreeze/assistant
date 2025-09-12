@@ -32,7 +32,8 @@ builder.Services.AddHttpClient("kc-admin", (sp, c) =>
 
 builder.Services.AddScoped<Assistant.KeyCloak.RealmsService>();
 builder.Services.AddScoped<Assistant.KeyCloak.ClientsService>();
-builder.Services.AddScoped<IClientsProvider, FakeClientsProvider>();
+builder.Services.AddSingleton<UserClientsRepository>();
+builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();
 builder.Services.AddAuthorization();
 
 builder.Services.Configure<ForwardedHeadersOptions>(opt =>

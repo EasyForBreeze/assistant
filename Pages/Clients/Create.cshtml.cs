@@ -1,4 +1,6 @@
 ﻿using Assistant.KeyCloak;
+using Assistant.Interfaces;
+using Assistant.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -13,11 +15,13 @@ namespace Assistant.Pages.Clients
     {
         private readonly RealmsService _realms;
         private readonly ClientsService _clients;
+        private readonly UserClientsRepository _repo;
 
-        public CreateModel(RealmsService realms, ClientsService clients)
+        public CreateModel(RealmsService realms, ClientsService clients, UserClientsRepository repo)
         {
             _realms = realms;
             _clients = clients;
+            _repo = repo;
         }
 
         public int StepToShow { get; set; } = 0;
@@ -258,6 +262,18 @@ namespace Assistant.Pages.Clients
             try
             {
                 var createdId = await _clients.CreateClientAsync(spec, ct);
+
+                var summary = new ClientSummary(
+                    Name: AppName ?? spec.ClientId,
+                    ClientId: spec.ClientId,
+                    Realm: spec.Realm,
+                    Enabled: true,
+                    FlowStandard: spec.StandardFlow,
+                    FlowService: spec.ServiceAccount);
+                var username = User.Identity?.Name ?? string.Empty;
+                if (!string.IsNullOrEmpty(username))
+                    await _repo.AddAsync(username, summary, ct);
+
                 TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
                 return RedirectToPage("/Index");
             }
