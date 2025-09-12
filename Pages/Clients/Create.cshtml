@@ -38,7 +38,7 @@
             <div class="mt-3 divider"></div>
         </div>
 
-        <form method="post" id="createForm" class="p-5" asp-page-handler="Create">
+        <form method="post" id="createForm" class="p-5" asp-page-handler="Create" autocomplete="off">
             <!-- hidden -->
             <input type="hidden" asp-for="ClientId" id="hidClientId" />
             <input type="hidden" asp-for="Description" id="hidDesc" />
@@ -87,19 +87,28 @@
                         <label class="block text-sm text-slate-400 mb-1">Client ID</label>
                         <div class="prefix-wrap">
                             <span class="prefix-chip" id="cidPrefix">app-bank-</span>
-                            <input id="cidInput" class="prefix-input" maxlength="25" placeholder="my-service" value="@(Model.ClientId != null && Model.ClientId.StartsWith("app-bank-")? Model.ClientId.Substring("app-bank-".Length): (Model.ClientId ?? ""))" />
+                            <input id="cidInput"
+                                   class="prefix-input"
+                                   maxlength="25"
+                                   placeholder="my-service"
+                                   autocomplete="off" autocapitalize="off" spellcheck="false"
+                                   value="@(Model.ClientId != null && Model.ClientId.StartsWith("app-bank-") ? Model.ClientId.Substring("app-bank-".Length) : (Model.ClientId ?? ""))" />
                         </div>
                         <div id="errCid" class="err">Укажите Client ID (часть после префикса).</div>
                         <div class="hint mt-1">Префикс <b>app-bank-</b> помогает соблюдать корпоративный стандарт.</div>
                     </div>
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Description <span class="text-slate-500">(необязательно)</span></label>
-                        <input id="descInput" value="@(Model.Description ?? "")" maxlength="64" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="Краткое описание клиента" />
+                        <input id="descInput"
+                               value="@(Model.Description ?? "")"
+                               maxlength="64"
+                               class="kc-input rounded-xl px-3 py-2 text-sm w-full"
+                               placeholder="Краткое описание клиента"
+                               autocomplete="off" autocapitalize="off" spellcheck="false" />
                         <div class="hint mt-1">Например: «Веб-приложение для платежей».</div>
                     </div>
                 </div>
             </div>
-
 
             <!-- Шаг 3: System info (АС) -->
             <div class="space-y-4 hidden" id="step-3" data-step="3">
@@ -108,23 +117,44 @@
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Название АС <span class="text-rose-500">*</span></label>
-                        <input id="appName" value="@(Model.AppName ?? "")" maxlength="40" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="Напр., «Платёжный сервис»" />
+                        <input id="appName"
+                               value="@(Model.AppName ?? "")"
+                               maxlength="40"
+                               class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full"
+                               placeholder="Напр., «Платёжный сервис»"
+                               autocomplete="off" autocapitalize="off" spellcheck="false" />
                         <div id="errAppName" class="err">Укажите название АС.</div>
                     </div>
 
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Ссылка на АС</label>
-                        <input id="appUrl" value="@(Model.AppUrl ?? "")" maxlength="100" type="url" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="https://example.company/app" />
+                        <input id="appUrl"
+                               value="@(Model.AppUrl ?? "")"
+                               maxlength="100"
+                               type="url"
+                               class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full"
+                               placeholder="https://example.company/app"
+                               autocomplete="off" autocapitalize="off" spellcheck="false" />
                     </div>
 
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Владелец сервиса</label>
-                        <input id="serviceOwner" value="@(Model.ServiceOwner ?? "")" maxlength="25" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="ФИО" />
+                        <input id="serviceOwner"
+                               value="@(Model.ServiceOwner ?? "")"
+                               maxlength="25"
+                               class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full"
+                               placeholder="ФИО"
+                               autocomplete="off" autocapitalize="off" spellcheck="false" />
                     </div>
 
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Менеджер сервиса</label>
-                        <input id="serviceManager" value="@(Model.ServiceManager ?? "")" maxlength="30" class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full" placeholder="ФИО" />
+                        <input id="serviceManager"
+                               value="@(Model.ServiceManager ?? "")"
+                               maxlength="30"
+                               class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full"
+                               placeholder="ФИО"
+                               autocomplete="off" autocapitalize="off" spellcheck="false" />
                     </div>
                 </div>
             </div>
@@ -180,7 +210,7 @@
                 <div class="kc-mini mt-1">Пример: <code>https://localhost:8080/*</code>.</div>
                 <div id="redirList" class="flex flex-wrap gap-2"></div>
                 <div class="flex gap-2">
-                    <input id="redirInput" maxlength="100" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="https://app.example.com/callback" />
+                    <input id="redirInput" maxlength="100" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="https://app.example.com/callback" autocomplete="off" autocapitalize="off" spellcheck="false" />
                     <button type="button" class="btn-subtle" onclick="addRedirect()">Add</button>
                 </div>
             </div>
@@ -191,62 +221,52 @@
                 <div class="hint">Создаются на этом клиенте для назначения другим клиентам/пользователям для доступа.</div>
                 <div id="locList" class="flex flex-wrap gap-2"></div>
                 <div class="flex gap-2">
-                    <input id="locInput" maxlength="25" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" />
+                    <input id="locInput" maxlength="25" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" autocomplete="off" autocapitalize="off" spellcheck="false" />
                     <button type="button" class="btn-subtle" onclick="addLocal()">Add</button>
                 </div>
             </div>
+
             <!-- Шаг 7: Service roles -->
             <div class="space-y-4 hidden" data-step="7">
                 <div class="text-slate-200 font-semibold text-lg">6. Service roles</div>
                 <div class="hint">
-                    Назначают роли <b>других сервисов</b> (клиентов). Сначала найдите сервис по <code>clientId</code>, затем добавляйте его роли.
+                    Введите <b>clientId</b> (или часть) <u>или</u> фрагмент имени роли. В результатах можно
+                    выбрать клиента (чтобы просмотреть все его роли) или сразу роль для добавления.
                 </div>
 
                 <!-- Выбранные роли (чипсы) -->
                 <div id="svcList" class="flex flex-wrap gap-2 mb-2"></div>
 
-                <!-- Поиск клиента: ТОЛЬКО по кнопке -->
+                <!-- Поиск клиента ИЛИ роли -->
                 <div class="relative space-y-2">
                     <div class="flex gap-2 items-center">
                         <input id="svcSearchInput"
                                class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
-                               placeholder="например: app-bank-cdi или 'cdi'" />
+                               placeholder="например: app-bank-portal или 'read'"
+                               autocomplete="off" autocapitalize="off" spellcheck="false"/>
                         <button type="button" id="svcSearchBtn" class="btn-subtle">Найти</button>
                     </div>
 
-                    <!-- Выпадающий список найденных клиентов -->
+                    <!-- Выпадающий список найденных клиентов/ролей -->
                     <div id="svcSearchDd"
                          class="absolute z-20 mt-1 w-full md:w-[420px] kc-card p-2 hidden"></div>
                 </div>
 
-                <!-- Выбранный клиент + роли -->
+                <!-- Выбранный клиент + его роли -->
                 <div id="svcChosen" class="hidden space-y-3">
                     <div class="flex items-center gap-3">
                         <span class="kc-tag" id="svcChosenTag"></span>
                         <button type="button" class="btn-link underline text-slate-300" id="svcChange">Сменить сервис</button>
                     </div>
 
-                    <div class="space-y-2">
-                        <div class="flex gap-2 items-center">
-                            <input id="svcRoleFilter"
-                                   class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
-                                   placeholder="фильтр по имени роли...">
-                            <button type="button" id="svcRoleRefresh" class="btn-subtle">Найти</button>
-                        </div>
+                    <!-- Список ролей выбранного клиента -->
+                    <div id="svcRoleList" class="grid md:grid-cols-2 gap-2"></div>
+                    <div><button type="button" id="btnMoreRoles" class="btn-subtle hidden">Показать ещё</button></div>
 
-                        <!-- Список ролей выбранного клиента -->
-                        <div id="svcRoleList" class="grid md:grid-cols-2 gap-2"></div>
-
-                        <div>
-                            <button type="button" id="btnMoreRoles" class="btn-subtle hidden">Показать ещё</button>
-                        </div>
-
-                        <div id="svcErr" class="err"></div>
-                        <div class="kc-mini">Клик по роли добавляет её в список выше. Формат: <code>clientId: roleName</code>.</div>
-                    </div>
+                    <div id="svcErr" class="err"></div>
+                    <div class="kc-mini">Клик по роли добавляет её в список выше. Формат: <code>clientId: roleName</code>.</div>
                 </div>
             </div>
-
 
             <!-- Навигация -->
             <div class="wizard-nav mt-6">
@@ -258,6 +278,7 @@
                 </div>
             </div>
         </form>
+
         @if (!ViewContext.ViewData.ModelState.IsValid)
         {
             <div class="kc-toast kc-toast-error" id="formErrorToast" role="alert">
@@ -300,7 +321,7 @@
           const btnPrev   = $('#btnPrev');
           const btnNext   = $('#btnNext');
           const btnCreate = $('#btnCreate');
-          const btnSkip   = $('#btnSkip'); // оставим, но прячем, он почти не нужен
+          const btnSkip   = $('#btnSkip');
           if (btnSkip) btnSkip.style.display = 'none';
 
           // Basics
@@ -324,7 +345,7 @@
           // Redirects / Local / Service roles (чипы)
           const redirInput = $('#redirInput'), redirList = $('#redirList');
           const locInput   = $('#locInput'),   locList   = $('#locList');
-          const svcClient  = $('#svcClient'),  svcRole   = $('#svcRole'), svcList = $('#svcList');
+          const svcList    = $('#svcList');
 
           // Hidden fields (BindProperty)
           const hidClientId      = $('#hidClientId');
@@ -341,14 +362,14 @@
           const hidServiceManager= $('#hidServiceManager');
 
           // ---- Chips data
-         const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
-         const locals   = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
-         const svcRoles = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
-            renderChips(redirList, redirs);
-            renderChips(locList,  locals);
-            renderChips(svcList,  svcRoles);
+          const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
+          const locals   = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
+          const svcRoles = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
+          renderChips(redirList, redirs);
+          renderChips(locList,  locals);
+          renderChips(svcList,  svcRoles);
 
-          // ---- Panels & headers (динамически, без “магических” массивов)
+          // ---- Panels & headers
           const panels = $$('[data-step]');
           const heads  = $$('[id^="stepHead"]');
           const stepNum = (el)=> +el.getAttribute('data-step') || +el.id.replace('stepHead','');
@@ -366,7 +387,7 @@
             return nums.filter(n => (predicates[n] ? predicates[n]() : true));
           };
 
-          // ---- Realm description (без сетевых запросов)
+          // ---- Realm description
           function updateRealmDesc()
           {
             const id = realmSelect?.value || '';
@@ -399,6 +420,21 @@
             return true;
           }
 
+          // ---- Enforce: Service account => Client Authentication
+          function enforceServiceAuth() {
+            if (swService?.checked) {
+              if (swClientAuth) {
+                swClientAuth.checked = true;
+                swClientAuth.setAttribute('disabled','disabled');
+              }
+            } else {
+              swClientAuth?.removeAttribute('disabled');
+            }
+          }
+          swClientAuth?.addEventListener('change', () => {
+            if (swService?.checked) swClientAuth.checked = true;
+          });
+
           // ---- Step engine
           let current = 0;
 
@@ -417,17 +453,12 @@
             const en = enabledSteps();
             if (en.length===0) return;
 
-            // подобрать ближайший доступный
             let target = en.includes(requested) ? requested : en.find(x=>x>=requested) ?? en[en.length-1];
             current = target;
 
-            // панели
             panels.forEach(p => p.classList.toggle('hidden', stepNum(p)!==current));
-
-            // хэдэры/“кружки”
             setHeaderStates(en);
 
-            // кнопки
             const i = en.indexOf(current);
             const isFirst = (i===0), isLast = (i===en.length-1);
             btnPrev && (btnPrev.style.display = isFirst ? 'none' : '');
@@ -437,7 +468,6 @@
 
           function gotoRelative(delta)
           {
-            // валидация только при движении вперёд
             if (delta>0 && !validateStep(current)) return;
             const en = enabledSteps();
             const i  = en.indexOf(current);
@@ -445,13 +475,11 @@
             showStep(en[j]);
           }
 
-          // клики по “кружкам” с защитой: нельзя перепрыгнуть через невалидные
           heads.forEach(h=>{
             h.addEventListener('click', ()=>{
               const en = enabledSteps();
               const target = stepNum(h);
-              if (!en.includes(target)) return; // выключен — не кликаем
-              // провалидируем все предыдущие доступные
+              if (!en.includes(target)) return;
               for (const s of en){
                 if (s===target) break;
                 if (!validateStep(s)){ showStep(s); return; }
@@ -460,19 +488,16 @@
             });
           });
 
-          // переключатели влияют на доступность шагов
           [swStandard, swService].forEach(el=> el?.addEventListener('change', ()=>{
+            enforceServiceAuth();
             const en = enabledSteps();
-            // если текущий выключили — прыгнем на ближайший доступный
             if (!en.includes(current)) showStep(en[en.length-1]);
-            else showStep(current); // просто перерисовать состояния
+            else showStep(current);
           }));
 
-          // навигация
           btnPrev?.addEventListener('click', (e)=>{ e.preventDefault(); gotoRelative(-1); });
           btnNext?.addEventListener('click', (e)=>{ e.preventDefault(); gotoRelative(1); });
 
-          // Realm live
           if (realmSelect)
           {
             updateRealmDesc();
@@ -500,11 +525,6 @@
             const v = trim(locInput?.value); if(!v) return;
             locals.push(v); locInput.value=''; renderChips(locList, locals);
           };
-          window.addServiceRole = function()
-          {
-            const c = svcClient?.value, r = svcRole?.value; if(!c||!r) return;
-            const v = `${c}: ${r}`; svcRoles.push(v); renderChips(svcList, svcRoles);
-          };
 
           // Submit
           document.getElementById('createForm')?.addEventListener('submit', (e)=>
@@ -517,17 +537,17 @@
             }
 
             const suffix   = trim(cidInput?.value);
-            const clientId = cidPrefix + suffix;
+            const clientId = 'app-bank-' + suffix;
 
             hidClientId.value       = clientId;
             hidDesc.value           = trim(descInput?.value);
-            hidClientAuth.value     = swClientAuth?.checked ? 'true':'false';
+            hidClientAuth.value     = (swService?.checked || swClientAuth?.checked) ? 'true':'false'; // авто-включение
             hidFlowStandard.value   = swStandard?.checked   ? 'true':'false';
             hidFlowService.value    = swService?.checked    ? 'true':'false';
 
             hidRedirects.value      = JSON.stringify(redirs);
             hidLocalRoles.value     = JSON.stringify(locals);
-            hidServiceRoles.value   = JSON.stringify(svcRoles);
+            //hidServiceRoles.value   = JSON.stringify(svcRoles);
 
             hidAppName.value        = trim(appNameInput?.value);
             hidAppUrl.value         = trim(appUrlInput?.value);
@@ -535,29 +555,42 @@
             hidServiceManager.value = trim(managerInput?.value);
           });
 
-          // старт: на первом доступном шаге
-        const _srv = Number(window.__stepToShow || 0);
-        const _en  = enabledSteps();
-        const _start = (_srv > 0 && _en.length) ? (_en.includes(_srv) ? _srv : (_en.find(x => x >= _srv) ?? _en[_en.length - 1])): (_en[0] ?? 1);showStep(_start);
+          // старт
+          enforceServiceAuth();
+          const _srv = Number(window.__stepToShow || 0);
+          const _en  = enabledSteps();
+          const _start = (_srv > 0 && _en.length) ? (_en.includes(_srv) ? _srv : (_en.find(x => x >= _srv) ?? _en[_en.length - 1])): (_en[0] ?? 1);
+          showStep(_start);
 
+          // локальные рендер-функции уже объявлены выше
+          function renderChips(listEl, arr){
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            arr.forEach((v, idx) => {
+              const span = document.createElement('span');
+              span.className = 'chip';
+              span.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
+              span.querySelector('button')
+                  .addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(listEl, arr); });
+              listEl.appendChild(span);
+            });
+          }
+        })();
+    </script>
 
-
-
-
-
-
-                (() => {
-          // --- изоляция и безопасные helpers
+    <!-- Изолированный модуль Service Roles -->
+    <script>
+        (() => {
+          // helpers
           const $  = (s, r=document)=>r.querySelector(s);
-          const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
           const el = (t, cls, html)=>{ const n=document.createElement(t); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
           const safe = fn => (...a)=>{ try { return fn(...a); } catch(e){ console.error('[ServiceRolesUI]', e); } };
 
-          // --- DOM (ищем только в шаге 7, чтобы не влиять на другие части)
+          // scope: только шаг 7
           const step = document.querySelector('[data-step="7"]');
           if (!step) return;
 
-          const realmEl = document.getElementById("@Html.IdFor(m => m.Realm)") || $('#realmSelect') || $('select[name="Realm"]');
+          const realmEl  = document.getElementById("@Html.IdFor(m => m.Realm)") || $('#realmSelect') || $('select[name="Realm"]');
           const hidRoles = document.getElementById("@Html.IdFor(m => m.ServiceRolesJson)") || $('#hidServiceRoles') || $('input[name="ServiceRolesJson"]');
 
           const svcList        = $('#svcList', step);
@@ -569,95 +602,194 @@
           const svcChosenTag   = $('#svcChosenTag', step);
           const svcChangeBtn   = $('#svcChange', step);
 
-          const svcRoleFilter  = $('#svcRoleFilter', step);
-          const svcRoleRefresh = $('#svcRoleRefresh', step);
           const svcRoleList    = $('#svcRoleList', step);
           const btnMoreRoles   = $('#btnMoreRoles', step);
           const svcErr         = $('#svcErr', step);
 
-          // --- состояние (локальное; не конфликтует с внешними переменными)
           const PAGE_URL = '@Url.Page(null)';
-          const state = {
-            roles: [],                 // "clientId: roleName"
-            currentClient: null,       // { id, clientId, name? }
-            page: 0, size: 50, more: false, q: '',
-            cacheClients: new Map(),   // query → [{id,clientId,name}]
-            cacheRoles: new Map()      // key(clientId|q|page) → [roleName]
-          };
           const realm = ()=> (realmEl?.value ?? '').trim();
 
-          // --- утилиты
+          // --- MIN LEN
+          const MIN_LEN = 3;
+
+          // state
+          const state = {
+            chips: [],
+            currentClient: null,           // { id, clientId }
+            page: 0, size: 50, more: false,
+            cacheClients: new Map(),       // q → [{id,clientId}]
+            cacheClientRoles: new Map(),   // clientId|page → ["roleA",...]
+            lastQuery: '',
+            roleScanCursor: 0,
+            roleScanHasMore: false,
+            pendingEmpty: false
+          };
+
+          // utils
           async function fetchJson(url, opts){
             const r = await fetch(url, {headers:{'Accept':'application/json'}, ...opts});
             if(!r.ok) throw new Error(`HTTP ${r.status}`);
             return r.json();
           }
-          function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; }
+          function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; svcSearchDd.style.minHeight=''; }
           function showDd(){ if(!svcSearchDd) return; svcSearchDd.classList.remove('hidden'); }
+          function showLoading(){
+            if (!svcSearchDd) return;
+            svcSearchDd.innerHTML = `<div class="px-3 py-2 text-slate-400">Ищем...</div>`;
+            svcSearchDd.style.minHeight = '56px';
+            showDd();
+          }
 
-          // --- persist/restore
-          function persist(){ if(hidRoles) hidRoles.value = JSON.stringify(state.roles); }
+          // chips persist/restore
+          function persist(){ if(hidRoles) hidRoles.value = JSON.stringify(state.chips); }
           function renderChips(){
             if(!svcList) return;
             svcList.innerHTML = '';
-            for (const s of state.roles){
+            for (const s of state.chips){
               const chip = el('div','kc-chip'); chip.textContent = s;
               const x = el('button','kc-chip-x','×'); x.type='button'; x.title='Удалить';
               x.addEventListener('click', safe(()=>{
-                const i = state.roles.indexOf(s);
-                if(i>=0){ state.roles.splice(i,1); renderChips(); persist(); }
+                const i = state.chips.indexOf(s);
+                if(i>=0){ state.chips.splice(i,1); renderChips(); persist(); }
               }));
               chip.appendChild(x);
               svcList.appendChild(chip);
             }
           }
-          // восстановление из hidden (не бросаем ошибок)
           safe(()=>{
             const raw = hidRoles?.value || '[]';
             const arr = JSON.parse(raw);
-            if (Array.isArray(arr)) for (const v of arr) if (typeof v === 'string' && !state.roles.includes(v)) state.roles.push(v);
+            if (Array.isArray(arr)) for (const v of arr) if (typeof v === 'string' && !state.chips.includes(v)) state.chips.push(v);
             renderChips();
           })();
 
-          // --- поиск клиентов (по кнопке)
-          async function searchClients(query){
-            const q = (query||'').trim();
-            if (!q){ hideDd(); return; }
-            if (state.cacheClients.has(q)){ renderClientDd(state.cacheClients.get(q)); return; }
-            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(realm())}&q=${encodeURIComponent(q)}&first=0&max=20`;
-            const data = await fetchJson(url); // [{id,clientId,name?}]
-            state.cacheClients.set(q, data || []);
-            renderClientDd(data || []);
+          // ------- SEARCH: clients + roles (когда клиента не знаем)
+          async function searchClients(q){
+            if (state.cacheClients.has(q)) return state.cacheClients.get(q);
+            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(realm())}&q=${encodeURIComponent(q)}&first=0&max=12`;
+            const clients = await fetchJson(url); // [{id, clientId}]
+            state.cacheClients.set(q, clients || []);
+            return clients || [];
           }
-          function renderClientDd(items){
-            if(!svcSearchDd) return;
-            if (!items?.length){ svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Ничего не найдено</div>`; showDd(); return; }
-            svcSearchDd.innerHTML = '';
-            for (const it of items){
+
+          async function searchRolesAcrossClients(q, append=false, isFirst=false){
+            const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(realm())}`
+                      + `&q=${encodeURIComponent(q)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
+            const res = await fetchJson(url); // { hits:[{clientUuid,clientId,role}], nextClientFirst }
+            const hits = res.hits || [];
+
+            renderRoleHits(hits, append);
+
+            if (typeof res.nextClientFirst === 'number' && res.nextClientFirst >= 0){
+              state.roleScanCursor = res.nextClientFirst;
+              state.roleScanHasMore = true;
+              ensureMoreHitsButton();
+            } else {
+              state.roleScanHasMore = false;
+              removeMoreHitsButton();
+            }
+
+            if (isFirst){
+              if (state.pendingEmpty && hits.length === 0){
+                svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`;
+                showDd();
+              }
+              state.pendingEmpty = false;
+            }
+          }
+
+          function ensureMoreHitsButton(){
+            if (!svcSearchDd) return;
+            if (svcSearchDd.querySelector('#roleHitsMoreBtn')) return;
+            const btn = el('button','w-full text-center px-3 py-2 mt-2 hover:bg-slate-700 rounded-md','Показать ещё совпадения');
+            btn.type='button';
+            btn.id='roleHitsMoreBtn';
+            btn.addEventListener('click', safe(()=> searchRolesAcrossClients(state.lastQuery, true, false)));
+            svcSearchDd.appendChild(btn);
+          }
+          function removeMoreHitsButton(){
+            document.getElementById('roleHitsMoreBtn')?.remove();
+          }
+
+          function renderRoleHits(hits, append){
+            if (!svcSearchDd || !hits.length) return;
+            let roleSec = svcSearchDd.querySelector('#roleHitsSection');
+            if (!append){
+              roleSec?.remove();
+              roleSec = el('div', null, '');
+              roleSec.id = 'roleHitsSection';
+              roleSec.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Роли (совпадения)'));
+              svcSearchDd.appendChild(roleSec);
+            }
+            for (const m of hits){
               const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
               line.type='button';
-              line.textContent = [it.clientId, it.name].filter(Boolean).join(' — ');
-              line.addEventListener('click', safe(()=> selectClient(it)));
-              svcSearchDd.appendChild(line);
+              line.textContent = `${m.clientId}: ${m.role}`;
+              line.title = 'Добавить роль';
+              line.addEventListener('click', safe(()=>{
+                const val = `${m.clientId}: ${m.role}`;
+                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
+                hideDd();
+              }));
+              roleSec.appendChild(line);
             }
+          }
+
+          // clients list: ТОЛЬКО clientId
+          function renderClientList(clients){
+            if (!svcSearchDd || !clients.length) return;
+            const wrap = el('div', null, '');
+            wrap.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Клиенты'));
+            clients.forEach(it=>{
+              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
+              line.type='button';
+              line.textContent = it.clientId;
+              line.addEventListener('click', safe(()=> selectClient(it)));
+              wrap.appendChild(line);
+            });
+            svcSearchDd.innerHTML = '';               // заменяем лоадер
+            svcSearchDd.appendChild(wrap);
+            svcSearchDd.appendChild(el('div','divider my-2',''));
             showDd();
           }
-          svcSearchBtn?.addEventListener('click', safe(()=> searchClients(svcSearchInput?.value)));
-          document.addEventListener('click', safe((e)=>{
-            if (!svcSearchDd) return;
-            if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
-          }));
 
-          // --- выбор клиента
+          async function unifiedSearch(qRaw){
+            const q = (qRaw||'').trim();
+            if (q.length < MIN_LEN){
+              svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Введите минимум ${MIN_LEN} символа</div>`;
+              showDd();
+              return;
+            }
+
+            state.lastQuery = q;
+            state.roleScanCursor = 0;
+            state.roleScanHasMore = false;
+            state.pendingEmpty = true;
+            removeMoreHitsButton();
+
+            showLoading();
+
+            // 1) Клиенты — ждём и рисуем
+            const clients = await searchClients(q);
+            if (clients.length){
+              renderClientList(clients);
+              state.pendingEmpty = false;
+            }
+
+            // 2) Роли — фоном
+            searchRolesAcrossClients(q, false, true).catch(()=>{});
+          }
+
+          // выбор клиента
           function selectClient(it){
-            state.currentClient = { id: it.id, clientId: it.clientId, name: it.name };
-            if (svcChosenTag) svcChosenTag.textContent = [it.clientId, it.name].filter(Boolean).join(' — ');
+            state.currentClient = { id: it.id, clientId: it.clientId };
+            if (svcChosenTag) svcChosenTag.textContent = it.clientId;
             svcChosen?.classList.remove('hidden');
             hideDd();
             if (svcSearchInput) svcSearchInput.value = it.clientId;
 
-            state.page = 0; state.q = (svcRoleFilter?.value || '').trim();
-            if (svcRoleList) svcRoleList.innerHTML = '';
+            state.page = 0;
+            svcRoleList && (svcRoleList.innerHTML = '');
             loadRoles({append:false});
           }
           svcChangeBtn?.addEventListener('click', safe(()=>{
@@ -666,20 +798,18 @@
             svcSearchInput?.focus();
           }));
 
-          // --- роли выбранного клиента
+          // роли клиента, пагинация
           async function loadRoles({append}){
             if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
             if (!state.currentClient) return;
 
-            const key = `${state.currentClient.clientId}|${state.q}|${state.page}`;
+            const key = `${state.currentClient.clientId}|${state.page}`;
             try{
-              let roles;
-              if (state.cacheRoles.has(key)){
-                roles = state.cacheRoles.get(key);
-              } else {
-                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(realm())}&first=${state.page*state.size}&max=${state.size}` + (state.q?`&q=${encodeURIComponent(state.q)}`:'');
-                roles = await fetchJson(url); // ["roleA","roleB",...]
-                state.cacheRoles.set(key, roles || []);
+              let roles = state.cacheClientRoles.get(key);
+              if (!roles){
+                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(realm())}&first=${state.page*state.size}&max=${state.size}`;
+                roles = await fetchJson(url);
+                state.cacheClientRoles.set(key, roles || []);
               }
               renderRoles(roles || [], {append});
               state.more = (roles?.length || 0) === state.size;
@@ -695,7 +825,7 @@
               if (!append) svcRoleList.innerHTML = `<div class="px-2 py-1 text-slate-400">Ролей не найдено</div>`;
               return;
             }
-            for (const name of roles){
+            roles.forEach(name=>{
               const item = el('button','kc-card px-3 py-2 hover:bg-slate-700 text-left');
               item.type = 'button';
               item.textContent = name;
@@ -703,35 +833,32 @@
               item.addEventListener('click', safe(()=>{
                 if (!state.currentClient) return;
                 const val = `${state.currentClient.clientId}: ${name}`;
-                if (!state.roles.includes(val)){
-                  state.roles.push(val);
-                  renderChips();
-                  persist();
-                }
+                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
               }));
               svcRoleList.appendChild(item);
-            }
+            });
           }
-
-          // --- фильтр и пагинация
-          svcRoleRefresh?.addEventListener('click', safe(()=>{
-            state.q = (svcRoleFilter?.value || '').trim();
-            state.page = 0;
-            loadRoles({append:false});
-          }));
           btnMoreRoles?.addEventListener('click', safe(()=>{
             state.page += 1;
             loadRoles({append:true});
           }));
 
-        })();
+          // events: дизейблим кнопку до MIN_LEN, мгновенный лоадер + rAF, блок Enter, клик вне
+          const updateBtnState = ()=> { if (svcSearchBtn && svcSearchInput) svcSearchBtn.disabled = (svcSearchInput.value.trim().length < MIN_LEN); };
+          updateBtnState();
+          svcSearchInput?.addEventListener('input', updateBtnState);
 
+          svcSearchBtn?.addEventListener('click', safe(()=>{
+            const q = svcSearchInput?.value || '';
+            showLoading();
+            requestAnimationFrame(()=> unifiedSearch(q));
+          }));
 
-
-
-
-
+          svcSearchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+          document.addEventListener('click', safe((e)=>{
+            if (!svcSearchDd) return;
+            if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
+          }));
         })();
     </script>
-
 }

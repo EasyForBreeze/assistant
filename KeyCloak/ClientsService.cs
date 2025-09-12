@@ -1,6 +1,7 @@
 ﻿// Assistant/KeyCloak/ClientsService.cs
 using Microsoft.Extensions.Options;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace Assistant.KeyCloak
@@ -9,24 +10,49 @@ namespace Assistant.KeyCloak
     {
         public string Id { get; set; } = "";
         public string ClientId { get; set; } = "";
-        public string? Name { get; set; }
     }
 
+    // Ответы KC (берём только нужные поля)
     internal sealed class ClientRep
     {
         public string? Id { get; set; }
         public string? ClientId { get; set; }
-        public string? Name { get; set; }
     }
     internal sealed class RoleRep
     {
         public string? Name { get; set; }
-        public string? Description { get; set; }
     }
 
+    internal sealed class KcRoleRep
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public bool? ClientRole { get; set; }
+        public string? ContainerId { get; set; }
+    }
+
+    internal sealed class KcUserRep
+    {
+        public string? Id { get; set; }
+        public string? Username { get; set; }
+    }
+
+    public sealed record RoleHit(string ClientUuid, string ClientId, string Role);
+
+    public sealed record NewClientSpec(
+        string Realm,
+        string ClientId,
+        string? Description,
+        bool ClientAuthentication,      // true => confidential (publicClient=false)
+        bool StandardFlow,
+        bool ServiceAccount,
+        List<string> RedirectUris,
+        List<string> LocalRoles,
+        List<(string ClientId, string Role)> ServiceRoles
+    );
+
     /// <summary>
-    /// Поиск клиентов и получение ролей через Keycloak Admin API (без кэша).
-    /// Возвращает только клиентов, у которых подстрока встречается в clientId или name (case-insensitive).
+    /// Работа с Keycloak Admin API: поиск/роли и создание клиента (без кэша).
     /// </summary>
     public class ClientsService
     {
@@ -41,40 +67,94 @@ namespace Assistant.KeyCloak
 
         private string BaseUrl => _opt.BaseUrl.TrimEnd('/');
 
+        private static readonly JsonSerializerOptions JsonOpts = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private static string UR(string s) => Uri.EscapeDataString(s);
+
+        // ======= Public: Search/List/Roles =======
+
+        /// <summary>
+        /// Поиск клиентов по подстроке в clientId (CI). Возвращает только Id и ClientId.
+        /// </summary>
         public async Task<List<ClientShort>> SearchClientsAsync(
             string realm, string query, int first = 0, int max = 20, CancellationToken ct = default)
         {
             query = (query ?? "").Trim();
-            if (string.IsNullOrEmpty(query)) return new(); // пустой ввод — пустой список
+            if (string.IsNullOrEmpty(query)) return new();
             first = Math.Max(0, first);
             max = Math.Clamp(max <= 0 ? 20 : max, 1, 200);
 
             var http = _factory.CreateClient("kc-admin");
 
-            // Берём search= из KC и ДОПОЛНИТЕЛЬНО фильтруем строгим подстрочным совпадением
-            var urlNew = $"{BaseUrl}/admin/realms/{Uri.EscapeDataString(realm)}/clients?search={Uri.EscapeDataString(query)}&first={first}&max={max}";
-            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{Uri.EscapeDataString(realm)}/clients?search={Uri.EscapeDataString(query)}&first={first}&max={max}";
+            // 1) Точное clientId=
+            var urlExactNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?clientId={UR(query)}&briefRepresentation=true";
+            var urlExactLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?clientId={UR(query)}&briefRepresentation=true";
 
-            var resp = await http.GetAsync(urlNew, ct);
-            if (resp.StatusCode == HttpStatusCode.NotFound)
-            {
-                resp.Dispose();
-                resp = await http.GetAsync(urlLegacy, ct);
-            }
-
+            var resp = await GetAsyncWithFallback(http, urlExactNew, urlExactLegacy, ct);
             await EnsureAuthOrThrow(resp);
-            var list = await ReadJson<List<ClientRep>>(resp, ct) ?? new();
+            var exact = await ReadJson<List<ClientRep>>(resp, ct) ?? new();
 
             static bool ContainsCi(string? s, string needle) =>
                 !string.IsNullOrEmpty(s) && s.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0;
 
+            var mappedExact = exact
+                .Where(x => !string.IsNullOrWhiteSpace(x.ClientId))
+                .Select(MapClient)
+                .Where(c => ContainsCi(c.ClientId, query))
+                .ToList();
+
+            if (mappedExact.Count > 0) return mappedExact;
+
+            // 2) search= + пагинация
+            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
+            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
+
+            var resp2 = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
+            await EnsureAuthOrThrow(resp2);
+            var list = await ReadJson<List<ClientRep>>(resp2, ct) ?? new();
+
             return list
                 .Where(x => !string.IsNullOrWhiteSpace(x.ClientId))
-                .Select(c => new ClientShort { Id = c.Id ?? "", ClientId = c.ClientId ?? "", Name = c.Name })
-                .Where(c => ContainsCi(c.ClientId, query) || ContainsCi(c.Name, query))
+                .Select(MapClient)
+                .Where(c => ContainsCi(c.ClientId, query))
+                .ToList();
+
+            static ClientShort MapClient(ClientRep c) => new ClientShort
+            {
+                Id = c.Id ?? "",
+                ClientId = c.ClientId ?? ""
+            };
+        }
+
+        /// <summary>
+        /// Плоский листинг клиентов (для сканирования при поиске роли, когда клиент неизвестен).
+        /// </summary>
+        public async Task<List<ClientShort>> ListClientsAsync(string realm, int first = 0, int max = 50, CancellationToken ct = default)
+        {
+            first = Math.Max(0, first);
+            max = Math.Clamp(max <= 0 ? 50 : max, 1, 200);
+
+            var http = _factory.CreateClient("kc-admin");
+
+            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?first={first}&max={max}&briefRepresentation=true";
+            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?first={first}&max={max}&briefRepresentation=true";
+
+            var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
+            await EnsureAuthOrThrow(resp);
+            var list = await ReadJson<List<ClientRep>>(resp, ct) ?? new();
+
+            return list
+                .Where(x => !string.IsNullOrWhiteSpace(x.ClientId))
+                .Select(c => new ClientShort { Id = c.Id ?? "", ClientId = c.ClientId ?? "" })
                 .ToList();
         }
 
+        /// <summary>
+        /// Роли клиента (с опциональным server-side search по названию роли).
+        /// </summary>
         public async Task<List<string>> GetClientRolesAsync(
             string realm, string clientUuid, int first = 0, int max = 50, string? search = null, CancellationToken ct = default)
         {
@@ -83,38 +163,208 @@ namespace Assistant.KeyCloak
 
             var http = _factory.CreateClient("kc-admin");
             var qs = $"briefRepresentation=true&first={first}&max={max}" +
-                     (string.IsNullOrWhiteSpace(search) ? "" : $"&search={Uri.EscapeDataString(search!)}");
+                     (string.IsNullOrWhiteSpace(search) ? "" : $"&search={UR(search!)}");
 
-            var urlNew = $"{BaseUrl}/admin/realms/{Uri.EscapeDataString(realm)}/clients/{Uri.EscapeDataString(clientUuid)}/roles?{qs}";
-            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{Uri.EscapeDataString(realm)}/clients/{Uri.EscapeDataString(clientUuid)}/roles?{qs}";
+            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles?{qs}";
+            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles?{qs}";
 
-            var resp = await http.GetAsync(urlNew, ct);
-            if (resp.StatusCode == HttpStatusCode.NotFound)
-            {
-                resp.Dispose();
-                resp = await http.GetAsync(urlLegacy, ct);
-            }
-
+            var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
             await EnsureAuthOrThrow(resp);
             var roles = await ReadJson<List<RoleRep>>(resp, ct) ?? new();
+
             return roles.Select(r => r.Name)
                         .Where(n => !string.IsNullOrWhiteSpace(n))
                         .Select(n => n!)
                         .ToList();
         }
 
+        /// <summary>
+        /// Поиск ролей по подстроке, когда клиент неизвестен: сканируем пачку клиентов и берём роли с search=.
+        /// Возвращаем совпадения и смещение для следующей пачки.
+        /// </summary>
+        public async Task<(List<RoleHit> Hits, int NextClientFirst)> FindRolesAcrossClientsAsync(
+            string realm, string roleQuery, int clientFirst = 0, int clientsToScan = 25, int rolesPerClient = 10, CancellationToken ct = default)
+        {
+            roleQuery = (roleQuery ?? "").Trim();
+            if (roleQuery.Length == 0) return (new(), -1);
+
+            var clients = await ListClientsAsync(realm, clientFirst, clientsToScan, ct);
+            var hits = new List<RoleHit>();
+
+            foreach (var c in clients)
+            {
+                var roles = await GetClientRolesAsync(realm, c.Id, 0, rolesPerClient, roleQuery, ct);
+                foreach (var r in roles)
+                    hits.Add(new RoleHit(c.Id, c.ClientId, r));
+            }
+
+            var next = clients.Count < clientsToScan ? -1 : clientFirst + clients.Count;
+            return (hits, next);
+        }
+
+        // ======= Public: Create client (+ roles + service roles) =======
+
+        public async Task<string> CreateClientAsync(NewClientSpec spec, CancellationToken ct = default)
+        {
+            var http = _factory.CreateClient("kc-admin");
+
+            // 1) Создаём клиента
+            var body = new
+            {
+                clientId = spec.ClientId,
+                protocol = "openid-connect",
+                publicClient = !spec.ClientAuthentication,
+                serviceAccountsEnabled = spec.ServiceAccount,
+                standardFlowEnabled = spec.StandardFlow,
+                directAccessGrantsEnabled = false,
+                redirectUris = spec.RedirectUris?.Distinct().ToArray() ?? Array.Empty<string>(),
+                description = spec.Description
+            };
+
+            var postNew = $"{BaseUrl}/admin/realms/{UR(spec.Realm)}/clients";
+            var postLegacy = $"{BaseUrl}/auth/admin/realms/{UR(spec.Realm)}/clients";
+
+            var createResp = await PostJsonWithFallback(http, postNew, postLegacy, body, ct);
+            if (createResp.StatusCode == HttpStatusCode.Conflict)
+                throw new InvalidOperationException($"Client '{spec.ClientId}' already exists.");
+            await EnsureAuthOrThrow(createResp);
+
+            // извлекаем id из Location
+            string? createdId = null;
+            if (createResp.Headers.Location is Uri loc)
+            {
+                var seg = loc.Segments.LastOrDefault();
+                if (!string.IsNullOrWhiteSpace(seg)) createdId = seg.TrimEnd('/');
+            }
+            createResp.Dispose();
+
+            // fallback: найдём по clientId, если Location не пришёл
+            createdId ??= (await SearchClientsAsync(spec.Realm, spec.ClientId, 0, 1, ct))
+                .FirstOrDefault(c => string.Equals(c.ClientId, spec.ClientId, StringComparison.OrdinalIgnoreCase))?.Id
+                ?? throw new InvalidOperationException("Cannot resolve created client id.");
+
+            // 2) Локальные роли
+            if (spec.LocalRoles?.Count > 0)
+                await EnsureLocalRolesAsync(spec.Realm, createdId, spec.LocalRoles, ct);
+
+            // 3) Service roles → назначаем на сервис-аккаунт нового клиента
+            if (spec.ServiceAccount && spec.ServiceRoles?.Count > 0)
+                await AssignServiceRolesToServiceAccountAsync(spec.Realm, createdId, spec.ServiceRoles, ct);
+
+            return createdId;
+        }
+
+        // ======= Internal helpers for Create =======
+
+        private async Task EnsureLocalRolesAsync(string realm, string clientUuid, IEnumerable<string> roles, CancellationToken ct)
+        {
+            var http = _factory.CreateClient("kc-admin");
+
+            foreach (var name in roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var payload = new { name = name.Trim() };
+
+                var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
+                var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
+
+                var resp = await PostJsonWithFallback(http, urlNew, urlLegacy, payload, ct);
+
+                if (resp.StatusCode == HttpStatusCode.Conflict)
+                {
+                    // роль уже существует — ок
+                    resp.Dispose();
+                    continue;
+                }
+                await EnsureAuthOrThrow(resp);
+                resp.Dispose();
+            }
+        }
+
+        private async Task AssignServiceRolesToServiceAccountAsync(string realm, string newClientUuid, List<(string ClientId, string Role)> pairs, CancellationToken ct)
+        {
+            var http = _factory.CreateClient("kc-admin");
+
+            // userId сервис-аккаунта нового клиента
+            var getSvcUserNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(newClientUuid)}/service-account-user";
+            var getSvcUserLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(newClientUuid)}/service-account-user";
+
+            var userResp = await GetAsyncWithFallback(http, getSvcUserNew, getSvcUserLegacy, ct);
+            await EnsureAuthOrThrow(userResp);
+            var svcUser = await ReadJson<KcUserRep>(userResp, ct) ?? throw new InvalidOperationException("Service account user not found.");
+            if (string.IsNullOrWhiteSpace(svcUser.Id)) throw new InvalidOperationException("Service account user id is empty.");
+
+            // Группируем роли по исходному клиенту: clientId → [roleName]
+            var groups = pairs
+                .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
+                .GroupBy(p => p.ClientId.Trim(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var g in groups)
+            {
+                var srcClientId = g.Key;
+
+                // найдём UUID исходного клиента по его clientId
+                var srcClient = (await SearchClientsAsync(realm, srcClientId, 0, 2, ct))
+                    .FirstOrDefault(c => string.Equals(c.ClientId, srcClientId, StringComparison.OrdinalIgnoreCase));
+                if (srcClient == null) throw new InvalidOperationException($"Client '{srcClientId}' not found.");
+
+                // соберём представления ролей
+                var roleReps = new List<KcRoleRep>();
+                foreach (var roleName in g.Select(x => x.Role.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    var getRoleNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+                    var getRoleLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+
+                    var rr = await GetAsyncWithFallback(http, getRoleNew, getRoleLegacy, ct);
+                    await EnsureAuthOrThrow(rr);
+                    var rep = await ReadJson<KcRoleRep>(rr, ct) ?? new KcRoleRep { Name = roleName };
+                    rep.ClientRole = true;
+                    rep.ContainerId = srcClient.Id;
+                    roleReps.Add(rep);
+                }
+
+                // POST маппинг на пользователя сервис-аккаунта
+                var mapNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
+                var mapLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
+
+                var mapResp = await PostJsonWithFallback(http, mapNew, mapLegacy, roleReps, ct);
+                await EnsureAuthOrThrow(mapResp);
+                mapResp.Dispose();
+            }
+        }
+
+        // ======= HTTP helpers (new → legacy fallback) =======
+
+        private static async Task<HttpResponseMessage> GetAsyncWithFallback(HttpClient http, string newUrl, string legacyUrl, CancellationToken ct)
+        {
+            var resp = await http.GetAsync(newUrl, ct);
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+            {
+                resp.Dispose();
+                resp = await http.GetAsync(legacyUrl, ct);
+            }
+            return resp;
+        }
+
+        private static async Task<HttpResponseMessage> PostJsonWithFallback(HttpClient http, string newUrl, string legacyUrl, object body, CancellationToken ct)
+        {
+            var resp = await http.PostAsJsonAsync(newUrl, body, JsonOpts, ct);
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+            {
+                resp.Dispose();
+                resp = await http.PostAsJsonAsync(legacyUrl, body, JsonOpts, ct);
+            }
+            return resp;
+        }
+
         private static async Task EnsureAuthOrThrow(HttpResponseMessage resp)
         {
             if (resp.StatusCode == HttpStatusCode.Forbidden)
-                throw new UnauthorizedAccessException("Недостаточно прав для чтения клиентов/ролей (realm-management).");
+                throw new UnauthorizedAccessException("Недостаточно прав для операции (нужны права realm-management).");
             resp.EnsureSuccessStatusCode();
             await Task.CompletedTask;
         }
 
         private static async Task<T?> ReadJson<T>(HttpResponseMessage resp, CancellationToken ct)
-        {
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            return await resp.Content.ReadFromJsonAsync<T>(options, ct);
-        }
+            => await resp.Content.ReadFromJsonAsync<T>(JsonOpts, ct);
     }
 }

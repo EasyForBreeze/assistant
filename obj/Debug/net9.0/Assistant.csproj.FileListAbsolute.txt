@@ -1,5 +1,4 @@
 C:\Users\bream\source\repos\Assistant\Assistant\bin\Debug\net9.0\appsettings.Development.json
-C:\Users\bream\source\repos\Assistant\Assistant\bin\Debug\net9.0\appsettings.json
 C:\Users\bream\source\repos\Assistant\Assistant\bin\Debug\net9.0\Assistant.staticwebassets.runtime.json
 C:\Users\bream\source\repos\Assistant\Assistant\bin\Debug\net9.0\Assistant.staticwebassets.endpoints.json
 C:\Users\bream\source\repos\Assistant\Assistant\bin\Debug\net9.0\Assistant.exe
@@ -106,3 +105,5 @@ C:\Users\bream\source\repos\Assistant\Assistant\bin\Debug\net9.0\System.Identity
 C:\Users\bream\source\repos\Assistant\Assistant\obj\Debug\net9.0\Assistant.csproj.AssemblyReference.cache
 C:\Users\bream\source\repos\Assistant\Assistant\obj\Debug\net9.0\Assistant.csproj.Up2Date
 C:\Users\bream\source\repos\Assistant\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-x6akiibj3p.gz
+C:\Users\bream\source\repos\Assistant\Assistant\obj\Debug\net9.0\Assistant.sourcelink.json
+C:\Users\bream\source\repos\Assistant\Assistant\bin\Debug\net9.0\appsettings.json

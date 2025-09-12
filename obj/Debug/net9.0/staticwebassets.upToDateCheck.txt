@@ -1,4 +1,3 @@
-wwwroot\css\kc.css
 wwwroot\css\site.css
 wwwroot\favicon.ico
 wwwroot\js\site.js
@@ -62,6 +61,7 @@ wwwroot\lib\jquery\dist\jquery.slim.js
 wwwroot\lib\jquery\dist\jquery.slim.min.js
 wwwroot\lib\jquery\dist\jquery.slim.min.map
 wwwroot\lib\jquery\LICENSE.txt
+wwwroot\css\kc.css
 C:\Users\bream\source\repos\Assistant\Assistant\wwwroot\css\site.css
 C:\Users\bream\source\repos\Assistant\Assistant\wwwroot\favicon.ico
 C:\Users\bream\source\repos\Assistant\Assistant\wwwroot\js\site.js
