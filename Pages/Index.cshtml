@@ -78,6 +78,19 @@
     </div>
 </div>
 
+@if (TempData["FlashOk"] is string flash)
+{
+    <div class="kc-toast kc-toast-success" id="flashToast" role="alert">
+        <div class="kc-toast-icon">✓</div>
+        <div class="kc-toast-body">
+            <div class="kc-toast-title">@flash</div>
+        </div>
+        <button type="button" class="kc-toast-close" aria-label="Закрыть"
+                onclick="this.closest('.kc-toast').remove()">×</button>
+    </div>
+    <script>setTimeout(() => document.getElementById('flashToast')?.remove(), 10000);</script>
+}
+
 @if (!Model.Clients.Any())
 {
     <div class="kc-card p-10 text-center">

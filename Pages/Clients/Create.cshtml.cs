@@ -157,18 +157,31 @@ namespace Assistant.Pages.Clients
             var badRedirects = new List<string>();
             foreach (var s in redirects)
             {
-                if (!Uri.TryCreate(s, UriKind.Absolute, out var uri))
-                    badRedirects.Add(s);
-                else
+                var candidate = s;
+                var starPos = s.IndexOf('*');
+                if (starPos >= 0)
                 {
-                    var httpsOk = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-                    var httpLocalOk = uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase)
-                                      && (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-                                          || IPAddress.TryParse(uri.Host, out _));
-                    if (!(httpsOk || httpLocalOk)) badRedirects.Add(s);
-                    if (!string.IsNullOrEmpty(uri.Fragment)) badRedirects.Add(s);
-                    if (s.Contains("*")) badRedirects.Add(s);
+                    // Разрешаем шаблон типа https://host/path/*
+                    if (starPos != s.Length - 1 || starPos == 0 || s[starPos - 1] != '/')
+                    {
+                        badRedirects.Add(s);
+                        continue;
+                    }
+                    candidate = s[..starPos];
                 }
+
+                if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+                {
+                    badRedirects.Add(s);
+                    continue;
+                }
+
+                var httpsOk = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+                var httpLocalOk = uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase)
+                                  && (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                                      || IPAddress.TryParse(uri.Host, out _));
+                if (!(httpsOk || httpLocalOk)) badRedirects.Add(s);
+                if (!string.IsNullOrEmpty(uri.Fragment)) badRedirects.Add(s);
             }
             if (badRedirects.Count > 0)
                 ModelState.AddModelError(nameof(RedirectUrisJson), $"Некорректные Redirect URI: {string.Join(", ", badRedirects.Distinct())}");
