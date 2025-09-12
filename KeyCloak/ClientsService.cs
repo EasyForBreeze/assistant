@@ -7,11 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace Assistant.KeyCloak
 {
-    public sealed class ClientShort
-    {
-        public string Id { get; set; } = "";
-        public string ClientId { get; set; } = "";
-    }
+    public sealed record ClientShort(string Id, string ClientId);
 
     // Ответы KC (берём только нужные поля)
     internal sealed class ClientRep
@@ -97,7 +93,7 @@ namespace Assistant.KeyCloak
             var urlExactLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?clientId={UR(query)}&briefRepresentation=true";
 
             var resp = await GetAsyncWithFallback(http, urlExactNew, urlExactLegacy, ct);
-            await EnsureAuthOrThrow(resp);
+            EnsureAuthOrThrow(resp);
             var exact = await ReadJson<List<ClientRep>>(resp, ct) ?? new();
 
             static bool ContainsCi(string? s, string needle) =>
@@ -116,7 +112,7 @@ namespace Assistant.KeyCloak
             var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
 
             var resp2 = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
-            await EnsureAuthOrThrow(resp2);
+            EnsureAuthOrThrow(resp2);
             var list = await ReadJson<List<ClientRep>>(resp2, ct) ?? new();
 
             return list
@@ -125,11 +121,9 @@ namespace Assistant.KeyCloak
                 .Where(c => ContainsCi(c.ClientId, query))
                 .ToList();
 
-            static ClientShort MapClient(ClientRep c) => new ClientShort
-            {
-                Id = c.Id ?? "",
-                ClientId = c.ClientId ?? ""
-            };
+            static ClientShort MapClient(ClientRep c) => new ClientShort(
+                c.Id ?? string.Empty,
+                c.ClientId ?? string.Empty);
         }
 
         /// <summary>
@@ -146,12 +140,12 @@ namespace Assistant.KeyCloak
             var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?first={first}&max={max}&briefRepresentation=true";
 
             var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
-            await EnsureAuthOrThrow(resp);
+            EnsureAuthOrThrow(resp);
             var list = await ReadJson<List<ClientRep>>(resp, ct) ?? new();
 
             return list
                 .Where(x => !string.IsNullOrWhiteSpace(x.ClientId))
-                .Select(c => new ClientShort { Id = c.Id ?? "", ClientId = c.ClientId ?? "" })
+                .Select(c => new ClientShort(c.Id ?? string.Empty, c.ClientId ?? string.Empty))
                 .ToList();
         }
 
@@ -172,7 +166,7 @@ namespace Assistant.KeyCloak
             var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles?{qs}";
 
             var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
-            await EnsureAuthOrThrow(resp);
+            EnsureAuthOrThrow(resp);
             var roles = await ReadJson<List<RoleRep>>(resp, ct) ?? new();
 
             return roles.Select(r => r.Name)
@@ -230,7 +224,7 @@ namespace Assistant.KeyCloak
             var createResp = await PostJsonWithFallback(http, postNew, postLegacy, body, ct);
             if (createResp.StatusCode == HttpStatusCode.Conflict)
                 throw new InvalidOperationException($"Client '{spec.ClientId}' already exists.");
-            await EnsureAuthOrThrow(createResp);
+            EnsureAuthOrThrow(createResp);
 
             // извлекаем id из Location
             string? createdId = null;
@@ -287,7 +281,7 @@ namespace Assistant.KeyCloak
                         // роль уже существует — ок
                         continue;
                     }
-                    await EnsureAuthOrThrow(resp);
+                    EnsureAuthOrThrow(resp);
                 }
                 catch (Exception ex)
                 {
@@ -305,7 +299,7 @@ namespace Assistant.KeyCloak
             var getSvcUserLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(newClientUuid)}/service-account-user";
 
             var userResp = await GetAsyncWithFallback(http, getSvcUserNew, getSvcUserLegacy, ct);
-            await EnsureAuthOrThrow(userResp);
+            EnsureAuthOrThrow(userResp);
             var svcUser = await ReadJson<KcUserRep>(userResp, ct) ?? throw new InvalidOperationException("Service account user not found.");
             userResp.Dispose();
             if (string.IsNullOrWhiteSpace(svcUser.Id)) throw new InvalidOperationException("Service account user id is empty.");
@@ -335,13 +329,13 @@ namespace Assistant.KeyCloak
                         var getRoleLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
 
                         using var rr = await GetAsyncWithFallback(http, getRoleNew, getRoleLegacy, ct);
-                        await EnsureAuthOrThrow(rr);
+                        EnsureAuthOrThrow(rr);
                         var rep = await ReadJson<KcRoleRep>(rr, ct) ?? new KcRoleRep { Name = roleName };
                         rep.ClientRole = true;
                         rep.ContainerId = srcClient.Id;
 
                         using var mapResp = await PostJsonWithFallback(http, mapNewBase, mapLegacyBase, new[] { rep }, ct);
-                        await EnsureAuthOrThrow(mapResp);
+                        EnsureAuthOrThrow(mapResp);
                     }
                     catch (Exception ex)
                     {
@@ -375,12 +369,11 @@ namespace Assistant.KeyCloak
             return resp;
         }
 
-        private static async Task EnsureAuthOrThrow(HttpResponseMessage resp)
+        private static void EnsureAuthOrThrow(HttpResponseMessage resp)
         {
             if (resp.StatusCode == HttpStatusCode.Forbidden)
                 throw new UnauthorizedAccessException("Недостаточно прав для операции (нужны права realm-management).");
             resp.EnsureSuccessStatusCode();
-            await Task.CompletedTask;
         }
 
         private static async Task<T?> ReadJson<T>(HttpResponseMessage resp, CancellationToken ct)
