@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Assistant.KeyCloak
 {
@@ -69,7 +70,9 @@ namespace Assistant.KeyCloak
 
         private static readonly JsonSerializerOptions JsonOpts = new()
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
         private static string UR(string s) => Uri.EscapeDataString(s);
@@ -291,6 +294,7 @@ namespace Assistant.KeyCloak
             var userResp = await GetAsyncWithFallback(http, getSvcUserNew, getSvcUserLegacy, ct);
             await EnsureAuthOrThrow(userResp);
             var svcUser = await ReadJson<KcUserRep>(userResp, ct) ?? throw new InvalidOperationException("Service account user not found.");
+            userResp.Dispose();
             if (string.IsNullOrWhiteSpace(svcUser.Id)) throw new InvalidOperationException("Service account user id is empty.");
 
             // Группируем роли по исходному клиенту: clientId → [roleName]
