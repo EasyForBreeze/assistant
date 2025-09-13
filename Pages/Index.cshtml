@@ -91,14 +91,14 @@
     <script>setTimeout(() => document.getElementById('flashToast')?.remove(), 10000);</script>
 }
 
-@if (!Model.Clients.Any())
+@if (!Model.Clients.Any() && Model.ShowEmptyMessage)
 {
     <div class="kc-card p-10 text-center">
         <div class="text-slate-200 text-lg font-semibold mb-1">Нет клиентов</div>
         <div class="text-slate-400 text-sm">Попробуйте другой поиск или создайте нового клиента.</div>
     </div>
 }
-else
+else if (Model.Clients.Any())
 {
     <!-- Сетка карточек клиентов -->
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
