@@ -56,14 +56,7 @@ namespace Assistant.Pages
                 return;
             }
 
-            var all = await _provider.GetClientsForUser(User);
-            Clients = string.IsNullOrEmpty(Q)
-                ? all.ToList()
-                : all.Where(c =>
-                    (c.Name?.Contains(Q, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (c.ClientId?.Contains(Q, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (c.Realm?.Contains(Q, StringComparison.OrdinalIgnoreCase) ?? false)
-                  ).ToList();
+            Clients = (await _provider.GetClientsForUser(User)).ToList();
             ShowEmptyMessage = true;
         }
     }
