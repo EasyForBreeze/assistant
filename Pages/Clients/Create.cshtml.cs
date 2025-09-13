@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace Assistant.Pages.Clients
 {
@@ -16,6 +17,15 @@ namespace Assistant.Pages.Clients
         private readonly RealmsService _realms;
         private readonly ClientsService _clients;
         private readonly UserClientsRepository _repo;
+        private static readonly HashSet<string> SystemClients = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "account",
+            "account-console",
+            "admin-cli",
+            "broker",
+            "realm-management",
+            "security-admin-console"
+        };
 
         public CreateModel(RealmsService realms, ClientsService clients, UserClientsRepository repo)
         {
@@ -113,6 +123,9 @@ namespace Assistant.Pages.Clients
         private async Task LoadViewDataAsync()
         {
             var names = await _realms.GetRealmsAsync();
+            if (User.IsInRole("assistant-user") && !User.IsInRole("assistant-admin"))
+                names = names.Where(n => !string.Equals(n.Realm, "master", StringComparison.OrdinalIgnoreCase)).ToList();
+
             RealmOptions = names.Select(n => new SelectListItem { Value = n.Realm, Text = n.Realm }).ToList();
             Realm ??= RealmOptions.FirstOrDefault()?.Value;
             var dict = names.ToDictionary(r => r.Realm, r => r.DisplayName ?? "");
@@ -152,6 +165,9 @@ namespace Assistant.Pages.Clients
 
             if (!await _realms.RealmExistsAsync(Realm ?? ""))
                 ModelState.AddModelError(nameof(Realm), "Такого realm не существует.");
+
+            if (!User.IsInRole("assistant-admin") && string.Equals(Realm, "master", StringComparison.OrdinalIgnoreCase))
+                ModelState.AddModelError(nameof(Realm), "Realm 'master' недоступен.");
 
             // Service account => обязательно включаем Client Authentication
             if (FlowService) ClientAuth = true;
@@ -218,7 +234,7 @@ namespace Assistant.Pages.Clients
                 if (idx <= 0 || idx >= s.Length - 1) { badSvc.Add(s); continue; }
                 var svc = s[..idx].Trim();
                 var role = s[(idx + 1)..].Trim();
-                if (!clientIdRx.IsMatch(svc) || !roleRx.IsMatch(role)) badSvc.Add(s);
+                if (!clientIdRx.IsMatch(svc) || !roleRx.IsMatch(role) || SystemClients.Contains(svc)) badSvc.Add(s);
             }
             if (badSvc.Any())
                 ModelState.AddModelError(nameof(ServiceRolesJson), $"Некорректные сервисные роли: {string.Join(", ", badSvc)}");
