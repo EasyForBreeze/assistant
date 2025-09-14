@@ -1,5 +1,6 @@
 ﻿// Assistant/KeyCloak/ClientsService.cs
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -9,11 +10,35 @@ namespace Assistant.KeyCloak
 {
     public sealed record ClientShort(string Id, string ClientId);
 
+    public sealed record ClientDetails(
+        string Id,
+        string ClientId,
+        bool Enabled,
+        string? Description,
+        bool ClientAuth,
+        bool StandardFlow,
+        bool ServiceAccount,
+        List<string> RedirectUris,
+        List<string> LocalRoles,
+        List<(string ClientId, string Role)> ServiceRoles
+    );
+
     // Ответы KC (берём только нужные поля)
     internal sealed class ClientRep
     {
         public string? Id { get; set; }
         public string? ClientId { get; set; }
+    }
+    internal sealed class ClientFullRep
+    {
+        public string? Id { get; set; }
+        public string? ClientId { get; set; }
+        public bool? Enabled { get; set; }
+        public string? Description { get; set; }
+        public bool? PublicClient { get; set; }
+        public bool? StandardFlowEnabled { get; set; }
+        public bool? ServiceAccountsEnabled { get; set; }
+        public List<string>? RedirectUris { get; set; }
     }
     internal sealed class RoleRep
     {
@@ -32,6 +57,16 @@ namespace Assistant.KeyCloak
     {
         public string? Id { get; set; }
         public string? Username { get; set; }
+    }
+
+    internal sealed class RoleMappingsRep
+    {
+        public Dictionary<string, ClientMapping>? ClientMappings { get; set; }
+    }
+
+    internal sealed class ClientMapping
+    {
+        public List<RoleRep>? Mappings { get; set; }
     }
 
     public sealed record RoleHit(string ClientUuid, string ClientId, string Role);
@@ -150,6 +185,40 @@ namespace Assistant.KeyCloak
         }
 
         /// <summary>
+        /// Полные сведения о клиенте вместе с ролями и redirect URIs.
+        /// </summary>
+        public async Task<ClientDetails?> GetClientDetailsAsync(string realm, string clientId, CancellationToken ct = default)
+        {
+            var http = _factory.CreateClient("kc-admin");
+
+            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?clientId={UR(clientId)}";
+            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?clientId={UR(clientId)}";
+
+            using var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
+            EnsureAuthOrThrow(resp);
+            var list = await ReadJson<List<ClientFullRep>>(resp, ct) ?? new();
+            var rep = list.FirstOrDefault(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
+            if (rep == null || string.IsNullOrWhiteSpace(rep.Id) || string.IsNullOrWhiteSpace(rep.ClientId))
+                return null;
+
+            var localRoles = await GetClientRolesAsync(realm, rep.Id!, 0, 1000, null, ct);
+            var svcRoles = await GetServiceAccountRolesAsync(realm, rep.Id!, ct);
+
+            return new ClientDetails(
+                rep.Id!,
+                rep.ClientId!,
+                rep.Enabled ?? false,
+                rep.Description,
+                !(rep.PublicClient ?? true),
+                rep.StandardFlowEnabled ?? false,
+                rep.ServiceAccountsEnabled ?? false,
+                rep.RedirectUris?.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r!).ToList() ?? new(),
+                localRoles,
+                svcRoles
+            );
+        }
+
+        /// <summary>
         /// Роли клиента (с опциональным server-side search по названию роли).
         /// </summary>
         public async Task<List<string>> GetClientRolesAsync(
@@ -197,6 +266,42 @@ namespace Assistant.KeyCloak
 
             var next = clients.Count < clientsToScan ? -1 : clientFirst + clients.Count;
             return (hits, next);
+        }
+
+        private async Task<List<(string ClientId, string Role)>> GetServiceAccountRolesAsync(string realm, string clientUuid, CancellationToken ct)
+        {
+            var http = _factory.CreateClient("kc-admin");
+
+            var getSvcUserNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
+            var getSvcUserLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
+
+            using var userResp = await GetAsyncWithFallback(http, getSvcUserNew, getSvcUserLegacy, ct);
+            EnsureAuthOrThrow(userResp);
+            var svcUser = await ReadJson<KcUserRep>(userResp, ct);
+            userResp.Dispose();
+            if (svcUser?.Id == null) return new();
+
+            var mapUrlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings";
+            var mapUrlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings";
+
+            using var mapResp = await GetAsyncWithFallback(http, mapUrlNew, mapUrlLegacy, ct);
+            EnsureAuthOrThrow(mapResp);
+            var mappings = await ReadJson<RoleMappingsRep>(mapResp, ct);
+            mapResp.Dispose();
+
+            var list = new List<(string ClientId, string Role)>();
+            if (mappings?.ClientMappings != null)
+            {
+                foreach (var kv in mappings.ClientMappings)
+                {
+                    var roles = kv.Value.Mappings;
+                    if (roles == null) continue;
+                    foreach (var r in roles)
+                        if (!string.IsNullOrWhiteSpace(r.Name))
+                            list.Add((kv.Key, r.Name!));
+                }
+            }
+            return list;
         }
 
         // ======= Public: Create client (+ roles + service roles) =======

@@ -2,14 +2,14 @@
 @model Assistant.Pages.Clients.DetailsModel
 @{
     ViewData["Title"] = "Client details";
-    var client = Model.Client; // заглушка: используем, если есть
-    string clientId = client?.ClientId ?? Model.ClientId ?? "app-bank-sample";
-    string realm = client?.Realm ?? Model.Realm ?? "internal-bank-idm";
-    bool enabled = client?.Enabled ?? true;
-    bool clientAuthInit = client?.ClientAuth ?? true;
-    bool standardInit = client?.StandardFlow ?? true;
-    bool serviceInit = client?.ServiceAccount ?? false;
-    string description = client?.Description ?? "Description from Keycloak (stub)";
+    var client = Model.Client;
+    string clientId = client.ClientId;
+    string realm = client.Realm;
+    bool enabled = client.Enabled;
+    bool clientAuthInit = client.ClientAuth;
+    bool standardInit = client.StandardFlow;
+    bool serviceInit = client.ServiceAccount;
+    string description = client.Description ?? "";
 }
 
 
@@ -396,9 +396,9 @@
           showTab(start);
 
           // ---------- Состояние формы ----------
-          const redirs   = [];
-          const locals   = [];
-          const svcRoles = [];
+          const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
+          const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
+          const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
 
           // Redirect URIs
           const swStandard = document.getElementById('swStandard');
@@ -406,6 +406,7 @@
           const redirInput = document.getElementById('redirInput');
           const redirList  = document.getElementById('redirList');
           const btnAddRedirect = document.getElementById('btnAddRedirect');
+          renderChips(redirList, redirs);
 
           function renderChips(el, arr){
             el.innerHTML = '';
@@ -434,6 +435,7 @@
           // Local roles
           const locInput = document.getElementById('locInput');
           const locList  = document.getElementById('locList');
+          renderChips(locList, locals);
           document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
             const v = (locInput.value||'').trim(); if(!v) return;
             locals.push(v); locInput.value=''; renderChips(locList, locals);
@@ -443,6 +445,7 @@
           const svcClient = document.getElementById('svcClient');
           const svcRole   = document.getElementById('svcRole');
           const svcList   = document.getElementById('svcList');
+          renderChips(svcList, svcRoles);
           const svcSource = {
             "billing-api":   ["api.billing.read","api.billing.write"],
             "analytics-api": ["api.analytics.read","api.analytics.write"],
