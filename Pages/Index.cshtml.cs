@@ -20,6 +20,7 @@ namespace Assistant.Pages
             _clients = clients;
         }
 
+        // Show 20 clients per page
         private const int PageSize = 20;
 
         public List<ClientSummary> Clients { get; private set; } = [];
