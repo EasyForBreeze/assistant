@@ -10,6 +10,8 @@
     bool standardInit = client.StandardFlow;
     bool serviceInit = client.ServiceAccount;
     string description = client.Description ?? "";
+    string browserFlow = client.BrowserFlow ?? "";
+    string clientSecret = Model.ClientSecret ?? "";
 }
 
 
@@ -167,7 +169,7 @@
     <div class="tab-pane hidden" data-tab="Scopes" role="tabpanel">
         <div class="kc-card p-5 kc-hover">
             <div class="text-slate-200 font-semibold mb-3">Default scopes</div>
-            <div class="kc-th mb-2">Список скопов по умолчанию (заглушка).</div>
+            <div class="kc-th mb-2">Scopes assigned to the client by default.</div>
             <div id="scopesList" class="flex flex-wrap gap-2"></div>
         </div>
     </div>
@@ -177,6 +179,7 @@
         <div class="kc-card p-5 kc-hover">
             <div class="text-slate-200 font-semibold mb-3">Browser flow</div>
             <div class="kc-th mb-2">Назначение кастомного browser flow (заглушка).</div>
+            <div class="kc-th mb-2">Current: <span class="text-slate-200">@browserFlow</span></div>
             <select id="flowSelect" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full md:w-[360px]">
                 <option>bank-browser-flow</option>
                 <option>strict-browser-flow</option>
@@ -204,19 +207,25 @@
                     </div>
                 </div>
 
+                @if (!string.IsNullOrEmpty(clientSecret))
+                {
                 <div class="form-row_small justify-self-center w-full">
                     <label class="text-sm text-slate-400">Secret key</label>
                     <div class="flex gap-2 items-center">
-                        <input id="credSecret" class="kc-input rounded-xl px-3 py-2 text-sm w-full" value="••••••••••••••" />
-                        <button class="btn-subtle" id="btnCopyClientId" title="Копировать" aria-label="Копировать">
-                            <!-- copy icon -->
+                        <input id="credSecret" type="password" class="kc-input rounded-xl px-3 py-2 text-sm w-full" value="@clientSecret" readonly />
+                        <button class="btn-subtle" type="button" id="btnToggleSecret" title="Show/Hide" aria-label="Show/Hide">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
+                        <button class="btn-subtle" id="btnCopySecret" title="Копировать" aria-label="Копировать">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" />
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                             </svg>
                         </button>
                         <button class="btn-danger" id="btnRegenSecret" title="Перегенерировать" aria-label="Перегенерировать">
-                            <!-- refresh icon -->
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 12a9 9 0 1 1-3-6.7" />
                                 <path d="M21 3v6h-6" />
@@ -224,6 +233,7 @@
                         </button>
                     </div>
                 </div>
+                }
             </div>
         </div>
     </div>
@@ -399,6 +409,7 @@
           const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
           const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
+          const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)');
 
           // Redirect URIs
           const swStandard = document.getElementById('swStandard');
@@ -408,13 +419,17 @@
           const btnAddRedirect = document.getElementById('btnAddRedirect');
           renderChips(redirList, redirs);
 
-          function renderChips(el, arr){
+          function renderChips(el, arr, editable = true){
             el.innerHTML = '';
             arr.forEach((v, idx)=>{
               const chip = document.createElement('span');
               chip.className = 'kc-chip';
-              chip.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
-              chip.querySelector('button').addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr); });
+              if (editable){
+                chip.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
+                chip.querySelector('button').addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr, editable); });
+              } else {
+                chip.textContent = v;
+              }
               el.appendChild(chip);
             });
           }
@@ -468,6 +483,26 @@
           document.getElementById('btnAddServiceRole')?.addEventListener('click', ()=>{
             const c = svcClient.value, r = svcRole.value; if (!c || !r) return;
             const v = `${c}: ${r}`; svcRoles.push(v); renderChips(svcList, svcRoles);
+          });
+
+          // Default scopes
+          const scopesList = document.getElementById('scopesList');
+          renderChips(scopesList, scopes, false);
+
+          document.getElementById('flowSelect')?.value = '@browserFlow';
+
+          // Secret reveal
+          const btnToggleSecret = document.getElementById('btnToggleSecret');
+          const credSecret = document.getElementById('credSecret');
+          btnToggleSecret?.addEventListener('click', ()=>{
+            if (credSecret.getAttribute('type') === 'password') {
+              credSecret.setAttribute('type','text');
+            } else {
+              credSecret.setAttribute('type','password');
+            }
+          });
+          document.getElementById('btnCopySecret')?.addEventListener('click', ()=>{
+            navigator.clipboard.writeText(credSecret.value);
           });
 
           // ---------- Events (ленивая инициализация) ----------
