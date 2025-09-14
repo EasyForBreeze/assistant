@@ -1,6 +1,7 @@
 using Assistant.Interfaces;
 using Assistant.KeyCloak;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Assistant.Pages
@@ -19,21 +20,32 @@ namespace Assistant.Pages
             _clients = clients;
         }
 
+        private const int PageSize = 20;
+
         public List<ClientSummary> Clients { get; private set; } = [];
         public string? Q { get; private set; }
         public bool ShowEmptyMessage { get; private set; }
+
+        [BindProperty(SupportsGet = true)]
+        [FromQuery(Name = "page")]
+        public int PageNumber { get; set; } = 1;
+
+        public int TotalPages { get; private set; }
+        public bool HasPreviousPage => PageNumber > 1;
+        public bool HasNextPage => PageNumber < TotalPages;
 
         public async Task OnGetAsync(string? q)
         {
             Q = q?.Trim();
             var isAdmin = User.IsInRole("assistant-admin");
 
+            var list = new List<ClientSummary>();
+
             if (isAdmin)
             {
                 if (!string.IsNullOrEmpty(Q))
                 {
                     var realms = await _realms.GetRealmsAsync();
-                    var list = new List<ClientSummary>();
                     foreach (var r in realms)
                     {
                         if (string.IsNullOrWhiteSpace(r.Realm)) continue;
@@ -49,15 +61,19 @@ namespace Assistant.Pages
                                 FlowService: false));
                         }
                     }
-                    Clients = list;
                 }
 
                 ShowEmptyMessage = !string.IsNullOrEmpty(Q);
-                return;
+            }
+            else
+            {
+                list = (await _provider.GetClientsForUser(User)).ToList();
+                ShowEmptyMessage = true;
             }
 
-            Clients = (await _provider.GetClientsForUser(User)).ToList();
-            ShowEmptyMessage = true;
+            TotalPages = Math.Max(1, (int)Math.Ceiling(list.Count / (double)PageSize));
+            PageNumber = Math.Clamp(PageNumber, 1, TotalPages);
+            Clients = list.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
         }
     }
 }
