@@ -29,7 +29,7 @@ namespace Assistant.Pages
         public bool HasPreviousPage => PageNumber > 1;
         public bool HasNextPage => PageNumber < TotalPages;
 
-        public async Task OnGetAsync(string? q, int page = 1)
+        public async Task OnGetAsync(string? q, int pageNumber = 1)
         {
             Q = q?.Trim();
             var isAdmin = User.IsInRole("assistant-admin");
@@ -67,7 +67,7 @@ namespace Assistant.Pages
             }
 
             TotalPages = Math.Max(1, (int)Math.Ceiling(list.Count / (double)PageSize));
-            PageNumber = Math.Clamp(page, 1, TotalPages);
+            PageNumber = Math.Clamp(pageNumber, 1, TotalPages);
             Clients = list.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
         }
     }
