@@ -202,7 +202,9 @@ namespace Assistant.KeyCloak
                 return null;
 
             var localRoles = await GetClientRolesAsync(realm, rep.Id!, 0, 1000, null, ct);
-            var svcRoles = await GetServiceAccountRolesAsync(realm, rep.Id!, ct);
+            var svcRoles = (rep.ServiceAccountsEnabled ?? false)
+                ? await GetServiceAccountRolesAsync(realm, rep.Id!, ct)
+                : new List<(string ClientId, string Role)>();
 
             return new ClientDetails(
                 rep.Id!,
