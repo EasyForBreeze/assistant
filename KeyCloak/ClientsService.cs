@@ -20,10 +20,7 @@ namespace Assistant.KeyCloak
         bool ServiceAccount,
         List<string> RedirectUris,
         List<string> LocalRoles,
-        List<(string ClientId, string Role)> ServiceRoles,
-        List<string> DefaultScopes,
-        string? Secret,
-        string? BrowserFlow
+        List<(string ClientId, string Role)> ServiceRoles
     );
 
     // Ответы KC (берём только нужные поля)
@@ -42,7 +39,6 @@ namespace Assistant.KeyCloak
         public bool? StandardFlowEnabled { get; set; }
         public bool? ServiceAccountsEnabled { get; set; }
         public List<string>? RedirectUris { get; set; }
-        public Dictionary<string, string>? AuthenticationFlowBindingOverrides { get; set; }
     }
     internal sealed class RoleRep
     {
@@ -71,16 +67,6 @@ namespace Assistant.KeyCloak
     internal sealed class ClientMapping
     {
         public List<RoleRep>? Mappings { get; set; }
-    }
-
-    internal sealed class ClientScopeRep
-    {
-        public string? Name { get; set; }
-    }
-
-    internal sealed class ClientSecretRep
-    {
-        public string? Value { get; set; }
     }
 
     public sealed record RoleHit(string ClientUuid, string ClientId, string Role);
@@ -220,32 +206,17 @@ namespace Assistant.KeyCloak
                 ? await GetServiceAccountRolesAsync(realm, rep.Id!, ct)
                 : new List<(string ClientId, string Role)>();
 
-            var defaultScopes = await GetDefaultClientScopesAsync(http, realm, rep.Id!, ct);
-
-            string? secret = null;
-            var confidential = !(rep.PublicClient ?? true);
-            if (confidential)
-                secret = await GetClientSecretAsync(http, realm, rep.Id!, ct);
-
-            string? browserFlow = null;
-            if (rep.AuthenticationFlowBindingOverrides != null &&
-                rep.AuthenticationFlowBindingOverrides.TryGetValue("browser", out var bf))
-                browserFlow = bf;
-
             return new ClientDetails(
                 rep.Id!,
                 rep.ClientId!,
                 rep.Enabled ?? false,
                 rep.Description,
-                confidential,
+                !(rep.PublicClient ?? true),
                 rep.StandardFlowEnabled ?? false,
                 rep.ServiceAccountsEnabled ?? false,
                 rep.RedirectUris?.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r!).ToList() ?? new(),
                 localRoles,
-                svcRoles,
-                defaultScopes,
-                secret,
-                browserFlow
+                svcRoles
             );
         }
 
@@ -297,28 +268,6 @@ namespace Assistant.KeyCloak
 
             var next = clients.Count < clientsToScan ? -1 : clientFirst + clients.Count;
             return (hits, next);
-        }
-
-        private async Task<List<string>> GetDefaultClientScopesAsync(HttpClient http, string realm, string clientUuid, CancellationToken ct)
-        {
-            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/default-client-scopes";
-            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/default-client-scopes";
-
-            using var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
-            EnsureAuthOrThrow(resp);
-            var list = await ReadJson<List<ClientScopeRep>>(resp, ct) ?? new();
-            return list.Where(s => !string.IsNullOrWhiteSpace(s.Name)).Select(s => s.Name!).ToList();
-        }
-
-        private async Task<string?> GetClientSecretAsync(HttpClient http, string realm, string clientUuid, CancellationToken ct)
-        {
-            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/client-secret";
-            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/client-secret";
-
-            using var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
-            EnsureAuthOrThrow(resp);
-            var rep = await ReadJson<ClientSecretRep>(resp, ct);
-            return rep?.Value;
         }
 
         private async Task<List<(string ClientId, string Role)>> GetServiceAccountRolesAsync(string realm, string clientUuid, CancellationToken ct)

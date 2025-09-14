@@ -25,8 +25,6 @@ namespace Assistant.Pages.Clients
         public string RedirectUrisJson { get; private set; } = "[]";
         public string LocalRolesJson { get; private set; } = "[]";
         public string ServiceRolesJson { get; private set; } = "[]";
-        public string DefaultScopesJson { get; private set; } = "[]";
-        public string? ClientSecret { get; private set; }
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
@@ -44,15 +42,12 @@ namespace Assistant.Pages.Clients
                 Description = details.Description,
                 ClientAuth = details.ClientAuth,
                 StandardFlow = details.StandardFlow,
-                ServiceAccount = details.ServiceAccount,
-                BrowserFlow = details.BrowserFlow
+                ServiceAccount = details.ServiceAccount
             };
 
             RedirectUrisJson = JsonSerializer.Serialize(details.RedirectUris);
             LocalRolesJson = JsonSerializer.Serialize(details.LocalRoles);
             ServiceRolesJson = JsonSerializer.Serialize(details.ServiceRoles.Select(p => $"{p.ClientId}: {p.Role}"));
-            DefaultScopesJson = JsonSerializer.Serialize(details.DefaultScopes);
-            ClientSecret = details.Secret;
 
             return Page();
         }
@@ -83,7 +78,6 @@ namespace Assistant.Pages.Clients
             public bool ClientAuth { get; set; }   // конфиденциальный клиент?  = !publicClient
             public bool StandardFlow { get; set; }   // standardFlowEnabled
             public bool ServiceAccount { get; set; }   // serviceAccountsEnabled
-            public string? BrowserFlow { get; set; }
         }
     }
 }
