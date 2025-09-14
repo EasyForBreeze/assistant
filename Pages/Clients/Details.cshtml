@@ -1,5 +1,6 @@
 ﻿@page
 @model Assistant.Pages.Clients.DetailsModel
+@inject IConfiguration Config
 @{
     ViewData["Title"] = "Client details";
     var client = Model.Client;
@@ -10,6 +11,7 @@
     bool standardInit = client.StandardFlow;
     bool serviceInit = client.ServiceAccount;
     string description = client.Description ?? "";
+    string baseUrl = Config["Keycloak:BaseUrl"]!.TrimEnd('/');
 }
 
 
@@ -237,7 +239,7 @@
 
     <!-- ENDPOINTS -->
     @{
-        var issuer = $"https://keycloak.example.com/realms/{realm}";
+        var issuer = $"{baseUrl}/realms/{realm}";
         var auth = $"{issuer}/protocol/openid-connect/auth";
         var token = $"{issuer}/protocol/openid-connect/token";
         var user = $"{issuer}/protocol/openid-connect/userinfo";
@@ -345,7 +347,7 @@
                 </div>
             </div>
 
-            <div class="kc-th mt-2">Пути приведены для примера. Подставьте ваш <code>Keycloak BaseUrl</code> и <code>realm</code>.</div>
+            <div class="kc-th mt-2">Endpoints сформированы на основе вашего <code>Keycloak BaseUrl</code> и <code>realm</code>.</div>
         </div>
     </div>
 
