@@ -208,7 +208,7 @@
                     <label class="text-sm text-slate-400">Secret key</label>
                     <div class="flex gap-2 items-center">
                         <input id="credSecret" class="kc-input rounded-xl px-3 py-2 text-sm w-full" value="••••••••••••••" />
-                        <button class="btn-subtle" id="btnCopyClientId" title="Копировать" aria-label="Копировать">
+                        <button class="btn-subtle" id="btnCopySecret" title="Копировать" aria-label="Копировать">
                             <!-- copy icon -->
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -493,16 +493,31 @@
           // const scopesList = document.getElementById('scopesList');
           // renderStaticChips(scopesList, scopes);
 
-          // Secret key reveal
-          const btnShowSecret = document.getElementById('btnShowSecret');
-          btnShowSecret?.addEventListener('click', async () => {
-            const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`);
+          // Copy credentials & manage secret
+          document.getElementById('btnCopyClientId')?.addEventListener('click', async () => {
+            const val = document.getElementById('credClientId')?.value || '';
+            try { await navigator.clipboard.writeText(val); } catch {}
+          });
+
+          async function fetchSecret(method = 'GET') {
+            const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`, { method });
             if (resp.ok) {
               const data = await resp.json();
               const input = document.getElementById('credSecret');
               if (input) input.value = data.secret || '';
+              return data.secret || '';
             }
+            return '';
+          }
+
+          document.getElementById('btnShowSecret')?.addEventListener('click', () => { fetchSecret('GET'); });
+
+          document.getElementById('btnCopySecret')?.addEventListener('click', async () => {
+            const secret = await fetchSecret('GET');
+            try { await navigator.clipboard.writeText(secret); } catch {}
           });
+
+          document.getElementById('btnRegenSecret')?.addEventListener('click', () => { fetchSecret('POST'); });
 
           // ---------- Events (ленивая инициализация) ----------
           window.initEvents = function(){
