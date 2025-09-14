@@ -386,8 +386,8 @@
     <script>
         (function(){
           // ---------- Вкладки ----------
-          const btns  = document.querySelectorAll('.tab-btn');
-          const panes = document.querySelectorAll('.tab-pane');
+          const btns  = Array.from(document.querySelectorAll('.tab-btn'));
+          const panes = Array.from(document.querySelectorAll('.tab-pane'));
 
           function showTab(tab){
             panes.forEach(p => p.classList.toggle('hidden', p.dataset.tab !== tab));
