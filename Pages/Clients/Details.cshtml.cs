@@ -25,6 +25,7 @@ namespace Assistant.Pages.Clients
         public string RedirectUrisJson { get; private set; } = "[]";
         public string LocalRolesJson { get; private set; } = "[]";
         public string ServiceRolesJson { get; private set; } = "[]";
+        public string DefaultScopesJson { get; private set; } = "[]";
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
@@ -48,6 +49,7 @@ namespace Assistant.Pages.Clients
             RedirectUrisJson = JsonSerializer.Serialize(details.RedirectUris);
             LocalRolesJson = JsonSerializer.Serialize(details.LocalRoles);
             ServiceRolesJson = JsonSerializer.Serialize(details.ServiceRoles.Select(p => $"{p.ClientId}: {p.Role}"));
+            DefaultScopesJson = JsonSerializer.Serialize(details.DefaultScopes);
 
             return Page();
         }
