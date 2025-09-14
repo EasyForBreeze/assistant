@@ -495,6 +495,16 @@
           // const scopesList = document.getElementById('scopesList');
           // renderStaticChips(scopesList, scopes);
 
+          // Copy endpoints
+          document.querySelectorAll('button[data-copy]')?.forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const sel = btn.getAttribute('data-copy');
+              const target = sel ? document.querySelector(sel) : null;
+              const val = target?.value || target?.textContent || '';
+              try { await navigator.clipboard.writeText(val); } catch {}
+            });
+          });
+
           // Copy credentials & manage secret
           document.getElementById('btnCopyClientId')?.addEventListener('click', async () => {
             const val = document.getElementById('credClientId')?.value || '';
