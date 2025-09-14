@@ -1,37 +1,55 @@
 ﻿// Pages/Clients/Details.cshtml.cs
+using Assistant.KeyCloak;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.Json;
+using System.Linq;
 
 namespace Assistant.Pages.Clients
 {
     public class DetailsModel : PageModel
     {
+        private readonly ClientsService _clients;
+
+        public DetailsModel(ClientsService clients)
+        {
+            _clients = clients;
+        }
+
         // Параметры из query: ?realm=...&clientId=...
         [BindProperty(SupportsGet = true)] public string? Realm { get; set; }
         [BindProperty(SupportsGet = true)] public string? ClientId { get; set; }
 
         // То самое, что используется в cshtml: client?.ClientAuth и т.д.
-        public ClientVm? Client { get; set; }
+        public ClientVm Client { get; set; } = default!;
+        public string RedirectUrisJson { get; private set; } = "[]";
+        public string LocalRolesJson { get; private set; } = "[]";
+        public string ServiceRolesJson { get; private set; } = "[]";
 
-        public void OnGet()
+        public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
-            // TODO: загрузить из Keycloak Admin API и замапить:
-            // ClientAuth        = !publicClient
-            // StandardFlow      = standardFlowEnabled
-            // ServiceAccount    = serviceAccountsEnabled
-            // Enabled           = enabled
-            // Description       = description
+            if (string.IsNullOrWhiteSpace(Realm) || string.IsNullOrWhiteSpace(ClientId))
+                return NotFound();
+
+            var details = await _clients.GetClientDetailsAsync(Realm!, ClientId!, ct);
+            if (details == null) return NotFound();
 
             Client = new ClientVm
             {
-                ClientId = ClientId ?? "app-bank-sample",
-                Realm = Realm ?? "internal-bank-idm",
-                Enabled = true,
-                Description = "Description from Keycloak (stub)",
-                ClientAuth = true,   // !publicClient
-                StandardFlow = true,   // standardFlowEnabled
-                ServiceAccount = false   // serviceAccountsEnabled
+                ClientId = details.ClientId,
+                Realm = Realm!,
+                Enabled = details.Enabled,
+                Description = details.Description,
+                ClientAuth = details.ClientAuth,
+                StandardFlow = details.StandardFlow,
+                ServiceAccount = details.ServiceAccount
             };
+
+            RedirectUrisJson = JsonSerializer.Serialize(details.RedirectUris);
+            LocalRolesJson = JsonSerializer.Serialize(details.LocalRoles);
+            ServiceRolesJson = JsonSerializer.Serialize(details.ServiceRoles.Select(p => $"{p.ClientId}: {p.Role}"));
+
+            return Page();
         }
 
         public IActionResult OnPostSave()
