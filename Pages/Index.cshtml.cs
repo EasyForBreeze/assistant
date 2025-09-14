@@ -112,10 +112,14 @@ namespace Assistant.Pages
             Clients = list.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
         }
 
-        public async Task<PartialViewResult> OnGetClientsAsync(string? q, int pageNumber = 1)
+        public async Task<IActionResult> OnGetClientsAsync(string? q, int pageNumber = 1)
         {
             await OnGetAsync(q, pageNumber);
-            return Partial("_ClientsList", this);
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Partial("_ClientsList", this);
+            }
+            return Page();
         }
     }
 }
