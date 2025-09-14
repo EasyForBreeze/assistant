@@ -122,6 +122,11 @@ app.MapGet("/api/client-secret", async (string realm, string clientId, ClientsSe
     var secret = await clients.GetClientSecretAsync(realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
+app.MapPost("/api/client-secret", async (string realm, string clientId, ClientsService clients, CancellationToken ct) =>
+{
+    var secret = await clients.RegenerateClientSecretAsync(realm, clientId, ct);
+    return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
+}).RequireAuthorization();
 app.MapRazorPages().WithStaticAssets();
 app.MapRazorPages().RequireAuthorization();
 app.Run();

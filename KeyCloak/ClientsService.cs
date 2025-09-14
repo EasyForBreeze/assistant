@@ -244,6 +244,21 @@ namespace Assistant.KeyCloak
             return rep?.Value;
         }
 
+        public async Task<string?> RegenerateClientSecretAsync(string realm, string clientId, CancellationToken ct = default)
+        {
+            var details = await GetClientDetailsAsync(realm, clientId, ct);
+            if (details == null) return null;
+
+            var http = _factory.CreateClient("kc-admin");
+            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
+            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
+
+            using var resp = await PostWithFallback(http, urlNew, urlLegacy, ct);
+            EnsureAuthOrThrow(resp);
+            var rep = await ReadJson<ClientSecretRep>(resp, ct);
+            return rep?.Value;
+        }
+
         /// <summary>
         /// Роли клиента (с опциональным server-side search по названию роли).
         /// </summary>
@@ -496,6 +511,17 @@ namespace Assistant.KeyCloak
             {
                 resp.Dispose();
                 resp = await http.PostAsJsonAsync(legacyUrl, body, JsonOpts, ct);
+            }
+            return resp;
+        }
+
+        private static async Task<HttpResponseMessage> PostWithFallback(HttpClient http, string newUrl, string legacyUrl, CancellationToken ct)
+        {
+            var resp = await http.PostAsync(newUrl, null, ct);
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+            {
+                resp.Dispose();
+                resp = await http.PostAsync(legacyUrl, null, ct);
             }
             return resp;
         }
