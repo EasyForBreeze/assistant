@@ -1,5 +1,6 @@
 using Assistant.Interfaces;
 using Assistant.Services;
+using Assistant.KeyCloak;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -116,6 +117,11 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapStaticAssets();
+app.MapGet("/api/client-secret", async (string realm, string clientId, ClientsService clients, CancellationToken ct) =>
+{
+    var secret = await clients.GetClientSecretAsync(realm, clientId, ct);
+    return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
+}).RequireAuthorization();
 app.MapRazorPages().WithStaticAssets();
 app.MapRazorPages().RequireAuthorization();
 app.Run();

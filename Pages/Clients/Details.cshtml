@@ -46,7 +46,7 @@
     <button type="button" class="tab-btn active" data-tab="Overview" role="tab" aria-selected="true">Overview</button>
     <button type="button" class="tab-btn" data-tab="Roles" role="tab">Roles</button>
     <button type="button" class="tab-btn" data-tab="ServiceRoles" role="tab">Service Roles</button>
-    <button type="button" class="tab-btn" data-tab="Scopes" role="tab">Scopes</button>
+    @*<button type="button" class="tab-btn" data-tab="Scopes" role="tab">Scopes</button>*@
     <button type="button" class="tab-btn" data-tab="Flows" role="tab">Flows</button>
     <button type="button" class="tab-btn" data-tab="Credentials" role="tab">Credentials</button>
     <button type="button" class="tab-btn" data-tab="Endpoints" role="tab">Endpoints</button>
@@ -163,14 +163,14 @@
         </div>
     </div>
 
-    <!-- SCOPES -->
+    @*<!-- SCOPES -->
     <div class="tab-pane hidden" data-tab="Scopes" role="tabpanel">
         <div class="kc-card p-5 kc-hover">
             <div class="text-slate-200 font-semibold mb-3">Default scopes</div>
             <div class="kc-th mb-2">Список скопов по умолчанию.</div>
             <div id="scopesList" class="flex flex-wrap gap-2"></div>
         </div>
-    </div>
+    </div>*@
 
     <!-- FLOWS -->
     <div class="tab-pane hidden" data-tab="Flows" role="tabpanel">
@@ -213,6 +213,13 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" />
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                        </button>
+                        <button class="btn-subtle" id="btnShowSecret" title="Показать" aria-label="Показать">
+                            <!-- eye icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
                             </svg>
                         </button>
                         <button class="btn-danger" id="btnRegenSecret" title="Перегенерировать" aria-label="Перегенерировать">
@@ -396,10 +403,12 @@
           showTab(start);
 
           // ---------- Состояние формы ----------
+          const realm = '@realm';
+          const clientId = '@clientId';
           const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
           const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
-          const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)');
+          @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
 
           // Redirect URIs
           const swStandard = document.getElementById('swStandard');
@@ -480,9 +489,20 @@
             const v = `${c}: ${r}`; svcRoles.push(v); renderChips(svcList, svcRoles);
           });
 
-          // Default scopes
-          const scopesList = document.getElementById('scopesList');
-          renderStaticChips(scopesList, scopes);
+          // Default scopes (disabled)
+          // const scopesList = document.getElementById('scopesList');
+          // renderStaticChips(scopesList, scopes);
+
+          // Secret key reveal
+          const btnShowSecret = document.getElementById('btnShowSecret');
+          btnShowSecret?.addEventListener('click', async () => {
+            const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`);
+            if (resp.ok) {
+              const data = await resp.json();
+              const input = document.getElementById('credSecret');
+              if (input) input.value = data.secret || '';
+            }
+          });
 
           // ---------- Events (ленивая инициализация) ----------
           window.initEvents = function(){

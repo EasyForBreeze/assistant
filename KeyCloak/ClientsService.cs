@@ -42,6 +42,11 @@ namespace Assistant.KeyCloak
         public List<string>? RedirectUris { get; set; }
         public List<string>? DefaultClientScopes { get; set; }
     }
+
+    internal sealed class ClientSecretRep
+    {
+        public string? Value { get; set; }
+    }
     internal sealed class RoleRep
     {
         public string? Name { get; set; }
@@ -222,6 +227,21 @@ namespace Assistant.KeyCloak
                 svcRoles,
                 defaultScopes
             );
+        }
+
+        public async Task<string?> GetClientSecretAsync(string realm, string clientId, CancellationToken ct = default)
+        {
+            var details = await GetClientDetailsAsync(realm, clientId, ct);
+            if (details == null) return null;
+
+            var http = _factory.CreateClient("kc-admin");
+            var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
+            var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
+
+            using var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
+            EnsureAuthOrThrow(resp);
+            var rep = await ReadJson<ClientSecretRep>(resp, ct);
+            return rep?.Value;
         }
 
         /// <summary>
