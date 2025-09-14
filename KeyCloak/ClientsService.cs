@@ -478,6 +478,13 @@ namespace Assistant.KeyCloak
         {
             if (resp.StatusCode == HttpStatusCode.Forbidden)
                 throw new UnauthorizedAccessException("Недостаточно прав для операции (нужны права realm-management).");
+
+            if (resp.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var body = resp.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                throw new InvalidOperationException($"Запрос отклонён (400). Детали: {body}");
+            }
+
             resp.EnsureSuccessStatusCode();
         }
 
