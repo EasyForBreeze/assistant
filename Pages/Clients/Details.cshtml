@@ -167,7 +167,7 @@
     <div class="tab-pane hidden" data-tab="Scopes" role="tabpanel">
         <div class="kc-card p-5 kc-hover">
             <div class="text-slate-200 font-semibold mb-3">Default scopes</div>
-            <div class="kc-th mb-2">Список скопов по умолчанию (заглушка).</div>
+            <div class="kc-th mb-2">Список скопов по умолчанию.</div>
             <div id="scopesList" class="flex flex-wrap gap-2"></div>
         </div>
     </div>
@@ -399,6 +399,7 @@
           const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
           const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
+          const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)');
 
           // Redirect URIs
           const swStandard = document.getElementById('swStandard');
@@ -415,6 +416,15 @@
               chip.className = 'kc-chip';
               chip.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
               chip.querySelector('button').addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr); });
+              el.appendChild(chip);
+            });
+          }
+          function renderStaticChips(el, arr){
+            el.innerHTML = '';
+            arr.forEach(v =>{
+              const chip = document.createElement('span');
+              chip.className = 'kc-chip';
+              chip.textContent = v;
               el.appendChild(chip);
             });
           }
@@ -469,6 +479,10 @@
             const c = svcClient.value, r = svcRole.value; if (!c || !r) return;
             const v = `${c}: ${r}`; svcRoles.push(v); renderChips(svcList, svcRoles);
           });
+
+          // Default scopes
+          const scopesList = document.getElementById('scopesList');
+          renderStaticChips(scopesList, scopes);
 
           // ---------- Events (ленивая инициализация) ----------
           window.initEvents = function(){

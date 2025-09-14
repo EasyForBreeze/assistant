@@ -20,7 +20,8 @@ namespace Assistant.KeyCloak
         bool ServiceAccount,
         List<string> RedirectUris,
         List<string> LocalRoles,
-        List<(string ClientId, string Role)> ServiceRoles
+        List<(string ClientId, string Role)> ServiceRoles,
+        List<string> DefaultScopes
     );
 
     // Ответы KC (берём только нужные поля)
@@ -39,6 +40,7 @@ namespace Assistant.KeyCloak
         public bool? StandardFlowEnabled { get; set; }
         public bool? ServiceAccountsEnabled { get; set; }
         public List<string>? RedirectUris { get; set; }
+        public List<string>? DefaultClientScopes { get; set; }
     }
     internal sealed class RoleRep
     {
@@ -205,6 +207,7 @@ namespace Assistant.KeyCloak
             var svcRoles = (rep.ServiceAccountsEnabled ?? false)
                 ? await GetServiceAccountRolesAsync(realm, rep.Id!, ct)
                 : new List<(string ClientId, string Role)>();
+            var defaultScopes = rep.DefaultClientScopes?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!).ToList() ?? new();
 
             return new ClientDetails(
                 rep.Id!,
@@ -216,7 +219,8 @@ namespace Assistant.KeyCloak
                 rep.ServiceAccountsEnabled ?? false,
                 rep.RedirectUris?.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r!).ToList() ?? new(),
                 localRoles,
-                svcRoles
+                svcRoles,
+                defaultScopes
             );
         }
 
