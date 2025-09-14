@@ -480,3 +480,16 @@
 .kc-toast .validation-summary-errors ul {
     margin: .25rem 0 0 1.25rem;
 }
+
+/* Page transition animation */
+#app {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+body.page-loaded #app {
+    opacity: 1;
+    transform: translateY(0);
+}
+
