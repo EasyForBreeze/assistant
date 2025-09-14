@@ -9,57 +9,61 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = Assistant
 build_property.RootNamespace = Assistant
-build_property.ProjectDir = C:\Users\bream\source\repos\Assistant\Assistant\
+build_property.ProjectDir = C:\Users\bream\source\repos\qwe8\Assistant\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 9.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = C:\Users\bream\source\repos\Assistant\Assistant
+build_property.MSBuildProjectDirectory = C:\Users\bream\source\repos\qwe8\Assistant
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 9.0
 build_property.EnableCodeStyleSeverity = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Account/GoToKeycloak.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Account/GoToKeycloak.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudFxHb1RvS2V5Y2xvYWsuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Account/Logout.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Account/Logout.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudFxMb2dvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Clients/Create.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Clients/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2xpZW50c1xDcmVhdGUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Clients/Details.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Clients/Details.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2xpZW50c1xEZXRhaWxzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Error.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRXJyb3IuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Index.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Privacy.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Privacy.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJpdmFjeS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Shared/_ValidationScriptsPartial.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Shared/_ClientsList.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2hhcmVkXF9DbGllbnRzTGlzdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Shared/_ValidationScriptsPartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/_ViewImports.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/_ViewStart.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/_ViewStart.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/bream/source/repos/Assistant/Assistant/Pages/Shared/_Layout.cshtml]
+[C:/Users/bream/source/repos/qwe8/Assistant/Pages/Shared/_Layout.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2hhcmVkXF9MYXlvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = b-pangse8djv
