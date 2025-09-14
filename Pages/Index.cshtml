@@ -168,6 +168,23 @@ else if (Model.Clients.Any())
             </a>
         }
     </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="flex justify-center mt-6">
+            <nav class="flex items-center gap-2">
+                @if (Model.HasPreviousPage)
+                {
+                    <a asp-page="./Index" asp-route-q="@Model.Q" asp-route-page="@(Model.PageNumber - 1)" class="btn-subtle">Previous</a>
+                }
+                <span class="text-sm text-slate-400">Page @Model.PageNumber of @Model.TotalPages</span>
+                @if (Model.HasNextPage)
+                {
+                    <a asp-page="./Index" asp-route-q="@Model.Q" asp-route-page="@(Model.PageNumber + 1)" class="btn-subtle">Next</a>
+                }
+            </nav>
+        </div>
+    }
 }
 
 <script>
