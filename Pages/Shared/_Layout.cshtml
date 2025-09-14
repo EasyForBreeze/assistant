@@ -36,6 +36,11 @@
         <div class="w-16 h-16 border-4 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
     </div>
     <script>
+        let pending = 0;
+        const spinner = document.getElementById('globalSpinner');
+        function updateSpinner(){
+            spinner?.classList.toggle('hidden', pending === 0);
+        }
         (() =>
         {
           // also track XMLHttpRequest calls
