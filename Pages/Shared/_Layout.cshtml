@@ -114,8 +114,25 @@
               updateSpinner();
             }
           };
+
+          // also track XMLHttpRequest calls
+          if (window.XMLHttpRequest) {
+            const origOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(...a) {
+              this.addEventListener('loadstart', () => {
+                pending++;
+                updateSpinner();
+              });
+              this.addEventListener('loadend', () => {
+                pending--;
+                if (pending < 0) pending = 0;
+                updateSpinner();
+              });
+              return origOpen.apply(this, a);
+            };
+          }
         })();
-    </script>
+      </script>
 
     @RenderSection("Scripts", required: false)
 </body>
