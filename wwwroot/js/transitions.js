@@ -1,5 +1,6 @@
 // Smooth page transitions
 const TRANSITION_MS = 300;
+const PLACEHOLDER_TITLE = 'Keycloak Shell';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Fade in content on initial load
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = anchor.href;
             if (url && anchor.origin === window.location.origin) {
                 ev.preventDefault();
+                document.title = PLACEHOLDER_TITLE;
                 document.body.classList.remove('page-loaded');
                 setTimeout(() => {
                     window.location.href = url;
