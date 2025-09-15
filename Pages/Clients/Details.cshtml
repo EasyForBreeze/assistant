@@ -66,7 +66,7 @@
                 <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
             </svg>
         </button>
-        <button type="submit" class="btn-primary" id="btnSave" title="Сохранить изменения" aria-label="Save">
+        <button type="submit" class="btn-primary" id="btnSave" form="saveForm" title="Сохранить изменения" aria-label="Save">
             <!-- floppy/save icon -->
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7z" />
@@ -151,8 +151,6 @@
             <div class="kc-th mb-2">Назначают роли других сервисов сервисному аккаунту текущего клиента.</div>
 
             <div id="svcList" class="flex flex-wrap gap-2 mb-2"></div>
-            <input type="hidden" asp-for="ServiceRolesJson" id="hidServiceRoles" />
-
 
             <div class="relative space-y-2">
                 <div class="flex gap-2 items-center">
@@ -397,6 +395,18 @@
         </div>
     </div>
 </div>
+
+<!-- Hidden form for saving -->
+<form method="post" id="saveForm" asp-page-handler="Save" asp-route-realm="@realm" asp-route-clientId="@clientId" class="hidden">
+    <input type="hidden" asp-for="NewClientId" id="hidClientId" />
+    <input type="hidden" asp-for="Description" id="hidDescription" />
+    <input type="hidden" asp-for="ClientAuth" id="hidClientAuth" />
+    <input type="hidden" asp-for="StandardFlow" id="hidStandardFlow" />
+    <input type="hidden" asp-for="ServiceAccount" id="hidServiceAccount" />
+    <input type="hidden" asp-for="RedirectUrisJson" id="hidRedirects" />
+    <input type="hidden" asp-for="LocalRolesJson" id="hidLocalRoles" />
+    <input type="hidden" asp-for="ServiceRolesJson" id="hidServiceRoles" />
+</form>
 
 @section Scripts {
     <script>

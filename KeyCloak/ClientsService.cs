@@ -90,6 +90,19 @@ namespace Assistant.KeyCloak
         List<(string ClientId, string Role)> ServiceRoles
     );
 
+    public sealed record UpdateClientSpec(
+        string Realm,
+        string CurrentClientId,
+        string ClientId,
+        string? Description,
+        bool ClientAuth,
+        bool StandardFlow,
+        bool ServiceAccount,
+        List<string> RedirectUris,
+        List<string> LocalRoles,
+        List<(string ClientId, string Role)> ServiceRoles
+    );
+
     /// <summary>
     /// Работа с Keycloak Admin API: поиск/роли и создание клиента (без кэша).
     /// </summary>
@@ -405,6 +418,38 @@ namespace Assistant.KeyCloak
             return createdId;
         }
 
+        public async Task UpdateClientAsync(UpdateClientSpec spec, CancellationToken ct = default)
+        {
+            var http = _factory.CreateClient("kc-admin");
+
+            var existing = (await SearchClientsAsync(spec.Realm, spec.CurrentClientId, 0, 1, ct))
+                .FirstOrDefault(c => string.Equals(c.ClientId, spec.CurrentClientId, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException($"Client '{spec.CurrentClientId}' not found.");
+
+            var body = new
+            {
+                clientId = spec.ClientId,
+                publicClient = !spec.ClientAuth,
+                serviceAccountsEnabled = spec.ServiceAccount,
+                standardFlowEnabled = spec.StandardFlow,
+                directAccessGrantsEnabled = false,
+                redirectUris = spec.StandardFlow ? spec.RedirectUris?.Distinct().ToArray() ?? Array.Empty<string>() : Array.Empty<string>(),
+                description = spec.Description
+            };
+
+            var putNew = $"{BaseUrl}/admin/realms/{UR(spec.Realm)}/clients/{UR(existing.Id)}";
+            var putLegacy = $"{BaseUrl}/auth/admin/realms/{UR(spec.Realm)}/clients/{UR(existing.Id)}";
+
+            using var resp = await PutJsonWithFallback(http, putNew, putLegacy, body, ct);
+            EnsureAuthOrThrow(resp);
+
+            if (spec.LocalRoles?.Count > 0)
+                await EnsureLocalRolesAsync(spec.Realm, existing.Id, spec.LocalRoles, ct);
+
+            if (spec.ServiceAccount && spec.ServiceRoles?.Count > 0)
+                await AssignServiceRolesToServiceAccountAsync(spec.Realm, existing.Id, spec.ServiceRoles, ct);
+        }
+
         // ======= Internal helpers for Create =======
 
         private async Task EnsureLocalRolesAsync(string realm, string clientUuid, IEnumerable<string> roles, CancellationToken ct)
@@ -511,6 +556,17 @@ namespace Assistant.KeyCloak
             {
                 resp.Dispose();
                 resp = await http.PostAsJsonAsync(legacyUrl, body, JsonOpts, ct);
+            }
+            return resp;
+        }
+
+        private static async Task<HttpResponseMessage> PutJsonWithFallback(HttpClient http, string newUrl, string legacyUrl, object body, CancellationToken ct)
+        {
+            var resp = await http.PutAsJsonAsync(newUrl, body, JsonOpts, ct);
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+            {
+                resp.Dispose();
+                resp = await http.PutAsJsonAsync(legacyUrl, body, JsonOpts, ct);
             }
             return resp;
         }
