@@ -596,8 +596,6 @@
           // ---------- Events (ленивая инициализация) ----------
           window.initEvents = function(){
             const pageSize = 10;
-            const TYPES = ["CLIENT_CREATED","CLIENT_UPDATED","ROLE_ADDED","ROLE_REMOVED","SCOPE_ASSIGNED","LOGIN","LOGOUT","TOKEN_EXCHANGED"];
-            const USERS = ["alice","bob","charlie","svc-deploy","svc-ci","admin"];
             const rowsEl  = document.getElementById('eventsRows');
             const pagerEl = document.getElementById('eventsPager');
             const selType = document.getElementById('evFilterType');
@@ -606,54 +604,39 @@
             const inUser  = document.getElementById('evUser');
             const inIp    = document.getElementById('evIp');
 
-            const rand = n => Math.floor(Math.random()*n);
-            function gen(n=40){
-              const now = Date.now(), arr=[];
-              for (let i=0;i<n;i++){
-                const minsBack = rand(60*24*7);
-                const at = new Date(now - minsBack*60000);
-                const ip = `10.${rand(255)}.${rand(255)}.${1+rand(254)}`;
-                arr.push({ type:TYPES[rand(TYPES.length)], at, user:USERS[rand(USERS.length)], ip });
-              }
-              return arr.sort((a,b)=> b.at - a.at);
-            }
-            const all = gen(40);
-            Array.from(new Set(all.map(e=>e.type))).forEach(t=> selType.add(new Option(t,t)));
+            const types = JSON.parse('@Html.Raw(Model.EventTypesJson)');
+            types.forEach(t=> selType.add(new Option(t,t)));
 
+            let all = [];
             let page = 1;
-            const fmt = d => d.toLocaleString();
+            const fmt = s => new Date(s).toLocaleString();
 
-            function applyFilters(data){
-              const t  = selType.value;
-              const uf = (inUser.value||'').trim().toLowerCase();
-              const ip = (inIp.value||'').trim();
-              const df = inFrom.value ? new Date(inFrom.value) : null;
-              const dt = inTo.value   ? new Date(inTo.value)   : null;
-
-              return data.filter(e=>{
-                if (t && e.type !== t) return false;
-                if (uf && !e.user.toLowerCase().includes(uf)) return false;
-                if (ip && !e.ip.includes(ip)) return false;
-                if (df && e.at < df) return false;
-                if (dt && e.at > new Date(dt.getTime() + 24*3600*1000 - 1)) return false;
-                return true;
-              });
+            async function load(){
+              const params = new URLSearchParams({ realm, clientId });
+              if (selType.value) params.set('type', selType.value);
+              if (inFrom.value) params.set('from', inFrom.value);
+              if (inTo.value) params.set('to', inTo.value);
+              if ((inUser.value||'').trim()) params.set('user', inUser.value.trim());
+              if ((inIp.value||'').trim()) params.set('ip', inIp.value.trim());
+              const url = `${PAGE_URL}?handler=Events&${params.toString()}`;
+              try { all = await fetchJson(url); } catch { all = []; }
+              page = 1;
+              render();
             }
 
             function render(){
-              const data = applyFilters(all);
-              const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+              const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
               if (page > totalPages) page = totalPages;
 
               rowsEl.innerHTML = '';
-              const slice = data.slice((page-1)*pageSize, page*pageSize);
+              const slice = all.slice((page-1)*pageSize, page*pageSize);
               slice.forEach(e=>{
                 rowsEl.insertAdjacentHTML('beforeend', `
                   <div class="grid grid-cols-12 gap-2 text-sm py-2 border-b border-white/5 px-1">
                     <div class="col-span-3 text-slate-200">${e.type}</div>
                     <div class="col-span-3 text-slate-300">${fmt(e.at)}</div>
-                    <div class="col-span-3 text-slate-300">${e.user}</div>
-                    <div class="col-span-3 text-slate-400">${e.ip}</div>
+                    <div class="col-span-3 text-slate-300">${e.user||''}</div>
+                    <div class="col-span-3 text-slate-400">${e.ip||''}</div>
                   </div>
                 `);
               });
@@ -661,26 +644,24 @@
               pagerEl.innerHTML = '';
               if (totalPages > 1){
                 const mk = (label,target,disabled=false,active=false)=>
-                  `<a class="rounded-lg px-3 py-1 text-sm border border-white/10 ${active?'bg-white/10 text-white':(disabled?'pointer-events-none opacity-50':'bg-white/5 hover:bg-white/10')}"
-                      href="#tab=Events" data-page="${target}">${label}</a>`;
+                  `<a class="rounded-lg px-3 py-1 text-sm border border-white/10 ${active?'bg-white/10 text-white':(disabled?'pointer-events-none opacity-50':'bg-white/5 hover:bg-white/10')}" href="#tab=Events" data-page="${target}">${label}</a>`;
                 const inner = [
                   mk('Prev', Math.max(1,page-1), page===1),
                   ...Array.from({length: totalPages}, (_,i)=> mk(String(i+1), i+1, false, i+1===page)),
                   mk('Next', Math.min(totalPages,page+1), page===totalPages)
                 ].join('');
                 pagerEl.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-center gap-1 mt-4">${inner}</div>`);
-                pagerEl.querySelectorAll('a[data-page]').forEach(a => a.addEventListener('click', (ev)=>{ ev.preventDefault(); page = parseInt(a.dataset.page,10); render(); }));
+                pagerEl.querySelectorAll('a[data-page]').forEach(a => a.addEventListener('click', ev=>{ ev.preventDefault(); page = parseInt(a.dataset.page,10); render(); }));
               }
             }
 
             [selType, inFrom, inTo, inUser, inIp].forEach(el=>{
-              el?.addEventListener('input', ()=>{ page=1; render(); });
-              el?.addEventListener('change', ()=>{ page=1; render(); });
+              el?.addEventListener('input', load);
+              el?.addEventListener('change', load);
             });
 
-            render();
+            load();
           };
-
           // ---------- Сбор данных перед Save ----------
           const saveForm = document.getElementById('saveForm');
           const btnDelete = document.getElementById('btnDelete');

@@ -4,6 +4,7 @@ using Assistant.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Collections.Generic;
+using System;
 using System.Text.Json;
 using System.Linq;
 
@@ -13,11 +14,13 @@ namespace Assistant.Pages.Clients
     {
         private readonly ClientsService _clients;
         private readonly UserClientsRepository _repo;
+        private readonly EventsService _events;
 
-        public DetailsModel(ClientsService clients, UserClientsRepository repo)
+        public DetailsModel(ClientsService clients, UserClientsRepository repo, EventsService events)
         {
             _clients = clients;
             _repo = repo;
+            _events = events;
         }
 
         // Параметры из query: ?realm=...&clientId=...
@@ -35,6 +38,7 @@ namespace Assistant.Pages.Clients
         [BindProperty] public string RedirectUrisJson { get; set; } = "[]";
         [BindProperty] public string LocalRolesJson { get; set; } = "[]";
         [BindProperty] public string ServiceRolesJson { get; set; } = "[]";
+        public string EventTypesJson { get; set; } = "[]";
         // public string DefaultScopesJson { get; private set; } = "[]";
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
@@ -65,6 +69,7 @@ namespace Assistant.Pages.Clients
             RedirectUrisJson = JsonSerializer.Serialize(details.RedirectUris);
             LocalRolesJson = JsonSerializer.Serialize(details.LocalRoles);
             ServiceRolesJson = JsonSerializer.Serialize(details.ServiceRoles.Select(p => $"{p.ClientId}: {p.Role}"));
+            EventTypesJson = JsonSerializer.Serialize(await _events.GetEventTypesAsync(Realm!, ct));
             // DefaultScopesJson = JsonSerializer.Serialize(details.DefaultScopes);
 
             return Page();
@@ -108,6 +113,12 @@ namespace Assistant.Pages.Clients
             await _repo.RemoveAsync(ClientId!, Realm!, ct);
             TempData["FlashOk"] = "Client deleted.";
             return RedirectToPage("/Index");
+        }
+
+        public async Task<IActionResult> OnGetEventsAsync(string realm, string clientId, string? type, DateTime? from, DateTime? to, string? user, string? ip, CancellationToken ct)
+        {
+            var list = await _events.GetEventsAsync(realm, clientId, type, from, to, user, ip, ct: ct);
+            return new JsonResult(list);
         }
 
         private static List<string> TryParseList(string? json)
