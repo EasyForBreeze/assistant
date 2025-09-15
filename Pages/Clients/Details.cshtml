@@ -439,6 +439,28 @@
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
           @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
 
+          const swClientAuth = document.getElementById('swClientAuth');
+          const swService    = document.getElementById('swService');
+          const tabServiceRoles = document.querySelector('.tab-btn[data-tab="ServiceRoles"]');
+
+          function updateServiceRolesTab(){
+            const on = swService?.checked;
+            tabServiceRoles?.classList.toggle('kc-disabled', !on);
+            const active = document.querySelector('.tab-btn.active')?.dataset.tab;
+            if (!on && active === 'ServiceRoles') showTab('Overview');
+          }
+
+          function updateServiceState(){
+            const authOn = swClientAuth?.checked;
+            if (!authOn && swService){ swService.checked = false; }
+            if (swService) swService.disabled = !authOn;
+            updateServiceRolesTab();
+          }
+
+          swClientAuth?.addEventListener('change', updateServiceState);
+          swService?.addEventListener('change', updateServiceRolesTab);
+          updateServiceState();
+
           // Redirect URIs
           const swStandard = document.getElementById('swStandard');
           const redirectPanel = document.getElementById('redirectPanel');
