@@ -94,6 +94,7 @@ namespace Assistant.KeyCloak
         string Realm,
         string CurrentClientId,
         string ClientId,
+        bool Enabled,
         string? Description,
         bool ClientAuth,
         bool StandardFlow,
@@ -429,6 +430,7 @@ namespace Assistant.KeyCloak
             var body = new
             {
                 clientId = spec.ClientId,
+                enabled = spec.Enabled,
                 publicClient = !spec.ClientAuth,
                 serviceAccountsEnabled = spec.ServiceAccount,
                 standardFlowEnabled = spec.StandardFlow,
@@ -448,6 +450,21 @@ namespace Assistant.KeyCloak
 
             if (spec.ServiceAccount && spec.ServiceRoles?.Count > 0)
                 await AssignServiceRolesToServiceAccountAsync(spec.Realm, existing.Id, spec.ServiceRoles, ct);
+        }
+
+        public async Task DeleteClientAsync(string realm, string clientId, CancellationToken ct = default)
+        {
+            var http = _factory.CreateClient("kc-admin");
+
+            var existing = (await SearchClientsAsync(realm, clientId, 0, 1, ct))
+                .FirstOrDefault(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException($"Client '{clientId}' not found.");
+
+            var delNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(existing.Id)}";
+            var delLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(existing.Id)}";
+
+            using var resp = await DeleteWithFallback(http, delNew, delLegacy, ct);
+            EnsureAuthOrThrow(resp);
         }
 
         // ======= Internal helpers for Create =======
@@ -578,6 +595,17 @@ namespace Assistant.KeyCloak
             {
                 resp.Dispose();
                 resp = await http.PostAsync(legacyUrl, null, ct);
+            }
+            return resp;
+        }
+
+        private static async Task<HttpResponseMessage> DeleteWithFallback(HttpClient http, string newUrl, string legacyUrl, CancellationToken ct)
+        {
+            var resp = await http.DeleteAsync(newUrl, ct);
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+            {
+                resp.Dispose();
+                resp = await http.DeleteAsync(legacyUrl, ct);
             }
             return resp;
         }
