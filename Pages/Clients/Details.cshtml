@@ -378,14 +378,16 @@
             </div>
 
             <div class="grid md:grid-cols-6 gap-2 mb-10">
-                <input id="evFilterType" list="evTypeList" class="kc-input kc-select rounded-xl px-3 py-2 text-sm" placeholder="All types" />
+                <div class="relative">
+                    <input id="evFilterType" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full" placeholder="All types" autocomplete="off" />
+                    <div id="evTypeDd" class="absolute z-20 mt-1 w-full kc-card p-2 hidden"></div>
+                </div>
                 <input id="evFrom" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evTo" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evUser" placeholder="User" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evIp" placeholder="IP адрес" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <button id="evSearchBtn" type="button" class="btn-subtle">Search</button>
             </div>
-            <datalist id="evTypeList"></datalist>
 
             <div class="grid grid-cols-12 gap-2 kc-th px-1">
                 <div class="col-span-3">Type</div>
@@ -600,7 +602,7 @@
             const rowsEl  = document.getElementById('eventsRows');
             const pagerEl = document.getElementById('eventsPager');
             const inType  = document.getElementById('evFilterType');
-            const ddType  = document.getElementById('evTypeList');
+            const ddType  = document.getElementById('evTypeDd');
             const inFrom  = document.getElementById('evFrom');
             const inTo    = document.getElementById('evTo');
             const inUser  = document.getElementById('evUser');
@@ -608,7 +610,27 @@
             const btnSearch = document.getElementById('evSearchBtn');
 
             const types = JSON.parse('@Html.Raw(Model.EventTypesJson)');
-            types.forEach(t=> ddType?.appendChild(new Option(t,t)));
+
+            function renderTypeDd(){
+              if(!ddType) return;
+              const q = (inType.value||'').trim().toLowerCase();
+              ddType.innerHTML = '';
+              const hits = types.filter(t=> t.toLowerCase().includes(q)).slice(0,20);
+              hits.forEach(t=>{
+                const div = document.createElement('div');
+                div.className = 'px-3 py-1 cursor-pointer hover:bg-white/10 rounded';
+                div.textContent = t;
+                div.addEventListener('click', ()=>{ inType.value=t; ddType.classList.add('hidden'); });
+                ddType.appendChild(div);
+              });
+              ddType.classList.toggle('hidden', hits.length===0);
+            }
+
+            inType?.addEventListener('input', renderTypeDd);
+            inType?.addEventListener('focus', renderTypeDd);
+            document.addEventListener('click', e=>{ if(!ddType) return; if(e.target!==inType && !ddType.contains(e.target)) ddType.classList.add('hidden'); });
+
+            [inType,inFrom,inTo,inUser,inIp].forEach(el=> el?.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); load(); }}));
 
             let all = [];
             let page = 1;
