@@ -38,7 +38,10 @@
                 <input type="checkbox" id="swEnabled" @(enabled ? "checked" : "") />
                 <span class="track"><span class="dot"></span></span>
             </label>
-            <span id="lblEnabled" class="text-sm text-slate-300">@((enabled) ? "Enabled" : "Disabled")</span>
+            <span id="lblEnabled"
+                  class="inline-flex items-center rounded-full px-2 py-1 text-xs border border-white/10 @(enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")">
+                @((enabled) ? "Enabled" : "Disabled")
+            </span>
         </div>
     </div>
 </div>
@@ -463,7 +466,11 @@
           }
 
           function updateEnabledLabel(){
-            lblEnabled && (lblEnabled.textContent = swEnabled?.checked ? 'Enabled' : 'Disabled');
+            if (!lblEnabled || !swEnabled) return;
+            const on = swEnabled.checked;
+            lblEnabled.textContent = on ? 'Enabled' : 'Disabled';
+            lblEnabled.className = 'inline-flex items-center rounded-full px-2 py-1 text-xs border border-white/10 '
+              + (on ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200');
           }
 
           swEnabled?.addEventListener('change', updateEnabledLabel);
