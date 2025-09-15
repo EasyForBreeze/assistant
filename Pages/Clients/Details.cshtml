@@ -631,6 +631,7 @@
             document.addEventListener('click', e=>{ if(!ddType) return; if(e.target!==inType && !ddType.contains(e.target)) ddType.classList.add('hidden'); });
 
             [inType,inFrom,inTo,inUser,inIp].forEach(el=> el?.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); load(); }}));
+            btnSearch?.addEventListener('click', load);
 
             let all = [];
             let page = 1;
