@@ -493,3 +493,22 @@ body.page-loaded #app {
     transform: translateY(0);
 }
 
+/* ===== Events filters ===== */
+.event-filters {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    align-items: stretch;
+}
+
+.event-filters > * {
+    width: 100%;
+    min-width: 0;
+}
+
+@media (min-width: 768px) {
+    .event-filters {
+        grid-template-columns: 1.5fr repeat(5, minmax(0, 1fr));
+    }
+}
+
