@@ -378,9 +378,9 @@
             </div>
 
             <div class="grid md:grid-cols-6 gap-2 mb-10">
-                <div class="relative">
-                    <input id="evFilterType" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full" placeholder="All types" autocomplete="off" />
-                    <div id="evTypeDd" class="absolute z-20 mt-1 w-full kc-card p-2 hidden"></div>
+                <div class="relative md:col-span-2">
+                    <input id="evFilterType" class="kc-input kc-select rounded-xl px-3 py-2 text-xs w-full" placeholder="All types" autocomplete="off" />
+                    <div id="evTypeDd" class="absolute z-20 mt-1 w-full md:w-[420px] kc-card p-2 hidden text-xs"></div>
                 </div>
                 <input id="evFrom" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evTo" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
@@ -389,13 +389,13 @@
                 <button id="evSearchBtn" type="button" class="btn-subtle">Search</button>
             </div>
 
-            <div class="grid grid-cols-12 gap-2 kc-th px-1">
+            <div class="grid grid-cols-12 gap-2 kc-th px-1 text-center">
                 <div class="col-span-3">Type</div>
                 <div class="col-span-3">Date</div>
                 <div class="col-span-3">User</div>
                 <div class="col-span-3">IP адрес</div>
             </div>
-            <div id="eventsRows" class="mt-1"></div>
+            <div id="eventsRows" class="mt-1 text-center"></div>
             <div id="eventsPager"></div>
         </div>
     </div>
