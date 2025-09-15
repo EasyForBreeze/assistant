@@ -377,16 +377,16 @@
                 <div class="text-xs text-slate-400">Created: @(DateTime.Now.AddDays(-5).ToString("g")) by admin</div>
             </div>
 
-            <div class="grid md:grid-cols-7 gap-2 mb-10">
-                <div class="relative md:col-span-2 md:max-w-xs">
+            <div class="grid gap-2 mb-10 md:flex md:flex-wrap md:items-center md:gap-3">
+                <div class="relative w-full md:w-56 md:max-w-xs md:flex-none">
                     <input id="evFilterType" class="kc-input kc-select rounded-xl px-3 py-2 text-xs w-full" placeholder="All types" autocomplete="off" />
                     <div id="evTypeDd" class="absolute z-20 mt-1 w-full kc-card p-2 hidden text-xs"></div>
                 </div>
-                <input id="evFrom" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
-                <input id="evTo" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
-                <input id="evUser" placeholder="User" class="kc-input rounded-xl px-3 py-2 text-sm" />
-                <input id="evIp" placeholder="IP адрес" class="kc-input rounded-xl px-3 py-2 text-sm" />
-                <button id="evSearchBtn" type="button" class="btn-subtle md:self-center">Search</button>
+                <input id="evFrom" type="datetime-local" class="kc-input rounded-xl px-3 py-1.5 text-xs w-full md:w-44 md:flex-none" />
+                <input id="evTo" type="datetime-local" class="kc-input rounded-xl px-3 py-1.5 text-xs w-full md:w-44 md:flex-none" />
+                <input id="evUser" placeholder="User" class="kc-input rounded-xl px-3 py-1.5 text-xs w-full md:w-40 md:flex-none" />
+                <input id="evIp" placeholder="IP адрес" class="kc-input rounded-xl px-3 py-1.5 text-xs w-full md:w-32 md:flex-none" />
+                <button id="evSearchBtn" type="button" class="btn-subtle md:self-center md:flex-none">Search</button>
             </div>
 
             <div class="grid grid-cols-12 gap-2 kc-th px-1 text-center">
