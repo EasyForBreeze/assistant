@@ -41,9 +41,7 @@ else if (Model.Clients.Any())
                         <!-- Заголовок + статус -->
                         <div class="flex items-start justify-between">
                             <div class="text-slate-100 font-semibold text-lg truncate">@c.ClientId</div>
-                            <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px]"
-                                                 @(c.Enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")
-                                                 border border-white/10">
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] border border-white/10 @(c.Enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")">
                                 @(c.Enabled ? "Enabled" : "Disabled")
                             </span>
                         </div>
