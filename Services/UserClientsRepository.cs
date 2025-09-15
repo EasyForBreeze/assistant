@@ -63,6 +63,20 @@ public class UserClientsRepository
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
+    public async Task RemoveAsync(string clientId, string realm, CancellationToken ct = default)
+    {
+        await EnsureCreatedAsync(ct);
+
+        await using var conn = new NpgsqlConnection(_connString);
+        await conn.OpenAsync(ct);
+
+        var cmd = new NpgsqlCommand("delete from user_clients where client_id=@cid and realm=@r", conn);
+        cmd.Parameters.AddWithValue("cid", clientId);
+        cmd.Parameters.AddWithValue("r", realm);
+
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
     public async Task<List<ClientSummary>> GetForUserAsync(string username, bool isAdmin, CancellationToken ct = default)
     {
         await EnsureCreatedAsync(ct);
