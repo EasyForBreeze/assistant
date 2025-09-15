@@ -48,14 +48,14 @@
 
 <!-- Вкладки -->
 <div class="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Client tabs">
-    <button type="button" class="tab-btn active" data-tab="Overview" role="tab" aria-selected="true">Overview</button>
-    <button type="button" class="tab-btn" data-tab="Roles" role="tab">Roles</button>
-    <button type="button" class="tab-btn" data-tab="ServiceRoles" role="tab">Service Roles</button>
+    <button type="button" class="tab-btn active" data-tab="Overview" role="tab" aria-selected="true">Общие настройки</button>
+    <button type="button" class="tab-btn" data-tab="Roles" role="tab">Локальные роли</button>
+    <button type="button" class="tab-btn" data-tab="ServiceRoles" role="tab">Сервисные роли</button>
     @*<button type="button" class="tab-btn" data-tab="Scopes" role="tab">Scopes</button>*@
     @*<button type="button" class="tab-btn" data-tab="Flows" role="tab">Flows</button>*@
-    <button type="button" class="tab-btn" data-tab="Credentials" role="tab">Credentials</button>
+    <button type="button" class="tab-btn" data-tab="Credentials" role="tab">Учетные данные клиента</button>
     <button type="button" class="tab-btn" data-tab="Endpoints" role="tab">Endpoints</button>
-    <button type="button" class="tab-btn" data-tab="Events" role="tab">Events</button>
+    <button type="button" class="tab-btn" data-tab="Events" role="tab">События по клиенту</button>
 
 
     <div class="ml-auto flex items-center gap-2">
@@ -92,28 +92,28 @@
                         <input id="ovClientId" class="kc-input rounded-xl px-3 py-2 text-sm" value="@clientId" />
                     </div>
                     <div class="form-row_small">
-                        <label class="text-sm text-slate-400">Description</label>
-                        <input id="ovDesc" class="kc-input rounded-xl px-3 py-2 text-sm" value="@description" placeholder="Description..." />
+                        <label class="text-sm text-slate-400">Описание клиента</label>
+                        <input id="ovDesc" class="kc-input rounded-xl px-3 py-2 text-sm" value="@description" placeholder="Опишите вашего клиента..." />
                     </div>
                 </div>
 
                 <div class="space-y-3 justify-self-center w-full">
                     <div class="form-row">
-                        <label class="text-sm text-slate-400">Client Authentication</label>
+                        <label class="text-sm text-slate-400">Тип клиента (с ключом/без)</label>
                         <label class="kc-switch inline-flex items-center">
                             <input type="checkbox" id="swClientAuth" @(clientAuthInit ? "checked" : "")>
                             <span class="track"><span class="dot"></span></span>
                         </label>
                     </div>
                     <div class="form-row">
-                        <label class="text-sm text-slate-400">Standard flow</label>
+                        <label class="text-sm text-slate-400">Стандартный поток</label>
                         <label class="kc-switch inline-flex items-center">
                             <input type="checkbox" id="swStandard" @(standardInit ? "checked" : "")>
                             <span class="track"><span class="dot"></span></span>
                         </label>
                     </div>
                     <div class="form-row">
-                        <label class="text-sm text-slate-400">Service account</label>
+                        <label class="text-sm text-slate-400">Межсервисное взаимодействие</label>
                         <label class="kc-switch inline-flex items-center">
                             <input type="checkbox" id="swService" @(serviceInit ? "checked" : "")>
                             <span class="track"><span class="dot"></span></span>
@@ -125,7 +125,7 @@
 
         <!-- Redirect URIs — дизейблится при Standard=false -->
         <div id="redirectPanel" class="kc-card p-5 kc-hover mt-3">
-            <div class="text-slate-200 font-semibold mb-2">Redirect URIs</div>
+            <div class="text-slate-200 font-semibold mb-2">Адреса для перенаправлений</div>
             <div id="redirList" class="flex flex-wrap gap-2 mb-2"></div>
             <div class="flex gap-2">
                 <input id="redirInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="https://app.example.com/callback/*" />
@@ -138,7 +138,7 @@
     <!-- ROLES -->
     <div class="tab-pane hidden" data-tab="Roles" role="tabpanel">
         <div class="kc-card p-5 kc-hover">
-            <div class="text-slate-200 font-semibold mb-3">Local roles</div>
+            <div class="text-slate-200 font-semibold mb-3">Локальные роли</div>
             <div id="locList" class="flex flex-wrap gap-2 mb-2"></div>
             <div class="flex gap-2">
                 <input id="locInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" />
@@ -150,8 +150,7 @@
     <!-- SERVICE ROLES -->
     <div class="tab-pane hidden" data-tab="ServiceRoles" role="tabpanel">
         <div class="kc-card p-5 kc-hover">
-            <div class="text-slate-200 font-semibold mb-3">Service roles</div>
-            <div class="kc-th mb-2">Назначают роли других сервисов сервисному аккаунту текущего клиента.</div>
+            <div class="text-slate-200 font-semibold mb-3">Сервисные роли</div>
 
             <div id="svcList" class="flex flex-wrap gap-2 mb-2"></div>
 
@@ -166,6 +165,7 @@
 
                 <div id="svcSearchDd"
                      class="absolute z-20 mt-1 w-full md:w-[420px] kc-card p-2 hidden"></div>
+                <div class="kc-th mb-2">Назначают роли других сервисов сервисному аккаунту текущего клиента.</div>
             </div>
 
             <div id="svcChosen" class="hidden space-y-3">
@@ -225,7 +225,7 @@
                 </div>
 
                 <div class="form-row_small justify-self-center w-full">
-                    <label class="text-sm text-slate-400">Secret key</label>
+                    <label class="text-sm text-slate-400">Секретный ключ</label>
                     <div class="flex gap-2 items-center">
                         <input id="credSecret" class="kc-input rounded-xl px-3 py-2 text-sm w-full" value="••••••••••••••" />
                         <button class="btn-subtle" id="btnCopySecret" title="Копировать" aria-label="Копировать">
@@ -390,9 +390,9 @@
             </div>
 
             <div class="grid grid-cols-12 gap-2 kc-th px-1 text-center">
-                <div class="col-span-3">Type</div>
-                <div class="col-span-3">Date</div>
-                <div class="col-span-3">User</div>
+                <div class="col-span-3">Тип события</div>
+                <div class="col-span-3">Дата</div>
+                <div class="col-span-3">Пользователь</div>
                 <div class="col-span-3">IP адрес</div>
             </div>
             <div id="eventsRows" class="mt-1 text-center"></div>
