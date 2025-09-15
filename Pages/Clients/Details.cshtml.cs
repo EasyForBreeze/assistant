@@ -25,6 +25,7 @@ namespace Assistant.Pages.Clients
         public ClientVm Client { get; set; } = default!;
         [BindProperty] public string? NewClientId { get; set; }
         [BindProperty] public string? Description { get; set; }
+        [BindProperty] public bool Enabled { get; set; }
         [BindProperty] public bool ClientAuth { get; set; }
         [BindProperty] public bool StandardFlow { get; set; }
         [BindProperty] public bool ServiceAccount { get; set; }
@@ -53,6 +54,7 @@ namespace Assistant.Pages.Clients
             };
             NewClientId = details.ClientId;
             Description = details.Description;
+            Enabled = details.Enabled;
             ClientAuth = details.ClientAuth;
             StandardFlow = details.StandardFlow;
             ServiceAccount = details.ServiceAccount;
@@ -79,6 +81,7 @@ namespace Assistant.Pages.Clients
                 Realm!,
                 ClientId!,
                 newId,
+                Enabled,
                 Description,
                 ClientAuth,
                 StandardFlow,
@@ -93,10 +96,13 @@ namespace Assistant.Pages.Clients
             return RedirectToPage(new { realm = Realm, clientId = newId });
         }
 
-        public IActionResult OnPostDelete()
+        public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct)
         {
-            // Заглушка удаления:
-            TempData["Flash"] = "Client deleted (stub).";
+            if (string.IsNullOrWhiteSpace(Realm) || string.IsNullOrWhiteSpace(ClientId))
+                return NotFound();
+
+            await _clients.DeleteClientAsync(Realm!, ClientId!, ct);
+            TempData["FlashOk"] = "Client deleted.";
             return RedirectToPage("/Index");
         }
 

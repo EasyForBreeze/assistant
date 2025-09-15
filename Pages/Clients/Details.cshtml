@@ -56,7 +56,7 @@
 
 
     <div class="ml-auto flex items-center gap-2">
-        <button type="submit" class="btn-danger" title="Удалить клиента" aria-label="Delete">
+        <button type="submit" class="btn-danger" id="btnDelete" form="deleteForm" title="Удалить клиента" aria-label="Delete">
             <!-- trash icon -->
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6" />
@@ -400,6 +400,7 @@
 <form method="post" id="saveForm" asp-page-handler="Save" asp-route-realm="@realm" asp-route-clientId="@clientId" class="hidden">
     <input type="hidden" asp-for="NewClientId" id="hidClientId" />
     <input type="hidden" asp-for="Description" id="hidDescription" />
+    <input type="hidden" asp-for="Enabled" id="hidEnabled" />
     <input type="hidden" asp-for="ClientAuth" id="hidClientAuth" />
     <input type="hidden" asp-for="StandardFlow" id="hidStandardFlow" />
     <input type="hidden" asp-for="ServiceAccount" id="hidServiceAccount" />
@@ -407,6 +408,8 @@
     <input type="hidden" asp-for="LocalRolesJson" id="hidLocalRoles" />
     <input type="hidden" asp-for="ServiceRolesJson" id="hidServiceRoles" />
 </form>
+
+<form method="post" id="deleteForm" asp-page-handler="Delete" asp-route-realm="@realm" asp-route-clientId="@clientId" class="hidden"></form>
 
 @section Scripts {
     <script>
@@ -439,6 +442,8 @@
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
           @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
 
+          const swEnabled    = document.getElementById('swEnabled');
+          const lblEnabled   = document.getElementById('lblEnabled');
           const swClientAuth = document.getElementById('swClientAuth');
           const swService    = document.getElementById('swService');
           const tabServiceRoles = document.querySelector('.tab-btn[data-tab="ServiceRoles"]');
@@ -457,9 +462,15 @@
             updateServiceRolesTab();
           }
 
+          function updateEnabledLabel(){
+            lblEnabled && (lblEnabled.textContent = swEnabled?.checked ? 'Enabled' : 'Disabled');
+          }
+
+          swEnabled?.addEventListener('change', updateEnabledLabel);
           swClientAuth?.addEventListener('change', updateServiceState);
           swService?.addEventListener('change', updateServiceRolesTab);
           updateServiceState();
+          updateEnabledLabel();
 
           // Redirect URIs
           const swStandard = document.getElementById('swStandard');
@@ -665,11 +676,13 @@
 
           // ---------- Сбор данных перед Save ----------
           const saveForm = document.getElementById('saveForm');
+          const btnDelete = document.getElementById('btnDelete');
           function collect()
           {
             // базовые
             document.getElementById('hidClientId').value       = (document.getElementById('ovClientId').value||'').trim();
             document.getElementById('hidDescription').value    = (document.getElementById('ovDesc').value||'').trim();
+            document.getElementById('hidEnabled').value        = document.getElementById('swEnabled').checked ? 'true' : 'false';
             document.getElementById('hidClientAuth').value     = document.getElementById('swClientAuth').checked ? 'true' : 'false';
             document.getElementById('hidStandardFlow').value   = document.getElementById('swStandard').checked ? 'true' : 'false';
             document.getElementById('hidServiceAccount').value = document.getElementById('swService').checked ? 'true' : 'false';
@@ -678,7 +691,8 @@
             document.getElementById('hidLocalRoles').value   = JSON.stringify(locals);
             document.getElementById('hidServiceRoles').value = JSON.stringify(svcRoles);
           }
-            saveForm?.addEventListener('submit', collect);
+          btnDelete?.addEventListener('click', e=>{ if(!confirm('Вы действительно хотите удалить клиента?')) e.preventDefault(); });
+          saveForm?.addEventListener('submit', collect);
         })();
         (function(){
           const $  = (s, r=document)=>r.querySelector(s);
