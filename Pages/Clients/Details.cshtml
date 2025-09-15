@@ -377,16 +377,16 @@
                 <div class="text-xs text-slate-400">Created: @(DateTime.Now.AddDays(-5).ToString("g")) by admin</div>
             </div>
 
-            <div class="grid md:grid-cols-6 gap-2 mb-10">
-                <div class="relative md:col-span-2">
+            <div class="grid md:grid-cols-7 gap-2 mb-10">
+                <div class="relative md:col-span-2 md:max-w-xs">
                     <input id="evFilterType" class="kc-input kc-select rounded-xl px-3 py-2 text-xs w-full" placeholder="All types" autocomplete="off" />
-                    <div id="evTypeDd" class="absolute z-20 mt-1 w-full md:w-[420px] kc-card p-2 hidden text-xs"></div>
+                    <div id="evTypeDd" class="absolute z-20 mt-1 w-full kc-card p-2 hidden text-xs"></div>
                 </div>
                 <input id="evFrom" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evTo" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evUser" placeholder="User" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evIp" placeholder="IP адрес" class="kc-input rounded-xl px-3 py-2 text-sm" />
-                <button id="evSearchBtn" type="button" class="btn-subtle">Search</button>
+                <button id="evSearchBtn" type="button" class="btn-subtle md:self-center">Search</button>
             </div>
 
             <div class="grid grid-cols-12 gap-2 kc-th px-1 text-center">
@@ -424,6 +424,14 @@
           const btns  = document.querySelectorAll('.tab-btn');
           const panes = document.querySelectorAll('.tab-pane');
 
+          const ensureEventsInit = () => {
+            if (window.__eventsInited) return;
+            if (typeof window.initEvents === 'function'){
+              window.initEvents();
+              window.__eventsInited = true;
+            }
+          };
+
           function showTab(tab){
             panes.forEach(p => p.classList.toggle('hidden', p.dataset.tab !== tab));
             btns.forEach(b => {
@@ -432,11 +440,10 @@
               b.setAttribute('aria-selected', active ? 'true' : 'false');
             });
             history.replaceState(null, '', '#tab=' + encodeURIComponent(tab));
-            localStorage.setItem('kc.details.tab', tab);
-            if (tab === 'Events' && !window.__eventsInited){ if (typeof window.initEvents==='function') window.initEvents(); window.__eventsInited=true; }
+            if (tab === 'Events') ensureEventsInit();
           }
           const m = location.hash.match(/tab=([^&]+)/);
-          const start = m ? decodeURIComponent(m[1]) : (localStorage.getItem('kc.details.tab') || 'Overview');
+          const start = m ? decodeURIComponent(m[1]) : 'Overview';
           btns.forEach(b => b.addEventListener('click', ()=> showTab(b.dataset.tab)));
           showTab(start);
 
@@ -631,7 +638,6 @@
             document.addEventListener('click', e=>{ if(!ddType) return; if(e.target!==inType && !ddType.contains(e.target)) ddType.classList.add('hidden'); });
 
             [inType,inFrom,inTo,inUser,inIp].forEach(el=> el?.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); load(); }}));
-            btnSearch?.addEventListener('click', load);
 
             let all = [];
             let page = 1;
@@ -691,6 +697,9 @@
             btnSearch?.addEventListener('click', load);
             load();
           };
+          if (document.querySelector('.tab-btn.active')?.dataset.tab === 'Events'){
+            ensureEventsInit();
+          }
           // ---------- Сбор данных перед Save ----------
           const saveForm = document.getElementById('saveForm');
           const btnDelete = document.getElementById('btnDelete');
