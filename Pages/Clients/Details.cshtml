@@ -150,18 +150,34 @@
             <div class="text-slate-200 font-semibold mb-3">Service roles</div>
             <div class="kc-th mb-2">Назначают роли других сервисов сервисному аккаунту текущего клиента.</div>
 
-            <div id="svcList" class="flex flex-wrap gap-2 mb-3"></div>
-            <div class="flex flex-col md:flex-row gap-2 md:items-center">
-                <select id="svcClient" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full md:w-[360px]">
-                    <option value="">Выберите сервис…</option>
-                </select>
-                <select id="svcRole" class="kc-input kc-select rounded-xl px-3 py-2 text-sm w-full md:w-[360px]">
-                    <option value="">Выберите роль…</option>
-                </select>
-                <button type="button" class="btn-subtle" id="btnAddServiceRole">Add</button>
+            <div id="svcList" class="flex flex-wrap gap-2 mb-2"></div>
+            <input type="hidden" asp-for="ServiceRolesJson" id="hidServiceRoles" />
+
+            <div class="relative space-y-2">
+                <div class="flex gap-2 items-center">
+                    <input id="svcSearchInput"
+                           class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
+                           placeholder="например: app-bank-portal или 'read'"
+                           autocomplete="off" autocapitalize="off" spellcheck="false"/>
+                    <button type="button" id="svcSearchBtn" class="btn-subtle">Найти</button>
+                </div>
+
+                <div id="svcSearchDd"
+                     class="absolute z-20 mt-1 w-full md:w-[420px] kc-card p-2 hidden"></div>
             </div>
 
-            <div class="kc-mini mt-2">Примеры: <code>files-api: api.files.read</code>, <code>billing-api: api.billing.write</code>.</div>
+            <div id="svcChosen" class="hidden space-y-3">
+                <div class="flex items-center gap-3">
+                    <span class="kc-tag" id="svcChosenTag"></span>
+                    <button type="button" class="btn-link underline text-slate-300" id="svcChange">Сменить сервис</button>
+                </div>
+
+                <div id="svcRoleList" class="grid md:grid-cols-2 gap-2"></div>
+                <div><button type="button" id="btnMoreRoles" class="btn-subtle hidden">Показать ещё</button></div>
+
+                <div id="svcErr" class="err"></div>
+                <div class="kc-mini">Клик по роли добавляет её в список выше. Формат: <code>clientId: roleName</code>.</div>
+            </div>
         </div>
     </div>
 
@@ -383,6 +399,7 @@
 
 @section Scripts {
     <script>
+        const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
         (function(){
           // ---------- Вкладки ----------
           const btns  = document.querySelectorAll('.tab-btn');
@@ -409,7 +426,6 @@
           const clientId = '@clientId';
           const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
-          const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
           @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
 
           // Redirect URIs
@@ -462,35 +478,6 @@
             locals.push(v); locInput.value=''; renderChips(locList, locals);
           });
 
-          // Service roles (демо)
-          const svcClient = document.getElementById('svcClient');
-          const svcRole   = document.getElementById('svcRole');
-          const svcList   = document.getElementById('svcList');
-          renderChips(svcList, svcRoles);
-          const svcSource = {
-            "billing-api":   ["api.billing.read","api.billing.write"],
-            "analytics-api": ["api.analytics.read","api.analytics.write"],
-            "files-api":     ["api.files.read","api.files.write"]
-          };
-          function fillServiceSources(){
-            if (!svcClient) return;
-            svcClient.innerHTML = '<option value="">Выберите сервис…</option>';
-            Object.keys(svcSource).forEach(c => svcClient.add(new Option(c,c)));
-            fillRoles();
-          }
-          function fillRoles(){
-            if (!svcRole) return;
-            const c = svcClient.value;
-            svcRole.innerHTML = '<option value="">Выберите роль…</option>';
-            (svcSource[c]||[]).forEach(r => svcRole.add(new Option(r,r)));
-          }
-          svcClient?.addEventListener('change', fillRoles);
-          fillServiceSources();
-          document.getElementById('btnAddServiceRole')?.addEventListener('click', ()=>{
-            const c = svcClient.value, r = svcRole.value; if (!c || !r) return;
-            const v = `${c}: ${r}`; svcRoles.push(v); renderChips(svcList, svcRoles);
-          });
-
           // Default scopes (disabled)
           // const scopesList = document.getElementById('scopesList');
           // renderStaticChips(scopesList, scopes);
@@ -511,6 +498,9 @@
             try { await navigator.clipboard.writeText(val); } catch {}
           });
 
+          const secretMask = '••••••••••••••';
+          let secretVisible = false;
+
           async function fetchSecret(method = 'GET') {
             const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`, { method });
             if (resp.ok) {
@@ -522,14 +512,35 @@
             return '';
           }
 
-          document.getElementById('btnShowSecret')?.addEventListener('click', () => { fetchSecret('GET'); });
+          const btnShowSecret = document.getElementById('btnShowSecret');
+          btnShowSecret?.addEventListener('click', async () => {
+            const input = document.getElementById('credSecret');
+            if (!input) return;
+            if (secretVisible) {
+              input.value = secretMask;
+              secretVisible = false;
+              btnShowSecret.title = 'Показать';
+              btnShowSecret.setAttribute('aria-label','Показать');
+            } else {
+              await fetchSecret('GET');
+              secretVisible = true;
+              btnShowSecret.title = 'Скрыть';
+              btnShowSecret.setAttribute('aria-label','Скрыть');
+            }
+          });
 
           document.getElementById('btnCopySecret')?.addEventListener('click', async () => {
             const secret = await fetchSecret('GET');
+            secretVisible = true;
+            btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
             try { await navigator.clipboard.writeText(secret); } catch {}
           });
 
-          document.getElementById('btnRegenSecret')?.addEventListener('click', () => { fetchSecret('POST'); });
+          document.getElementById('btnRegenSecret')?.addEventListener('click', () => {
+            secretVisible = true;
+            btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
+            fetchSecret('POST');
+          });
 
           // ---------- Events (ленивая инициализация) ----------
           window.initEvents = function(){
@@ -634,7 +645,253 @@
             document.getElementById('hidLocalRoles').value   = JSON.stringify(locals);
             document.getElementById('hidServiceRoles').value = JSON.stringify(svcRoles);
           }
-          saveForm?.addEventListener('submit', collect);
+            saveForm?.addEventListener('submit', collect);
         })();
-    </script>
-}
+        (function(){
+          const $  = (s, r=document)=>r.querySelector(s);
+          const el = (t, cls, html)=>{ const n=document.createElement(t); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
+          const safe = fn => (...a)=>{ try { return fn(...a); } catch(e){ console.error('[ServiceRolesUI]', e); } };
+
+          const hidRoles       = document.getElementById('hidServiceRoles');
+          const svcList        = $('#svcList');
+          const svcSearchInput = $('#svcSearchInput');
+          const svcSearchBtn   = $('#svcSearchBtn');
+          const svcSearchDd    = $('#svcSearchDd');
+
+          const svcChosen      = $('#svcChosen');
+          const svcChosenTag   = $('#svcChosenTag');
+          const svcChangeBtn   = $('#svcChange');
+
+          const svcRoleList    = $('#svcRoleList');
+          const btnMoreRoles   = $('#btnMoreRoles');
+          const svcErr         = $('#svcErr');
+
+          const PAGE_URL = '@Url.Page(null)';
+          const realm = '@realm';
+          const MIN_LEN = 3;
+
+          const state = {
+            chips: Array.isArray(svcRoles) ? svcRoles : [],
+            currentClient: null,
+            page: 0, size: 50, more: false,
+            cacheClients: new Map(),
+            cacheClientRoles: new Map(),
+            lastQuery: '',
+            roleScanCursor: 0,
+            roleScanHasMore: false,
+            pendingEmpty: false
+          };
+
+          function persist(){ if(hidRoles) hidRoles.value = JSON.stringify(state.chips); }
+
+          function renderChips(){
+            if(!svcList) return;
+            svcList.innerHTML = '';
+            for (const s of state.chips){
+              const chip = el('div','kc-chip'); chip.textContent = s;
+              const x = el('button','kc-chip-x','×'); x.type='button'; x.title='Удалить';
+              x.addEventListener('click', safe(()=>{
+                const i = state.chips.indexOf(s);
+                if(i>=0){ state.chips.splice(i,1); renderChips(); persist(); }
+              }));
+              chip.appendChild(x);
+              svcList.appendChild(chip);
+            }
+          }
+          renderChips(); persist();
+
+          async function fetchJson(url, opts){
+            const r = await fetch(url, {headers:{'Accept':'application/json'}, ...opts});
+            if(!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          }
+          function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; svcSearchDd.style.minHeight=''; }
+          function showDd(){ if(!svcSearchDd) return; svcSearchDd.classList.remove('hidden'); }
+          function showLoading(){
+            if (!svcSearchDd) return;
+            svcSearchDd.innerHTML = `<div class="px-3 py-2 text-slate-400">Ищем...</div>`;
+            svcSearchDd.style.minHeight = '56px';
+            showDd();
+          }
+
+          async function searchClients(q){
+            if (state.cacheClients.has(q)) return state.cacheClients.get(q);
+            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(realm)}&q=${encodeURIComponent(q)}&first=0&max=12`;
+            const clients = await fetchJson(url);
+            state.cacheClients.set(q, clients || []);
+            return clients || [];
+          }
+
+          async function searchRolesAcrossClients(q, append=false, isFirst=false){
+            const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(realm)}&q=${encodeURIComponent(q)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
+            const res = await fetchJson(url);
+            const hits = res.hits || [];
+            renderRoleHits(hits, append);
+            if (typeof res.nextClientFirst === 'number' && res.nextClientFirst >= 0){
+              state.roleScanCursor = res.nextClientFirst;
+              state.roleScanHasMore = true;
+              ensureMoreHitsButton();
+            } else {
+              state.roleScanHasMore = false;
+              removeMoreHitsButton();
+            }
+            if (isFirst){
+              if (state.pendingEmpty && hits.length === 0){
+                svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`;
+                showDd();
+              }
+              state.pendingEmpty = false;
+            }
+          }
+
+          function ensureMoreHitsButton(){
+            if (!svcSearchDd) return;
+            if (svcSearchDd.querySelector('#roleHitsMoreBtn')) return;
+            const btn = el('button','w-full text-center px-3 py-2 mt-2 hover:bg-slate-700 rounded-md','Показать ещё совпадения');
+            btn.type='button';
+            btn.id='roleHitsMoreBtn';
+            btn.addEventListener('click', safe(()=> searchRolesAcrossClients(state.lastQuery, true, false)));
+            svcSearchDd.appendChild(btn);
+          }
+          function removeMoreHitsButton(){
+            document.getElementById('roleHitsMoreBtn')?.remove();
+          }
+
+          function renderRoleHits(hits, append){
+            if (!svcSearchDd || !hits.length) return;
+            let roleSec = svcSearchDd.querySelector('#roleHitsSection');
+            if (!append){
+              roleSec?.remove();
+              roleSec = el('div', null, '');
+              roleSec.id = 'roleHitsSection';
+              roleSec.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Роли (совпадения)'));
+              svcSearchDd.appendChild(roleSec);
+            }
+            hits.forEach(it=>{
+              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
+              line.type='button';
+              line.textContent = `${it.clientId}: ${it.role}`;
+              line.addEventListener('click', safe(()=>{
+                const val = `${it.clientId}: ${it.role}`;
+                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
+              }));
+              roleSec.appendChild(line);
+            });
+          }
+
+          function renderClientList(clients){
+            if (!svcSearchDd) return;
+            if (!clients.length){ svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`; showDd(); return; }
+            const wrap = el('div', null, '');
+            clients.forEach(it=>{
+              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
+              line.type='button';
+              line.textContent = it.clientId;
+              line.addEventListener('click', safe(()=> selectClient(it)));
+              wrap.appendChild(line);
+            });
+            svcSearchDd.innerHTML = '';
+            svcSearchDd.appendChild(wrap);
+            svcSearchDd.appendChild(el('div','divider my-2',''));
+            showDd();
+          }
+
+          async function unifiedSearch(qRaw){
+            const q = (qRaw||'').trim();
+            if (q.length < MIN_LEN){
+              svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Введите минимум ${MIN_LEN} символа</div>`;
+              showDd();
+              return;
+            }
+            state.lastQuery = q;
+            state.roleScanCursor = 0;
+            state.roleScanHasMore = false;
+            state.pendingEmpty = true;
+            removeMoreHitsButton();
+            showLoading();
+            const clients = await searchClients(q);
+            if (clients.length){
+              renderClientList(clients);
+              state.pendingEmpty = false;
+            }
+            searchRolesAcrossClients(q, false, true).catch(()=>{});
+          }
+
+          function selectClient(it){
+            state.currentClient = { id: it.id, clientId: it.clientId };
+            if (svcChosenTag) svcChosenTag.textContent = it.clientId;
+            svcChosen?.classList.remove('hidden');
+            hideDd();
+            if (svcSearchInput) svcSearchInput.value = it.clientId;
+            state.page = 0;
+            svcRoleList && (svcRoleList.innerHTML = '');
+            loadRoles({append:false});
+          }
+          svcChangeBtn?.addEventListener('click', safe(()=>{
+            state.currentClient = null;
+            svcChosen?.classList.add('hidden');
+            svcSearchInput?.focus();
+          }));
+
+          async function loadRoles({append}){
+            if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
+            if (!state.currentClient) return;
+
+            const key = `${state.currentClient.clientId}|${state.page}`;
+            try{
+              let roles = state.cacheClientRoles.get(key);
+              if (!roles){
+                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(realm)}&first=${state.page*state.size}&max=${state.size}`;
+                roles = await fetchJson(url);
+                state.cacheClientRoles.set(key, roles || []);
+              }
+              renderRoles(roles || [], {append});
+              state.more = (roles?.length || 0) === state.size;
+              btnMoreRoles?.classList.toggle('hidden', !state.more);
+            }catch(e){
+              if (svcErr){ svcErr.textContent = `Не удалось загрузить роли: ${e.message}`; svcErr.classList.add('show'); }
+            }
+          }
+          function renderRoles(roles, {append}){
+            if (!svcRoleList) return;
+            if (!append) svcRoleList.innerHTML = '';
+            if (!roles.length){
+              if (!append) svcRoleList.innerHTML = `<div class="px-2 py-1 text-slate-400">Ролей не найдено</div>`;
+              return;
+            }
+            roles.forEach(name=>{
+              const item = el('button','kc-card px-3 py-2 hover:bg-slate-700 text-left');
+              item.type = 'button';
+              item.textContent = name;
+              item.title = 'Добавить роль';
+              item.addEventListener('click', safe(()=>{
+                if (!state.currentClient) return;
+                const val = `${state.currentClient.clientId}: ${name}`;
+                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
+              }));
+              svcRoleList.appendChild(item);
+            });
+          }
+          btnMoreRoles?.addEventListener('click', safe(()=>{
+            state.page += 1;
+            loadRoles({append:true});
+          }));
+
+          const updateBtnState = ()=> { if (svcSearchBtn && svcSearchInput) svcSearchBtn.disabled = (svcSearchInput.value.trim().length < MIN_LEN); };
+          updateBtnState();
+          svcSearchInput?.addEventListener('input', updateBtnState);
+
+          svcSearchBtn?.addEventListener('click', safe(()=>{
+            const q = svcSearchInput?.value || '';
+            showLoading();
+            requestAnimationFrame(()=> unifiedSearch(q));
+          }));
+
+          svcSearchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+          document.addEventListener('click', safe((e)=>{
+            if (!svcSearchDd) return;
+            if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
+          }));
+        })();
+      </script>
+  }

@@ -69,6 +69,19 @@ namespace Assistant.Pages.Clients
             return RedirectToPage("/Index");
         }
 
+        // ===== AJAX handlers для фронта Service Roles =====
+        public async Task<IActionResult> OnGetRoleLookupAsync(string realm, string q, int clientFirst = 0, int clientsToScan = 25, int rolesPerClient = 10, CancellationToken ct = default)
+        {
+            var (hits, next) = await _clients.FindRolesAcrossClientsAsync(realm, q, clientFirst, clientsToScan, rolesPerClient, ct);
+            return new JsonResult(new { hits, nextClientFirst = next });
+        }
+
+        public async Task<IActionResult> OnGetClientsSearchAsync(string realm, string q, int first = 0, int max = 20, CancellationToken ct = default)
+            => new JsonResult(await _clients.SearchClientsAsync(realm, q ?? "", first, max, ct));
+
+        public async Task<IActionResult> OnGetClientRolesAsync(string realm, string id, int first = 0, int max = 50, string? q = null, CancellationToken ct = default)
+            => new JsonResult(await _clients.GetClientRolesAsync(realm, id, first, max, q, ct));
+
         public class ClientVm
         {
             public string ClientId { get; set; } = default!;
