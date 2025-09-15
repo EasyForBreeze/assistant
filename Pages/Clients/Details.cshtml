@@ -377,15 +377,15 @@
                 <div class="text-xs text-slate-400">Created: @(DateTime.Now.AddDays(-5).ToString("g")) by admin</div>
             </div>
 
-            <div class="grid md:grid-cols-5 gap-2 mb-10">
-                <select id="evFilterType" class="kc-input kc-select rounded-xl px-3 py-2 text-sm">
-                    <option value="">All types</option>
-                </select>
-                <input id="evFrom" type="date" class="kc-input rounded-xl px-3 py-2 text-sm" />
-                <input id="evTo" type="date" class="kc-input rounded-xl px-3 py-2 text-sm" />
+            <div class="grid md:grid-cols-6 gap-2 mb-10">
+                <input id="evFilterType" list="evTypeList" class="kc-input kc-select rounded-xl px-3 py-2 text-sm" placeholder="All types" />
+                <input id="evFrom" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
+                <input id="evTo" type="datetime-local" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evUser" placeholder="User" class="kc-input rounded-xl px-3 py-2 text-sm" />
                 <input id="evIp" placeholder="IP адрес" class="kc-input rounded-xl px-3 py-2 text-sm" />
+                <button id="evSearchBtn" type="button" class="btn-subtle">Search</button>
             </div>
+            <datalist id="evTypeList"></datalist>
 
             <div class="grid grid-cols-12 gap-2 kc-th px-1">
                 <div class="col-span-3">Type</div>
@@ -595,25 +595,35 @@
 
           // ---------- Events (ленивая инициализация) ----------
           window.initEvents = function(){
+            const PAGE_URL = '@Url.Page(null)';
             const pageSize = 10;
             const rowsEl  = document.getElementById('eventsRows');
             const pagerEl = document.getElementById('eventsPager');
-            const selType = document.getElementById('evFilterType');
+            const inType  = document.getElementById('evFilterType');
+            const ddType  = document.getElementById('evTypeList');
             const inFrom  = document.getElementById('evFrom');
             const inTo    = document.getElementById('evTo');
             const inUser  = document.getElementById('evUser');
             const inIp    = document.getElementById('evIp');
+            const btnSearch = document.getElementById('evSearchBtn');
 
             const types = JSON.parse('@Html.Raw(Model.EventTypesJson)');
-            types.forEach(t=> selType.add(new Option(t,t)));
+            types.forEach(t=> ddType?.appendChild(new Option(t,t)));
 
             let all = [];
             let page = 1;
             const fmt = s => new Date(s).toLocaleString();
 
+            async function fetchJson(url){
+              const r = await fetch(url,{headers:{'Accept':'application/json'}});
+              if(!r.ok) throw new Error('HTTP '+r.status);
+              return r.json();
+            }
+
             async function load(){
               const params = new URLSearchParams({ realm, clientId });
-              if (selType.value) params.set('type', selType.value);
+              const typeVal = (inType.value||'').trim();
+              if (typeVal) params.set('type', typeVal);
               if (inFrom.value) params.set('from', inFrom.value);
               if (inTo.value) params.set('to', inTo.value);
               if ((inUser.value||'').trim()) params.set('user', inUser.value.trim());
@@ -655,11 +665,7 @@
               }
             }
 
-            [selType, inFrom, inTo, inUser, inIp].forEach(el=>{
-              el?.addEventListener('input', load);
-              el?.addEventListener('change', load);
-            });
-
+            btnSearch?.addEventListener('click', load);
             load();
           };
           // ---------- Сбор данных перед Save ----------
