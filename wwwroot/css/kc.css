@@ -282,14 +282,14 @@
 .form-row 
 {
     display: grid;
-    grid-template-columns: 150px 1fr;
+    grid-template-columns: 1fr;
     gap: .5rem 1rem;
     align-items: center;
 }
 .form-row_small 
 {
     display: grid;
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 1fr;
     gap: .5rem 1rem;
     align-items: center;
 }
