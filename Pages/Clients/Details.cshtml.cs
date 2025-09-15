@@ -1,5 +1,6 @@
 ﻿// Pages/Clients/Details.cshtml.cs
 using Assistant.KeyCloak;
+using Assistant.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Collections.Generic;
@@ -11,10 +12,12 @@ namespace Assistant.Pages.Clients
     public class DetailsModel : PageModel
     {
         private readonly ClientsService _clients;
+        private readonly UserClientsRepository _repo;
 
-        public DetailsModel(ClientsService clients)
+        public DetailsModel(ClientsService clients, UserClientsRepository repo)
         {
             _clients = clients;
+            _repo = repo;
         }
 
         // Параметры из query: ?realm=...&clientId=...
@@ -102,6 +105,7 @@ namespace Assistant.Pages.Clients
                 return NotFound();
 
             await _clients.DeleteClientAsync(Realm!, ClientId!, ct);
+            await _repo.RemoveAsync(ClientId!, Realm!, ct);
             TempData["FlashOk"] = "Client deleted.";
             return RedirectToPage("/Index");
         }

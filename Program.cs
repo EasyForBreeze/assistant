@@ -110,6 +110,7 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
+app.UseExceptionHandler("/Error");
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
