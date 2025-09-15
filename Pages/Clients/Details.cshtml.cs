@@ -2,6 +2,7 @@
 using Assistant.KeyCloak;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Linq;
 
@@ -22,9 +23,14 @@ namespace Assistant.Pages.Clients
 
         // То самое, что используется в cshtml: client?.ClientAuth и т.д.
         public ClientVm Client { get; set; } = default!;
-        public string RedirectUrisJson { get; private set; } = "[]";
-        public string LocalRolesJson { get; private set; } = "[]";
-        public string ServiceRolesJson { get; private set; } = "[]";
+        [BindProperty] public string? NewClientId { get; set; }
+        [BindProperty] public string? Description { get; set; }
+        [BindProperty] public bool ClientAuth { get; set; }
+        [BindProperty] public bool StandardFlow { get; set; }
+        [BindProperty] public bool ServiceAccount { get; set; }
+        [BindProperty] public string RedirectUrisJson { get; set; } = "[]";
+        [BindProperty] public string LocalRolesJson { get; set; } = "[]";
+        [BindProperty] public string ServiceRolesJson { get; set; } = "[]";
         // public string DefaultScopesJson { get; private set; } = "[]";
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
@@ -45,6 +51,11 @@ namespace Assistant.Pages.Clients
                 StandardFlow = details.StandardFlow,
                 ServiceAccount = details.ServiceAccount
             };
+            NewClientId = details.ClientId;
+            Description = details.Description;
+            ClientAuth = details.ClientAuth;
+            StandardFlow = details.StandardFlow;
+            ServiceAccount = details.ServiceAccount;
 
             RedirectUrisJson = JsonSerializer.Serialize(details.RedirectUris);
             LocalRolesJson = JsonSerializer.Serialize(details.LocalRoles);
@@ -54,12 +65,32 @@ namespace Assistant.Pages.Clients
             return Page();
         }
 
-        public IActionResult OnPostSave()
+        public async Task<IActionResult> OnPostSaveAsync(CancellationToken ct)
         {
-            // Здесь возьмёшь значения из Request.Form или через [BindProperty] на нужных полях.
-            // Пока заглушка:
-            TempData["Flash"] = "Changes saved (stub).";
-            return RedirectToPage(new { realm = Realm ?? "internal-bank-idm", clientId = ClientId ?? "app-bank-sample" });
+            if (string.IsNullOrWhiteSpace(Realm) || string.IsNullOrWhiteSpace(ClientId))
+                return NotFound();
+
+            string newId = NewClientId?.Trim() ?? ClientId!;
+            var redirects = TryParseList(RedirectUrisJson);
+            var locals = TryParseList(LocalRolesJson);
+            var svc = ParseServiceRoles(ServiceRolesJson);
+
+            var spec = new UpdateClientSpec(
+                Realm!,
+                ClientId!,
+                newId,
+                Description,
+                ClientAuth,
+                StandardFlow,
+                ServiceAccount,
+                redirects,
+                locals,
+                svc
+            );
+
+            await _clients.UpdateClientAsync(spec, ct);
+            TempData["Flash"] = "Changes saved.";
+            return RedirectToPage(new { realm = Realm, clientId = newId });
         }
 
         public IActionResult OnPostDelete()
@@ -67,6 +98,34 @@ namespace Assistant.Pages.Clients
             // Заглушка удаления:
             TempData["Flash"] = "Client deleted (stub).";
             return RedirectToPage("/Index");
+        }
+
+        private static List<string> TryParseList(string? json)
+        {
+            try
+            {
+                return string.IsNullOrWhiteSpace(json)
+                    ? new List<string>()
+                    : (JsonSerializer.Deserialize<List<string>>(json!) ?? new List<string>());
+            }
+            catch { return new List<string>(); }
+        }
+
+        private static List<(string ClientId, string Role)> ParseServiceRoles(string? json)
+        {
+            var list = new List<(string, string)>();
+            foreach (var s in TryParseList(json))
+            {
+                var parts = s.Split(':', 2);
+                if (parts.Length == 2)
+                {
+                    var cid = parts[0].Trim();
+                    var role = parts[1].Trim();
+                    if (!string.IsNullOrWhiteSpace(cid) && !string.IsNullOrWhiteSpace(role))
+                        list.Add((cid, role));
+                }
+            }
+            return list;
         }
 
         // ===== AJAX handlers для фронта Service Roles =====
