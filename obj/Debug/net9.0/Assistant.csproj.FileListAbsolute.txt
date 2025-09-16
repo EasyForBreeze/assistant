@@ -362,7 +362,6 @@ C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\rjsmcshtml.dswa.cac
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\scopedcss\Pages\Shared\_Layout.cshtml.rz.scp.css
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\scopedcss\bundle\Assistant.styles.css
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\scopedcss\projectbundle\Assistant.bundle.scp.css
-C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-km8s1by0w1.gz
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\compressed\xamxxra285-b9sayid5wm.gz
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\compressed\dmbbmlp6mg-61n19gt1b8.gz
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\compressed\bp0o3wd32a-xtxxf3hu2r.gz
@@ -439,3 +438,4 @@ C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\refint\Assistant.dl
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\Assistant.pdb
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\Assistant.genruntimeconfig.cache
 C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\ref\Assistant.dll
+C:\Users\bream\source\repos\qwe17\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-bsgr36p29p.gz
