@@ -565,8 +565,6 @@
             const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`, { method });
             if (resp.ok) {
               const data = await resp.json();
-              const input = document.getElementById('credSecret');
-              if (input) input.value = data.secret || '';
               return data.secret || '';
             }
             return '';
@@ -582,7 +580,8 @@
               btnShowSecret.title = 'Показать';
               btnShowSecret.setAttribute('aria-label','Показать');
             } else {
-              await fetchSecret('GET');
+              const secret = await fetchSecret('GET');
+              input.value = secret;
               secretVisible = true;
               btnShowSecret.title = 'Скрыть';
               btnShowSecret.setAttribute('aria-label','Скрыть');
@@ -590,16 +589,23 @@
           });
 
           document.getElementById('btnCopySecret')?.addEventListener('click', async () => {
-            const secret = await fetchSecret('GET');
-            secretVisible = true;
-            btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
+            const secret = secretVisible
+              ? (document.getElementById('credSecret')?.value || '')
+              : await fetchSecret('GET');
+            const input = document.getElementById('credSecret');
+            if (input && !secretVisible) input.value = secretMask;
+            if (!secretVisible) {
+              btnShowSecret && (btnShowSecret.title = 'Показать', btnShowSecret.setAttribute('aria-label','Показать'));
+            }
             try { await navigator.clipboard.writeText(secret); } catch {}
           });
 
-          document.getElementById('btnRegenSecret')?.addEventListener('click', () => {
+          document.getElementById('btnRegenSecret')?.addEventListener('click', async () => {
+            const secret = await fetchSecret('POST');
+            const input = document.getElementById('credSecret');
+            if (input) input.value = secret;
             secretVisible = true;
             btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
-            fetchSecret('POST');
           });
 
           // ---------- Events (ленивая инициализация) ----------
