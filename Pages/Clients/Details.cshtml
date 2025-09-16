@@ -548,88 +548,88 @@
             unsupported: 'Копирование недоступно'
           };
 
-          function showCopyToast(message, variant = 'success') {
-            document.querySelectorAll('.kc-toast[data-auto-toast="copy"]')
-              .forEach(t => t.remove());
+          function showCopyNotice(trigger, message, variant = 'success') {
+            if (!(trigger instanceof HTMLElement)) return;
 
-            const toast = document.createElement('div');
-            toast.className = `kc-toast ${variant === 'error' ? 'kc-toast-error' : 'kc-toast-success'}`;
-            toast.dataset.autoToast = 'copy';
-            toast.setAttribute('role', 'status');
-            toast.setAttribute('aria-live', 'polite');
+            const host = trigger.parentElement instanceof HTMLElement ? trigger.parentElement : trigger;
+            host.classList.add('copy-notice-host');
 
-            const icon = document.createElement('div');
-            icon.className = 'kc-toast-icon';
-            icon.textContent = variant === 'error' ? '!' : '✓';
+            const existing = host.querySelector('.copy-notice');
+            existing?.remove();
 
-            const body = document.createElement('div');
-            body.className = 'kc-toast-body';
-            const title = document.createElement('div');
-            title.className = 'kc-toast-title';
-            title.textContent = message;
-            body.appendChild(title);
+            const notice = document.createElement('div');
+            notice.className = `copy-notice ${variant === 'error' ? 'copy-notice_error' : 'copy-notice_success'}`;
+            notice.textContent = message;
+            notice.setAttribute('role', 'status');
+            notice.setAttribute('aria-live', 'polite');
 
-            const close = document.createElement('button');
-            close.type = 'button';
-            close.className = 'kc-toast-close';
-            close.setAttribute('aria-label', 'Закрыть');
-            close.textContent = '×';
+            const hostRect = host.getBoundingClientRect();
+            const btnRect = trigger.getBoundingClientRect();
+            const left = btnRect.left - hostRect.left + btnRect.width / 2;
+            const top = btnRect.top - hostRect.top;
 
-            toast.append(icon, body, close);
+            notice.style.left = `${left}px`;
+            notice.style.top = `${top}px`;
 
-            const offset = Array.from(document.querySelectorAll('.kc-toast'))
-              .reduce((acc, el) => {
-                const style = window.getComputedStyle(el);
-                const top = parseFloat(style.top) || 0;
-                return Math.max(acc, top + el.offsetHeight + 12);
-              }, 16);
+            host.appendChild(notice);
 
-            toast.style.top = `${offset}px`;
-
-            const timer = setTimeout(() => toast.remove(), 2400);
-            close.addEventListener('click', () => {
-              clearTimeout(timer);
-              toast.remove();
+            requestAnimationFrame(() => {
+              notice.classList.add('copy-notice_visible');
             });
 
-            document.body.appendChild(toast);
+            window.setTimeout(() => {
+              notice.classList.remove('copy-notice_visible');
+            }, 2000);
+
+            const removeTimer = window.setTimeout(() => {
+              notice.remove();
+            }, 2400);
+
+            notice.addEventListener('transitionend', event => {
+              if (event.propertyName === 'opacity' && !notice.classList.contains('copy-notice_visible')) {
+                window.clearTimeout(removeTimer);
+                notice.remove();
+              }
+            });
           }
 
-          function ensureClipboardSupport() {
+          function ensureClipboardSupport(trigger) {
             if (!navigator.clipboard?.writeText) {
-              showCopyToast(copyMessages.unsupported, 'error');
+              showCopyNotice(trigger, copyMessages.unsupported, 'error');
               return false;
             }
             return true;
           }
 
-          async function copyToClipboard(value, successMessage = copyMessages.success) {
+          async function copyToClipboard(value, trigger, successMessage = copyMessages.success) {
             try {
               await navigator.clipboard.writeText(value ?? '');
-              showCopyToast(successMessage, 'success');
+              showCopyNotice(trigger, successMessage, 'success');
               return true;
             } catch {
-              showCopyToast(copyMessages.error, 'error');
+              showCopyNotice(trigger, copyMessages.error, 'error');
               return false;
             }
           }
 
           // Copy endpoints
           document.querySelectorAll('button[data-copy]')?.forEach(btn => {
+            if (!(btn instanceof HTMLElement)) return;
             btn.addEventListener('click', async () => {
-              if (!ensureClipboardSupport()) return;
+              if (!ensureClipboardSupport(btn)) return;
               const sel = btn.getAttribute('data-copy');
               const target = sel ? document.querySelector(sel) : null;
               const val = target?.value || target?.textContent || '';
-              await copyToClipboard(val);
+              await copyToClipboard(val, btn);
             });
           });
 
           // Copy credentials & manage secret
-          document.getElementById('btnCopyClientId')?.addEventListener('click', async () => {
-            if (!ensureClipboardSupport()) return;
+          const btnCopyClientId = document.getElementById('btnCopyClientId');
+          btnCopyClientId?.addEventListener('click', async () => {
+            if (!ensureClipboardSupport(btnCopyClientId)) return;
             const val = document.getElementById('credClientId')?.value || '';
-            await copyToClipboard(val);
+            await copyToClipboard(val, btnCopyClientId);
           });
 
           const secretMask = '••••••••••••••';
@@ -662,8 +662,9 @@
             }
           });
 
-          document.getElementById('btnCopySecret')?.addEventListener('click', async () => {
-            if (!ensureClipboardSupport()) return;
+          const btnCopySecret = document.getElementById('btnCopySecret');
+          btnCopySecret?.addEventListener('click', async () => {
+            if (!ensureClipboardSupport(btnCopySecret)) return;
             const secret = secretVisible
               ? (document.getElementById('credSecret')?.value || '')
               : await fetchSecret('GET');
@@ -672,7 +673,7 @@
             if (!secretVisible) {
               btnShowSecret && (btnShowSecret.title = 'Показать', btnShowSecret.setAttribute('aria-label','Показать'));
             }
-            await copyToClipboard(secret);
+            await copyToClipboard(secret, btnCopySecret);
           });
 
           document.getElementById('btnRegenSecret')?.addEventListener('click', async () => {
