@@ -263,7 +263,6 @@ namespace Assistant.KeyCloak
             var rep = list.FirstOrDefault(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
             if (rep == null || string.IsNullOrWhiteSpace(rep.Id) || string.IsNullOrWhiteSpace(rep.ClientId))
             {
-                await AuditAsync("client:details", realm, clientId, ct);
                 return null;
             }
 
@@ -286,7 +285,6 @@ namespace Assistant.KeyCloak
                 svcRoles,
                 defaultScopes
             );
-            await AuditAsync("client:details", realm, rep.ClientId!, ct);
             return details;
         }
 
@@ -354,8 +352,6 @@ namespace Assistant.KeyCloak
                              .Where(n => !string.IsNullOrWhiteSpace(n))
                              .Select(n => n!)
                              .ToList();
-            var target = string.IsNullOrWhiteSpace(search) ? clientUuid : $"{clientUuid}:{search}";
-            await AuditAsync("client-roles:list", realm, target, ct);
             return list;
         }
 
@@ -538,7 +534,10 @@ namespace Assistant.KeyCloak
 
             using var resp = await DeleteWithFallback(http, delNew, delLegacy, ct);
             EnsureAuthOrThrow(resp);
-            await AuditAsync("client:delete", realm, clientId, ct);
+            var target = string.IsNullOrWhiteSpace(existing.Id)
+                ? (string.IsNullOrWhiteSpace(existing.ClientId) ? clientId : existing.ClientId)
+                : $"{existing.Id}:{existing.ClientId}";
+            await AuditAsync("client:delete", realm, target, ct);
         }
 
         // ======= Internal helpers for Create =======
