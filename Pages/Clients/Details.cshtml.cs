@@ -107,12 +107,12 @@ namespace Assistant.Pages.Clients
             {
                 TempData["FlashError"] = $"Не удалось обновить клиента: {ex.Message}";
                 return RedirectToPage("/Clients/Details", pageHandler: null,
-                    values: new { realm = Realm, clientId = ClientId });
+                    routeValues: new { realm = Realm, clientId = ClientId });
             }
 
             TempData["FlashOk"] = "Клиент успешно обновлён.";
             return RedirectToPage("/Clients/Details", pageHandler: null,
-                values: new { realm = Realm, clientId = newId });
+                routeValues: new { realm = Realm, clientId = newId });
         }
 
         public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct)
