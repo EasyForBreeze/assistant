@@ -50,8 +50,6 @@
         const container = document.getElementById('clientsContainer');
         if (!input || !container) return;
 
-        const staticTitle = document.title;
-
         const applyFilter = () => {
             const q = input.value.trim().toLowerCase();
             const cards = container.querySelectorAll('.client-card');
@@ -81,16 +79,12 @@
                     load(a.href);
                     const url = new URL(a.href, window.location);
                     url.searchParams.delete('handler');
-                    history.pushState({}, document.title, url);
-                    document.title = staticTitle;
+                    history.pushState({}, '', url);
                 });
             });
         };
 
         attach();
-        window.addEventListener('popstate', () => {
-            document.title = staticTitle;
-        });
     })();
 </script>
 

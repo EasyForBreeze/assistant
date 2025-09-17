@@ -57,14 +57,12 @@
                     </div>
                 </aside>
             }
-            <main id="app" class="flex-1" data-soft-nav-root>
+            <main id="app" class="flex-1">
                 @RenderBody()
             </main>
         </div>
     </div>
-    <div id="pageToasts" data-soft-nav-toasts>
-        @RenderSection("Toasts", required: false)
-    </div>
+    @RenderSection("Toasts", required: false)
     <div id="globalSpinner" class="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 hidden">
         <div class="w-16 h-16 border-4 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
     </div>
@@ -90,8 +88,6 @@
       })();
       </script>
     <script src="~/js/transitions.js" asp-append-version="true"></script>
-    <div id="pageScripts" data-soft-nav-scripts>
-        @RenderSection("Scripts", required: false)
-    </div>
+    @RenderSection("Scripts", required: false)
 </body>
 </html>

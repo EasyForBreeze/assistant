@@ -536,15 +536,6 @@ body.page-loaded #app {
     transform: translateY(0);
 }
 
-main#app:focus {
-    outline: none;
-}
-
-main#app:focus-visible {
-    outline: 2px solid rgba(99,102,241,.45);
-    outline-offset: 6px;
-}
-
 /* ===== Events filters ===== */
 .event-filters {
     width: 100%;
