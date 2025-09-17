@@ -427,7 +427,7 @@
             </div>
             <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
         </div>
-        <script>setTimeout(() => document.getElementById('flashToastOk')?.remove(), 10000);</script>
+        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastOk')?.remove(), 10000);</script>
     }
     @if (TempData["FlashError"] is string err)
     {
@@ -438,12 +438,12 @@
             </div>
             <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
         </div>
-        <script>setTimeout(() => document.getElementById('flashToastError')?.remove(), 10000);</script>
+        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastError')?.remove(), 10000);</script>
     }
 }
 
 @section Scripts {
-    <script>
+    <script data-soft-nav>
         const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
         (function(){
           // ---------- Вкладки ----------

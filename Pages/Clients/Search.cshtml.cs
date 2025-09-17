@@ -6,7 +6,6 @@ using Assistant.Interfaces;
 using Assistant.KeyCloak;
 using Assistant.Pages;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Assistant.Pages.Clients;
 
@@ -61,14 +60,4 @@ public class SearchModel : ClientsPageModel
         ApplyPaging(ordered, pageNumber);
     }
 
-    public async Task<IActionResult> OnGetClientsAsync(string? q, int pageNumber = 1)
-    {
-        await OnGetAsync(q, pageNumber);
-        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-        {
-            return Partial("_ClientsList", this);
-        }
-
-        return Page();
-    }
 }

@@ -1,7 +1,6 @@
 using System.Linq;
 using Assistant.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Assistant.Pages
 {
@@ -25,14 +24,5 @@ namespace Assistant.Pages
             ApplyPaging(list, pageNumber);
         }
 
-        public async Task<IActionResult> OnGetClientsAsync(string? q, int pageNumber = 1)
-        {
-            await OnGetAsync(q, pageNumber);
-            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-            {
-                return Partial("_ClientsList", this);
-            }
-            return Page();
-        }
     }
 }
