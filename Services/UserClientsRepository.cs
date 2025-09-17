@@ -77,37 +77,6 @@ public class UserClientsRepository
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    public async Task UpdateClientAsync(
-        string realm,
-        string currentClientId,
-        string newClientId,
-        bool enabled,
-        bool flowStandard,
-        bool flowService,
-        CancellationToken ct = default)
-    {
-        await EnsureCreatedAsync(ct);
-
-        await using var conn = new NpgsqlConnection(_connString);
-        await conn.OpenAsync(ct);
-
-        var cmd = new NpgsqlCommand(@"update user_clients
-                set client_id = @newCid,
-                    enabled = @en,
-                    flow_standard = @std,
-                    flow_service = @svc
-                where client_id = @oldCid and realm = @realm;", conn);
-
-        cmd.Parameters.AddWithValue("newCid", newClientId);
-        cmd.Parameters.AddWithValue("en", enabled);
-        cmd.Parameters.AddWithValue("std", flowStandard);
-        cmd.Parameters.AddWithValue("svc", flowService);
-        cmd.Parameters.AddWithValue("oldCid", currentClientId);
-        cmd.Parameters.AddWithValue("realm", realm);
-
-        await cmd.ExecuteNonQueryAsync(ct);
-    }
-
     public async Task<List<ClientSummary>> GetForUserAsync(string username, bool isAdmin, CancellationToken ct = default)
     {
         await EnsureCreatedAsync(ct);

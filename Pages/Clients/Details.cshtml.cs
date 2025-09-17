@@ -102,19 +102,15 @@ namespace Assistant.Pages.Clients
             try
             {
                 await _clients.UpdateClientAsync(spec, ct);
-                await _repo.UpdateClientAsync(Realm!, ClientId!, newId, Enabled, StandardFlow, ServiceAccount, ct);
-                ClientId = newId;
             }
             catch (Exception ex)
             {
                 TempData["FlashError"] = $"Не удалось обновить клиента: {ex.Message}";
-                return RedirectToPage("/Clients/Details", pageHandler: null,
-                    routeValues: new { realm = Realm, clientId = ClientId });
+                return RedirectToPage(new { realm = Realm, clientId = ClientId });
             }
 
             TempData["FlashOk"] = "Клиент успешно обновлён.";
-            return RedirectToPage("/Clients/Details", pageHandler: null,
-                routeValues: new { realm = Realm, clientId = newId });
+            return RedirectToPage(new { realm = Realm, clientId = newId });
         }
 
         public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct)
