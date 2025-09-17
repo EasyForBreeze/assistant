@@ -221,7 +221,14 @@
                 <div class="hint">Создаются на этом клиенте для назначения другим клиентам/пользователям для доступа.</div>
                 <div id="locList" class="flex flex-wrap gap-2"></div>
                 <div class="flex gap-2">
-                    <input id="locInput" maxlength="25" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    <div class="prefix-wrap w-full md:w-72">
+                        <span class="prefix-chip" id="locPrefix">kc-gf-</span>
+                        <input id="locInput"
+                               maxlength="25"
+                               class="prefix-input text-sm"
+                               placeholder="Например: app.read"
+                               autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    </div>
                     <button type="button" class="btn-subtle" onclick="addLocal()">Add</button>
                 </div>
             </div>
@@ -329,6 +336,11 @@
 
           // Basics
           const cidPrefix = 'app-bank-';
+          const localRolePrefix = 'kc-gf-';
+          const ensureLocalRolePrefix = (value) => {
+            const v = (value ?? '').trim();
+            return v ? (v.startsWith(localRolePrefix) ? v : localRolePrefix + v) : v;
+          };
           const cidInput  = $('#cidInput');
           const errCid    = $('#errCid');
           const descInput = $('#descInput');
@@ -350,6 +362,8 @@
           const locInput   = $('#locInput'),   locList   = $('#locList');
           const svcList    = $('#svcList');
 
+          $('#locPrefix')?.textContent = localRolePrefix;
+
           // Hidden fields (BindProperty)
           const hidClientId      = $('#hidClientId');
           const hidDesc          = $('#hidDesc');
@@ -367,6 +381,10 @@
           // ---- Chips data
           const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
           const locals   = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
+          if (Array.isArray(locals)) {
+            const normalized = locals.map(ensureLocalRolePrefix);
+            locals.splice(0, locals.length, ...normalized);
+          }
           const svcRoles = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
           renderChips(redirList, redirs);
           renderChips(locList,  locals);
@@ -526,7 +544,7 @@
           };
           window.addLocal = function(){
             const v = trim(locInput?.value); if(!v) return;
-            locals.push(v); locInput.value=''; renderChips(locList, locals);
+            locals.push(ensureLocalRolePrefix(v)); locInput.value=''; renderChips(locList, locals);
           };
 
           // Submit
