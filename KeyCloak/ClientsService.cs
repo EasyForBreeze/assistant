@@ -1,8 +1,10 @@
 ﻿// Assistant/KeyCloak/ClientsService.cs
+using Assistant;
 using Assistant.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -460,10 +462,10 @@ namespace Assistant.KeyCloak
             var (clients, fetched) = await ListClientsAsync(realm, clientFirst, clientsToScan, ct);
             var hits = new List<RoleHit>();
 
-            foreach (var c in clients)
+            foreach (var c in clients.Where(c => RoleRules.IsValidServiceClientId(c.ClientId)))
             {
                 var roles = await GetClientRolesAsync(realm, c.Id, 0, rolesPerClient, roleQuery, ct);
-                foreach (var r in roles)
+                foreach (var r in roles.Where(RoleRules.IsValidRoleName))
                     hits.Add(new RoleHit(c.Id, c.ClientId, r));
             }
 
