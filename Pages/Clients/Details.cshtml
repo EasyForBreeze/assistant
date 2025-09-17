@@ -141,7 +141,10 @@
             <div class="text-slate-200 font-semibold mb-3">Локальные роли</div>
             <div id="locList" class="flex flex-wrap gap-2 mb-2"></div>
             <div class="flex gap-2 mb-2 items-center">
-                <input id="locInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[360px]" placeholder="Например: app.read" />
+                <div class="prefix-wrap w-full md:w-[360px]">
+                    <span class="prefix-chip">kc-gf-</span>
+                    <input id="locInput" class="prefix-input text-sm" placeholder="Например: app.read" />
+                </div>
                 <button type="button" class="btn-subtle" id="btnAddLocal">Добавить</button>
             </div>
             <div class="kc-th mb-2">Создаются роли текущего клиента для назначения другим.</div>
