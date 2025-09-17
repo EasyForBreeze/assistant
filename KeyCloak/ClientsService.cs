@@ -559,12 +559,9 @@ namespace Assistant.KeyCloak
 
                     if (resp.StatusCode == HttpStatusCode.Conflict)
                     {
-                        // роль уже существует — ок
-                        await AuditAsync("client-role:ensure", realm, $"{clientUuid}:{name}", ct);
                         continue;
                     }
                     EnsureAuthOrThrow(resp);
-                    await AuditAsync("client-role:ensure", realm, $"{clientUuid}:{name}", ct);
                 }
                 catch (Exception ex)
                 {
