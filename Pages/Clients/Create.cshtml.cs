@@ -17,21 +17,18 @@ namespace Assistant.Pages.Clients
         private readonly RealmsService _realms;
         private readonly ClientsService _clients;
         private readonly UserClientsRepository _repo;
-        private static readonly HashSet<string> SystemClients = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "account",
-            "account-console",
-            "admin-cli",
-            "broker",
-            "realm-management",
-            "security-admin-console"
-        };
+        private readonly ServiceRoleExclusionsRepository _exclusions;
 
-        public CreateModel(RealmsService realms, ClientsService clients, UserClientsRepository repo)
+        public CreateModel(
+            RealmsService realms,
+            ClientsService clients,
+            UserClientsRepository repo,
+            ServiceRoleExclusionsRepository exclusions)
         {
             _realms = realms;
             _clients = clients;
             _repo = repo;
+            _exclusions = exclusions;
         }
 
         public int StepToShow { get; set; } = 0;
@@ -226,6 +223,7 @@ namespace Assistant.Pages.Clients
 
             // 4) Service roles: "serviceId: roleName"
             var svcRaw = NormalizeList(TryParseList(ServiceRolesJson));
+            var restrictedClients = await _exclusions.GetAllAsync(ct);
             var badSvc = new List<string>();
             var clientIdRx = new Regex(@"^[a-z0-9][a-z0-9-]{2,60}$");
             foreach (var s in svcRaw)
@@ -234,7 +232,7 @@ namespace Assistant.Pages.Clients
                 if (idx <= 0 || idx >= s.Length - 1) { badSvc.Add(s); continue; }
                 var svc = s[..idx].Trim();
                 var role = s[(idx + 1)..].Trim();
-                if (!clientIdRx.IsMatch(svc) || !roleRx.IsMatch(role) || SystemClients.Contains(svc)) badSvc.Add(s);
+                if (!clientIdRx.IsMatch(svc) || !roleRx.IsMatch(role) || restrictedClients.Contains(svc)) badSvc.Add(s);
             }
             if (badSvc.Any())
                 ModelState.AddModelError(nameof(ServiceRolesJson), $"Некорректные сервисные роли: {string.Join(", ", badSvc)}");
