@@ -140,10 +140,11 @@
         <div class="kc-card p-5 kc-hover">
             <div class="text-slate-200 font-semibold mb-3">Локальные роли</div>
             <div id="locList" class="flex flex-wrap gap-2 mb-2"></div>
-            <div class="flex gap-2">
-                <input id="locInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" />
-                <button type="button" class="btn-subtle" id="btnAddLocal">Add</button>
+            <div class="flex gap-2 mb-2 items-center">
+                <input id="locInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[360px]" placeholder="Например: app.read" />
+                <button type="button" class="btn-subtle" id="btnAddLocal">Добавить</button>
             </div>
+            <div class="kc-th mb-2">Создаются роли текущего клиента для назначения другим.</div>
         </div>
     </div>
 
@@ -156,16 +157,13 @@
 
             <div class="relative space-y-2">
                 <div class="flex gap-2 items-center">
-                    <input id="svcSearchInput"
-                           class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
-                           placeholder="например: app-bank-portal или 'read'"
-                           autocomplete="off" autocapitalize="off" spellcheck="false"/>
+                    <input id="svcSearchInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[360px]" placeholder="Например: app-bank-portal или 'read'" autocomplete="off" autocapitalize="off" spellcheck="false"/>
                     <button type="button" id="svcSearchBtn" class="btn-subtle">Найти</button>
                 </div>
 
                 <div id="svcSearchDd"
                      class="absolute z-20 mt-1 w-full md:w-[420px] kc-card p-2 hidden"></div>
-                <div class="kc-th mb-2">Назначают роли других сервисов сервисному аккаунту текущего клиента.</div>
+                <div class="kc-th mb-2">Назначаются роли других клиентов для текущего.</div>
             </div>
 
             <div id="svcChosen" class="hidden space-y-3">
@@ -209,7 +207,7 @@
     <div class="tab-pane hidden" data-tab="Credentials" role="tabpanel">
         <div class="kc-card p-5 kc-hover">
             <div class="text-slate-200 font-semibold mb-3">Credentials</div>
-            <div class="grid md:grid-cols-2 md:gap-x-[9.375rem]">
+            <div class="grid md:grid-cols-2 md:gap-x-[5rem]">
                 <div class="form-row_small justify-self-center w-full">
                     <label class="text-sm text-slate-400">Client ID</label>
                     <div class="flex gap-2 items-center">
@@ -374,7 +372,7 @@
         <div class="kc-card p-5 kc-hover">
             <div class="flex items-center justify-between mb-3">
                 <div class="text-slate-200 font-semibold">Events</div>
-                <div class="text-xs text-slate-400">Created: @(DateTime.Now.AddDays(-5).ToString("g")) by admin</div>
+                <div class="text-xs text-slate-400">Created: @(DateTime.Now.ToString("g")) by admin</div>
             </div>
 
             <div class="event-filters grid gap-2 mb-10">
