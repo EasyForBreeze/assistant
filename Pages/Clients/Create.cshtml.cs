@@ -9,6 +9,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Assistant.Pages.Clients
 {
@@ -18,6 +19,9 @@ namespace Assistant.Pages.Clients
         private readonly ClientsService _clients;
         private readonly UserClientsRepository _repo;
         private readonly ServiceRoleExclusionsRepository _exclusions;
+
+        private static readonly string[] AllowedClientIdPrefixes = new[] { "app-bank-", "app-dom-" };
+        private const string LocalRolePrefix = "kc-gf-";
 
         public CreateModel(
             RealmsService realms,
@@ -36,6 +40,8 @@ namespace Assistant.Pages.Clients
         [BindProperty] public string? Realm { get; set; }
         public List<SelectListItem> RealmOptions { get; private set; } = new();
         public string RealmMapJson { get; private set; } = "{}";
+
+        public IReadOnlyList<string> ClientIdPrefixOptions => AllowedClientIdPrefixes;
 
         [BindProperty] public string? ClientId { get; set; }
         [BindProperty] public string? Description { get; set; }
@@ -61,12 +67,33 @@ namespace Assistant.Pages.Clients
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
+        private static string NormalizeLocalRole(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+            var trimmed = value.Trim();
+            if (trimmed.StartsWith(LocalRolePrefix, StringComparison.OrdinalIgnoreCase))
+                return trimmed;
+
+            string remainder;
+            if (trimmed.StartsWith("kc-gf", StringComparison.OrdinalIgnoreCase))
+            {
+                remainder = trimmed.Substring(5).TrimStart('-', '_', '.', ':');
+            }
+            else
+            {
+                remainder = trimmed.TrimStart('-', '_', '.', ':');
+            }
+
+            return LocalRolePrefix + remainder;
+        }
+
         private static bool IsValidClientId(string? id)
         {
             if (string.IsNullOrWhiteSpace(id)) return false;
             if (id.Length < 10 || id.Length > 80) return false;
-            if (!id.StartsWith("app-bank-", StringComparison.OrdinalIgnoreCase)) return false;
-            var slug = id["app-bank-".Length..];
+            var prefix = AllowedClientIdPrefixes.FirstOrDefault(p => id.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+            if (prefix is null) return false;
+            var slug = id[prefix.Length..];
             return Regex.IsMatch(slug, "^[a-z0-9-]+$", RegexOptions.IgnoreCase);
         }
 
@@ -152,7 +179,10 @@ namespace Assistant.Pages.Clients
                 ModelState.AddModelError(nameof(Realm), "Выберите realm.");
 
             if (!IsValidClientId(ClientId))
-                ModelState.AddModelError(nameof(ClientId), "Client ID должен начинаться с 'app-bank-' и содержать латиницу/цифры/дефисы (10–80 символов).");
+            {
+                var allowedPrefixesText = string.Join(" или ", AllowedClientIdPrefixes.Select(p => $"'{p}'"));
+                ModelState.AddModelError(nameof(ClientId), $"Client ID должен начинаться с {allowedPrefixesText} и содержать латиницу/цифры/дефисы (10–80 символов).");
+            }
 
             if (string.IsNullOrWhiteSpace(AppName) || AppName!.Trim().Length < 3)
                 ModelState.AddModelError(nameof(AppName), "Название АС обязательно (минимум 3 символа).");
@@ -208,7 +238,7 @@ namespace Assistant.Pages.Clients
 
             // 3) Local roles
             var localsRaw = TryParseList(LocalRolesJson);
-            var locals = localsRaw.Select(s => (s ?? "").Trim())
+            var locals = localsRaw.Select(NormalizeLocalRole)
                                   .Where(s => !string.IsNullOrWhiteSpace(s))
                                   .Distinct(StringComparer.OrdinalIgnoreCase)
                                   .ToList();

@@ -16,6 +16,8 @@ namespace Assistant.Pages.Clients
         private readonly UserClientsRepository _repo;
         private readonly EventsService _events;
 
+        private const string LocalRolePrefix = "kc-gf-";
+
         public DetailsModel(ClientsService clients, UserClientsRepository repo, EventsService events)
         {
             _clients = clients;
@@ -82,7 +84,12 @@ namespace Assistant.Pages.Clients
 
             string newId = NewClientId?.Trim() ?? ClientId!;
             var redirects = TryParseList(RedirectUrisJson);
-            var locals = TryParseList(LocalRolesJson);
+            var locals = TryParseList(LocalRolesJson)
+                .Select(NormalizeLocalRole)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            LocalRolesJson = JsonSerializer.Serialize(locals);
             var svc = ParseServiceRoles(ServiceRolesJson);
 
             var spec = new UpdateClientSpec(
@@ -139,6 +146,26 @@ namespace Assistant.Pages.Clients
                     : (JsonSerializer.Deserialize<List<string>>(json!) ?? new List<string>());
             }
             catch { return new List<string>(); }
+        }
+
+        private static string NormalizeLocalRole(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+            var trimmed = value.Trim();
+            if (trimmed.StartsWith(LocalRolePrefix, StringComparison.OrdinalIgnoreCase))
+                return trimmed;
+
+            string remainder;
+            if (trimmed.StartsWith("kc-gf", StringComparison.OrdinalIgnoreCase))
+            {
+                remainder = trimmed.Substring(5).TrimStart('-', '_', '.', ':');
+            }
+            else
+            {
+                remainder = trimmed.TrimStart('-', '_', '.', ':');
+            }
+
+            return LocalRolePrefix + remainder;
         }
 
         private static List<(string ClientId, string Role)> ParseServiceRoles(string? json)
