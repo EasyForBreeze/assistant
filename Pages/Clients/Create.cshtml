@@ -218,10 +218,10 @@
             <!-- Шаг 6: Local roles -->
             <div class="space-y-3 hidden" id="step-6" data-step="6">
                 <div class="text-slate-200 font-semibold text-lg">6. Local roles</div>
-                <div class="hint">Создаются на этом клиенте для назначения другим клиентам/пользователям для доступа. Роль должна начинаться с <code>kc-gf-</code>.</div>
+                <div class="hint">Создаются на этом клиенте для назначения другим клиентам/пользователям для доступа.</div>
                 <div id="locList" class="flex flex-wrap gap-2"></div>
                 <div class="flex gap-2">
-                    <input id="locInput" maxlength="64" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: kc-gf-app.read" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    <input id="locInput" maxlength="25" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" autocomplete="off" autocapitalize="off" spellcheck="false" />
                     <button type="button" class="btn-subtle" onclick="addLocal()">Add</button>
                 </div>
             </div>
@@ -242,7 +242,7 @@
                     <div class="flex gap-2 items-center">
                         <input id="svcSearchInput"
                                class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
-                               placeholder="например: app-bank-portal, app-dom-card или 'kc-gf-read'"
+                               placeholder="например: app-bank-portal или 'read'"
                                autocomplete="off" autocapitalize="off" spellcheck="false"/>
                         <button type="button" id="svcSearchBtn" class="btn-subtle">Найти</button>
                     </div>
@@ -364,27 +364,10 @@
           const hidServiceOwner  = $('#hidServiceOwner');
           const hidServiceManager= $('#hidServiceManager');
 
-          const localRolePrefix = 'kc-gf-';
-          const serviceClientPrefixes = ['app-bank-', 'app-dom-'];
-          const hasLocalRolePrefix = (name = '') => name.toLowerCase().startsWith(localRolePrefix);
-          const hasAllowedServiceClientPrefix = (clientId = '') => serviceClientPrefixes.some(p => clientId.toLowerCase().startsWith(p));
-          const normalizeLocalRole = (value) => {
-            let normalized = (value || '').trim().toLowerCase();
-            if (!normalized) return '';
-            if (!normalized.startsWith(localRolePrefix)) {
-              normalized = normalized.replace(/^[-]+/, '');
-              normalized = localRolePrefix + normalized;
-            }
-            return normalized;
-          };
-          window.__localRolePrefix = localRolePrefix;
-          window.__serviceClientPrefixes = serviceClientPrefixes;
-
           // ---- Chips data
           const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
           const locals   = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
           const svcRoles = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
-          locals.forEach((value, index) => { const normalized = normalizeLocalRole(value); locals[index] = normalized || value; });
           renderChips(redirList, redirs);
           renderChips(locList,  locals);
           renderChips(svcList,  svcRoles);
@@ -542,12 +525,8 @@
             redirs.push(v); redirInput.value=''; renderChips(redirList, redirs);
           };
           window.addLocal = function(){
-            const raw = trim(locInput?.value);
-            const normalized = normalizeLocalRole(raw);
-            if (!normalized) return;
-            if (!locals.includes(normalized)) locals.push(normalized);
-            if (locInput) locInput.value='';
-            renderChips(locList, locals);
+            const v = trim(locInput?.value); if(!v) return;
+            locals.push(v); locInput.value=''; renderChips(locList, locals);
           };
 
           // Submit
@@ -631,15 +610,6 @@
           const svcErr         = $('#svcErr', step);
 
           const PAGE_URL = '@Url.Page(null)';
-          const localRolePrefix = typeof window.__localRolePrefix === 'string' ? window.__localRolePrefix : 'kc-gf-';
-          const serviceClientPrefixes = Array.isArray(window.__serviceClientPrefixes) && window.__serviceClientPrefixes.length
-            ? window.__serviceClientPrefixes
-            : ['app-bank-', 'app-dom-'];
-          const hasLocalRolePrefix = (name = '') => name.toLowerCase().startsWith(localRolePrefix);
-          const hasAllowedServiceClientPrefix = (clientId = '') => serviceClientPrefixes.some(p => clientId.toLowerCase().startsWith(p));
-          const filterAllowedClients = (clients) => (clients || []).filter(it => hasAllowedServiceClientPrefix(it.clientId || ''));
-          const filterAllowedRoleHits = (hits) => (hits || []).filter(m => hasAllowedServiceClientPrefix(m.clientId || '') && hasLocalRolePrefix(m.role || ''));
-
           const realm = ()=> (realmEl?.value ?? '').trim();
 
           // --- MIN LEN
@@ -709,7 +679,7 @@
             const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(realm())}`
                       + `&q=${encodeURIComponent(q)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
             const res = await fetchJson(url); // { hits:[{clientUuid,clientId,role}], nextClientFirst }
-            const hits = filterAllowedRoleHits(res.hits);
+            const hits = res.hits || [];
 
             renderRoleHits(hits, append);
 
@@ -770,23 +740,17 @@
 
           // clients list: ТОЛЬКО clientId
           function renderClientList(clients){
-            if (!svcSearchDd) return;
-            const filtered = filterAllowedClients(clients);
-            svcSearchDd.innerHTML = '';
-            if (!filtered.length){
-              svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений по clientId не найдено</div>`;
-              showDd();
-              return;
-            }
+            if (!svcSearchDd || !clients.length) return;
             const wrap = el('div', null, '');
             wrap.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Клиенты'));
-            filtered.forEach(it=>{
+            clients.forEach(it=>{
               const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
               line.type='button';
               line.textContent = it.clientId;
               line.addEventListener('click', safe(()=> selectClient(it)));
               wrap.appendChild(line);
             });
+            svcSearchDd.innerHTML = '';               // заменяем лоадер
             svcSearchDd.appendChild(wrap);
             svcSearchDd.appendChild(el('div','divider my-2',''));
             showDd();
@@ -810,8 +774,8 @@
 
             // 1) Клиенты — ждём и рисуем
             const clients = await searchClients(q);
-            renderClientList(clients);
-            if (filterAllowedClients(clients).length){
+            if (clients.length){
+              renderClientList(clients);
               state.pendingEmpty = false;
             }
 
@@ -850,8 +814,7 @@
                 roles = await fetchJson(url);
                 state.cacheClientRoles.set(key, roles || []);
               }
-              const filteredRoles = (roles || []).filter(name => hasLocalRolePrefix(name || ''));
-              renderRoles(filteredRoles, {append});
+              renderRoles(roles || [], {append});
               state.more = (roles?.length || 0) === state.size;
               btnMoreRoles?.classList.toggle('hidden', !state.more);
             }catch(e){

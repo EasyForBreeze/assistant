@@ -1,7 +1,6 @@
 ﻿using Assistant.KeyCloak;
 using Assistant.Interfaces;
 using Assistant.Services;
-using Assistant;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -215,10 +214,10 @@ namespace Assistant.Pages.Clients
                                   .ToList();
             LocalRolesJson = JsonSerializer.Serialize(locals);
 
-            var badLocal = locals.Where(r => !RoleRules.IsValidRoleName(r)).ToList();
+            var roleRx = new Regex(@"^[a-z][a-z0-9._:-]{2,63}$");
+            var badLocal = locals.Where(r => !roleRx.IsMatch(r)).ToList();
             if (badLocal.Any())
-                ModelState.AddModelError(nameof(LocalRolesJson),
-                    $"Некорректные локальные роли (роль должна начинаться с '{RoleRules.LocalRolePrefix}'): {string.Join(", ", badLocal)}");
+                ModelState.AddModelError(nameof(LocalRolesJson), $"Некорректные локальные роли: {string.Join(", ", badLocal)}");
             if (locals.Count > 20)
                 ModelState.AddModelError(nameof(LocalRolesJson), "Слишком много локальных ролей (максимум 10).");
 
@@ -226,18 +225,17 @@ namespace Assistant.Pages.Clients
             var svcRaw = NormalizeList(TryParseList(ServiceRolesJson));
             var restrictedClients = await _exclusions.GetAllAsync(ct);
             var badSvc = new List<string>();
+            var clientIdRx = new Regex(@"^[a-z0-9][a-z0-9-]{2,60}$");
             foreach (var s in svcRaw)
             {
                 var idx = s.IndexOf(':');
                 if (idx <= 0 || idx >= s.Length - 1) { badSvc.Add(s); continue; }
                 var svc = s[..idx].Trim();
                 var role = s[(idx + 1)..].Trim();
-                if (!RoleRules.IsValidServiceClientId(svc) || !RoleRules.IsValidRoleName(role) || restrictedClients.Contains(svc))
-                    badSvc.Add(s);
+                if (!clientIdRx.IsMatch(svc) || !roleRx.IsMatch(role) || restrictedClients.Contains(svc)) badSvc.Add(s);
             }
             if (badSvc.Any())
-                ModelState.AddModelError(nameof(ServiceRolesJson),
-                    $"Некорректные сервисные роли (clientId должен начинаться с {RoleRules.FormatServiceClientPrefixes()}, роль — с '{RoleRules.LocalRolePrefix}'): {string.Join(", ", badSvc)}");
+                ModelState.AddModelError(nameof(ServiceRolesJson), $"Некорректные сервисные роли: {string.Join(", ", badSvc)}");
 
             // 5) Ошибки?
             if (!ModelState.IsValid)
