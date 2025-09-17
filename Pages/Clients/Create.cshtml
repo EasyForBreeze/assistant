@@ -525,7 +525,8 @@
             redirs.push(v); redirInput.value=''; renderChips(redirList, redirs);
           };
           window.addLocal = function(){
-            const v = trim(locInput?.value); if(!v) return;
+            const v = trim(locInput?.value);
+            if(!v || v.length < 3) return;
             locals.push(v); locInput.value=''; renderChips(locList, locals);
           };
 

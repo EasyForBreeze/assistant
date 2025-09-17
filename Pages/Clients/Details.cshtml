@@ -557,7 +557,7 @@
           const locList  = document.getElementById('locList');
           renderChips(locList, locals);
           document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
-            const v = (locInput.value||'').trim(); if(!v) return;
+            const v = (locInput.value||'').trim(); if(!v || v.length < 3) return;
             locals.push(v); locInput.value=''; renderChips(locList, locals);
           });
 

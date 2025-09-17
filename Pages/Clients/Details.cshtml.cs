@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System;
 using System.Text.Json;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Assistant.Pages.Clients
 {
@@ -15,6 +16,7 @@ namespace Assistant.Pages.Clients
         private readonly ClientsService _clients;
         private readonly UserClientsRepository _repo;
         private readonly EventsService _events;
+        private static readonly Regex RoleNameRegex = new(@"^[a-z][a-z0-9._:-]{2,63}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         public DetailsModel(ClientsService clients, UserClientsRepository repo, EventsService events)
         {
@@ -82,7 +84,23 @@ namespace Assistant.Pages.Clients
 
             string newId = NewClientId?.Trim() ?? ClientId!;
             var redirects = TryParseList(RedirectUrisJson);
-            var locals = TryParseList(LocalRolesJson);
+            var localsRaw = TryParseList(LocalRolesJson);
+            var locals = localsRaw.Select(s => (s ?? string.Empty).Trim())
+                                  .Where(s => !string.IsNullOrWhiteSpace(s))
+                                  .Distinct(StringComparer.OrdinalIgnoreCase)
+                                  .ToList();
+            LocalRolesJson = JsonSerializer.Serialize(locals);
+            var badLocal = locals.Where(r => !RoleNameRegex.IsMatch(r)).ToList();
+            if (badLocal.Any())
+            {
+                TempData["FlashError"] = $"Некорректные локальные роли: {string.Join(", ", badLocal)}";
+                return RedirectToPage(new { realm = Realm, clientId = ClientId });
+            }
+            if (locals.Count > 20)
+            {
+                TempData["FlashError"] = "Слишком много локальных ролей (максимум 10).";
+                return RedirectToPage(new { realm = Realm, clientId = ClientId });
+            }
             var svc = ParseServiceRoles(ServiceRolesJson);
 
             var spec = new UpdateClientSpec(

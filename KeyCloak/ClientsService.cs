@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Assistant.KeyCloak
 {
@@ -116,6 +117,7 @@ namespace Assistant.KeyCloak
         private readonly ServiceRoleExclusionsRepository _exclusions;
         private readonly ApiLogRepository _logs;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private static readonly Regex RoleNameRegex = new(@"^[a-z][a-z0-9._:-]{2,63}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         public ClientsService(
             IHttpClientFactory factory,
@@ -638,11 +640,20 @@ namespace Assistant.KeyCloak
         {
             var http = _factory.CreateClient("kc-admin");
 
-            foreach (var name in roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct(StringComparer.OrdinalIgnoreCase))
+            var normalized = roles
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Select(r => r.Trim())
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var name in normalized)
             {
+                if (!RoleNameRegex.IsMatch(name))
+                    throw new InvalidOperationException($"Локальная роль '{name}' имеет недопустимое имя.");
+
                 try
                 {
-                    var payload = new { name = name.Trim() };
+                    var payload = new { name };
 
                     var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
                     var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
