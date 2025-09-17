@@ -36,6 +36,7 @@ builder.Services.AddScoped<Assistant.KeyCloak.ClientsService>();
 builder.Services.AddScoped<Assistant.KeyCloak.EventsService>();
 builder.Services.AddSingleton<UserClientsRepository>();
 builder.Services.AddSingleton<ServiceRoleExclusionsRepository>();
+builder.Services.AddSingleton<ApiLogRepository>();
 builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();
 builder.Services.AddAuthorization();
 
@@ -120,14 +121,34 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapStaticAssets();
-app.MapGet("/api/client-secret", async (string realm, string clientId, ClientsService clients, CancellationToken ct) =>
+app.MapGet("/api/client-secret", async (
+    string realm,
+    string clientId,
+    ClientsService clients,
+    ApiLogRepository logs,
+    ClaimsPrincipal user,
+    CancellationToken ct) =>
 {
     var secret = await clients.GetClientSecretAsync(realm, clientId, ct);
+    var username = user.Identity?.Name;
+    if (string.IsNullOrWhiteSpace(username))
+        username = "unknown";
+    await logs.LogAsync("client-secret:get", username, realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
-app.MapPost("/api/client-secret", async (string realm, string clientId, ClientsService clients, CancellationToken ct) =>
+app.MapPost("/api/client-secret", async (
+    string realm,
+    string clientId,
+    ClientsService clients,
+    ApiLogRepository logs,
+    ClaimsPrincipal user,
+    CancellationToken ct) =>
 {
     var secret = await clients.RegenerateClientSecretAsync(realm, clientId, ct);
+    var username = user.Identity?.Name;
+    if (string.IsNullOrWhiteSpace(username))
+        username = "unknown";
+    await logs.LogAsync("client-secret:regenerate", username, realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
 app.MapRazorPages().WithStaticAssets();
