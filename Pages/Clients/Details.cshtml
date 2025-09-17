@@ -16,6 +16,7 @@
 
 
 <!-- Хедер -->
+<div data-client-details-page>
 <div class="kc-header p-5 md:p-6 relative overflow-hidden mb-5">
     <div class="flex items-center">
         <a asp-page="/Index" class="text-slate-400 text-sm hover:text-slate-200">&larr; Back to Clients</a>
@@ -417,6 +418,8 @@
 
 <form method="post" id="deleteForm" asp-page-handler="Delete" asp-route-realm="@realm" asp-route-clientId="@clientId" class="hidden"></form>
 
+</div>
+
 @section Toasts {
     @if (TempData["FlashOk"] is string ok)
     {
@@ -444,637 +447,668 @@
 
 @section Scripts {
     <script>
-        const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
-        (function(){
-          // ---------- Вкладки ----------
-          const btns  = document.querySelectorAll('.tab-btn');
-          const panes = document.querySelectorAll('.tab-pane');
+        (function()
+        {
+            const rootSelector = '[data-client-details-page]';
+            const initAttr = 'data-client-details-initialized';
 
-          const ensureEventsInit = () => {
-            if (window.__eventsInited) return;
-            if (typeof window.initEvents === 'function'){
-              window.initEvents();
-              window.__eventsInited = true;
+            function scheduleInit() {
+                window.requestAnimationFrame(init);
             }
-          };
 
-          function showTab(tab){
-            panes.forEach(p => p.classList.toggle('hidden', p.dataset.tab !== tab));
-            btns.forEach(b => {
-              const active = (b.dataset.tab === tab);
-              b.classList.toggle('active', active);
-              b.setAttribute('aria-selected', active ? 'true' : 'false');
-            });
-            history.replaceState(null, '', '#tab=' + encodeURIComponent(tab));
-            if (tab === 'Events') ensureEventsInit();
-          }
-          const m = location.hash.match(/tab=([^&]+)/);
-          const start = m ? decodeURIComponent(m[1]) : 'Overview';
-          btns.forEach(b => b.addEventListener('click', ()=> showTab(b.dataset.tab)));
-          showTab(start);
+            function init() {
+                const root = document.querySelector(rootSelector);
+                if (!root || root.getAttribute(initAttr) === '1') {
+                    return;
+                }
+                root.setAttribute(initAttr, '1');
+                window.__eventsInited = false;
+                        const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
+                        (function(){
+                          // ---------- Вкладки ----------
+                          const btns  = root.querySelectorAll('.tab-btn');
+                          const panes = root.querySelectorAll('.tab-pane');
 
-          // ---------- Состояние формы ----------
-          const realm = '@realm';
-          const clientId = '@clientId';
-          const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
-          const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
-          @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
+                          const ensureEventsInit = () => {
+                            if (window.__eventsInited) return;
+                            if (typeof window.initEvents === 'function'){
+                              window.initEvents();
+                              window.__eventsInited = true;
+                            }
+                          };
 
-          const swEnabled    = document.getElementById('swEnabled');
-          const lblEnabled   = document.getElementById('lblEnabled');
-          const swClientAuth = document.getElementById('swClientAuth');
-          const swService    = document.getElementById('swService');
-          const tabServiceRoles = document.querySelector('.tab-btn[data-tab="ServiceRoles"]');
+                          function showTab(tab){
+                            panes.forEach(p => p.classList.toggle('hidden', p.dataset.tab !== tab));
+                            btns.forEach(b => {
+                              const active = (b.dataset.tab === tab);
+                              b.classList.toggle('active', active);
+                              b.setAttribute('aria-selected', active ? 'true' : 'false');
+                            });
+                            history.replaceState(null, '', '#tab=' + encodeURIComponent(tab));
+                            if (tab === 'Events') ensureEventsInit();
+                          }
+                          const m = location.hash.match(/tab=([^&]+)/);
+                          const start = m ? decodeURIComponent(m[1]) : 'Overview';
+                          btns.forEach(b => b.addEventListener('click', ()=> showTab(b.dataset.tab)));
+                          showTab(start);
 
-          function updateServiceRolesTab(){
-            const on = swService?.checked;
-            tabServiceRoles?.classList.toggle('kc-disabled', !on);
-            const active = document.querySelector('.tab-btn.active')?.dataset.tab;
-            if (!on && active === 'ServiceRoles') showTab('Overview');
-          }
+                          // ---------- Состояние формы ----------
+                          const realm = '@realm';
+                          const clientId = '@clientId';
+                          const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
+                          const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
+                          @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
 
-          function updateServiceState(){
-            const authOn = swClientAuth?.checked;
-            if (!authOn && swService){ swService.checked = false; }
-            if (swService) swService.disabled = !authOn;
-            updateServiceRolesTab();
-          }
+                          const swEnabled    = document.getElementById('swEnabled');
+                          const lblEnabled   = document.getElementById('lblEnabled');
+                          const swClientAuth = document.getElementById('swClientAuth');
+                          const swService    = document.getElementById('swService');
+                          const tabServiceRoles = root.querySelector('.tab-btn[data-tab="ServiceRoles"]');
 
-          function updateEnabledLabel(){
-            if (!lblEnabled || !swEnabled) return;
-            const on = swEnabled.checked;
-            lblEnabled.textContent = on ? 'Enabled' : 'Disabled';
-            lblEnabled.className = 'inline-flex items-center rounded-full px-2 py-1 text-xs border border-white/10 '
-              + (on ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200');
-          }
+                          function updateServiceRolesTab(){
+                            const on = swService?.checked;
+                            tabServiceRoles?.classList.toggle('kc-disabled', !on);
+                            const active = root.querySelector('.tab-btn.active')?.dataset.tab;
+                            if (!on && active === 'ServiceRoles') showTab('Overview');
+                          }
 
-          swEnabled?.addEventListener('change', updateEnabledLabel);
-          swClientAuth?.addEventListener('change', updateServiceState);
-          swService?.addEventListener('change', updateServiceRolesTab);
-          updateServiceState();
-          updateEnabledLabel();
+                          function updateServiceState(){
+                            const authOn = swClientAuth?.checked;
+                            if (!authOn && swService){ swService.checked = false; }
+                            if (swService) swService.disabled = !authOn;
+                            updateServiceRolesTab();
+                          }
 
-          // Redirect URIs
-          const swStandard = document.getElementById('swStandard');
-          const redirectPanel = document.getElementById('redirectPanel');
-          const redirInput = document.getElementById('redirInput');
-          const redirList  = document.getElementById('redirList');
-          const btnAddRedirect = document.getElementById('btnAddRedirect');
-          renderChips(redirList, redirs);
+                          function updateEnabledLabel(){
+                            if (!lblEnabled || !swEnabled) return;
+                            const on = swEnabled.checked;
+                            lblEnabled.textContent = on ? 'Enabled' : 'Disabled';
+                            lblEnabled.className = 'inline-flex items-center rounded-full px-2 py-1 text-xs border border-white/10 '
+                              + (on ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200');
+                          }
 
-          function renderChips(el, arr){
-            el.innerHTML = '';
-            arr.forEach((v, idx)=>{
-              const chip = document.createElement('span');
-              chip.className = 'kc-chip';
-              chip.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
-              chip.querySelector('button').addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr); });
-              el.appendChild(chip);
-            });
-          }
-          function renderStaticChips(el, arr){
-            el.innerHTML = '';
-            arr.forEach(v =>{
-              const chip = document.createElement('span');
-              chip.className = 'kc-chip';
-              chip.textContent = v;
-              el.appendChild(chip);
-            });
-          }
-          btnAddRedirect?.addEventListener('click', ()=>{
-            const v = (redirInput.value||'').trim(); if(!v) return;
-            redirs.push(v); redirInput.value=''; renderChips(redirList, redirs);
-          });
+                          swEnabled?.addEventListener('change', updateEnabledLabel);
+                          swClientAuth?.addEventListener('change', updateServiceState);
+                          swService?.addEventListener('change', updateServiceRolesTab);
+                          updateServiceState();
+                          updateEnabledLabel();
 
-          function updateRedirectDisabled(){
-            const on = swStandard?.checked;
-            redirectPanel.classList.toggle('kc-disabled', !on);
-            [redirInput, btnAddRedirect].forEach(x => x && (x.disabled = !on));
-            redirectPanel.querySelectorAll('button').forEach(b => b.disabled = !on);
-          }
-          swStandard?.addEventListener('change', updateRedirectDisabled);
-          updateRedirectDisabled();
+                          // Redirect URIs
+                          const swStandard = document.getElementById('swStandard');
+                          const redirectPanel = document.getElementById('redirectPanel');
+                          const redirInput = document.getElementById('redirInput');
+                          const redirList  = document.getElementById('redirList');
+                          const btnAddRedirect = document.getElementById('btnAddRedirect');
+                          renderChips(redirList, redirs);
 
-          // Local roles
-          const locInput = document.getElementById('locInput');
-          const locList  = document.getElementById('locList');
-          renderChips(locList, locals);
-          document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
-            const v = (locInput.value||'').trim(); if(!v) return;
-            const prefix = 'kc-gf-';
-            const valueWithPrefix = v.startsWith(prefix) ? v : prefix + v;
-            locals.push(valueWithPrefix); locInput.value=''; renderChips(locList, locals);
-          });
+                          function renderChips(el, arr){
+                            el.innerHTML = '';
+                            arr.forEach((v, idx)=>{
+                              const chip = document.createElement('span');
+                              chip.className = 'kc-chip';
+                              chip.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
+                              chip.querySelector('button').addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr); });
+                              el.appendChild(chip);
+                            });
+                          }
+                          function renderStaticChips(el, arr){
+                            el.innerHTML = '';
+                            arr.forEach(v =>{
+                              const chip = document.createElement('span');
+                              chip.className = 'kc-chip';
+                              chip.textContent = v;
+                              el.appendChild(chip);
+                            });
+                          }
+                          btnAddRedirect?.addEventListener('click', ()=>{
+                            const v = (redirInput.value||'').trim(); if(!v) return;
+                            redirs.push(v); redirInput.value=''; renderChips(redirList, redirs);
+                          });
 
-          // Default scopes (disabled)
-          // const scopesList = document.getElementById('scopesList');
-          // renderStaticChips(scopesList, scopes);
+                          function updateRedirectDisabled(){
+                            const on = swStandard?.checked;
+                            redirectPanel.classList.toggle('kc-disabled', !on);
+                            [redirInput, btnAddRedirect].forEach(x => x && (x.disabled = !on));
+                            redirectPanel.querySelectorAll('button').forEach(b => b.disabled = !on);
+                          }
+                          swStandard?.addEventListener('change', updateRedirectDisabled);
+                          updateRedirectDisabled();
 
-          const copyMessages = {
-            success: 'Значение скопировано',
-            error: 'Не удалось скопировать значение',
-            unsupported: 'Копирование недоступно'
-          };
+                          // Local roles
+                          const locInput = document.getElementById('locInput');
+                          const locList  = document.getElementById('locList');
+                          renderChips(locList, locals);
+                          document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
+                            const v = (locInput.value||'').trim(); if(!v) return;
+                            const prefix = 'kc-gf-';
+                            const valueWithPrefix = v.startsWith(prefix) ? v : prefix + v;
+                            locals.push(valueWithPrefix); locInput.value=''; renderChips(locList, locals);
+                          });
 
-          function showCopyNotice(trigger, message, variant = 'success') {
-            if (!(trigger instanceof HTMLElement)) return;
+                          // Default scopes (disabled)
+                          // const scopesList = document.getElementById('scopesList');
+                          // renderStaticChips(scopesList, scopes);
 
-            const host = trigger.parentElement instanceof HTMLElement ? trigger.parentElement : trigger;
-            host.classList.add('copy-notice-host');
+                          const copyMessages = {
+                            success: 'Значение скопировано',
+                            error: 'Не удалось скопировать значение',
+                            unsupported: 'Копирование недоступно'
+                          };
 
-            const existing = host.querySelector('.copy-notice');
-            existing?.remove();
+                          function showCopyNotice(trigger, message, variant = 'success') {
+                            if (!(trigger instanceof HTMLElement)) return;
 
-            const notice = document.createElement('div');
-            notice.className = `copy-notice ${variant === 'error' ? 'copy-notice_error' : 'copy-notice_success'}`;
-            notice.textContent = message;
-            notice.setAttribute('role', 'status');
-            notice.setAttribute('aria-live', 'polite');
+                            const host = trigger.parentElement instanceof HTMLElement ? trigger.parentElement : trigger;
+                            host.classList.add('copy-notice-host');
 
-            const hostRect = host.getBoundingClientRect();
-            const btnRect = trigger.getBoundingClientRect();
-            const left = btnRect.left - hostRect.left + btnRect.width / 2;
-            const top = btnRect.top - hostRect.top;
+                            const existing = host.querySelector('.copy-notice');
+                            existing?.remove();
 
-            notice.style.left = `${left}px`;
-            notice.style.top = `${top}px`;
+                            const notice = document.createElement('div');
+                            notice.className = `copy-notice ${variant === 'error' ? 'copy-notice_error' : 'copy-notice_success'}`;
+                            notice.textContent = message;
+                            notice.setAttribute('role', 'status');
+                            notice.setAttribute('aria-live', 'polite');
 
-            host.appendChild(notice);
+                            const hostRect = host.getBoundingClientRect();
+                            const btnRect = trigger.getBoundingClientRect();
+                            const left = btnRect.left - hostRect.left + btnRect.width / 2;
+                            const top = btnRect.top - hostRect.top;
 
-            requestAnimationFrame(() => {
-              notice.classList.add('copy-notice_visible');
-            });
+                            notice.style.left = `${left}px`;
+                            notice.style.top = `${top}px`;
 
-            window.setTimeout(() => {
-              notice.classList.remove('copy-notice_visible');
-            }, 2000);
+                            host.appendChild(notice);
 
-            const removeTimer = window.setTimeout(() => {
-              notice.remove();
-            }, 2400);
+                            requestAnimationFrame(() => {
+                              notice.classList.add('copy-notice_visible');
+                            });
 
-            notice.addEventListener('transitionend', event => {
-              if (event.propertyName === 'opacity' && !notice.classList.contains('copy-notice_visible')) {
-                window.clearTimeout(removeTimer);
-                notice.remove();
-              }
-            });
-          }
+                            window.setTimeout(() => {
+                              notice.classList.remove('copy-notice_visible');
+                            }, 2000);
 
-          function ensureClipboardSupport(trigger) {
-            if (!navigator.clipboard?.writeText) {
-              showCopyNotice(trigger, copyMessages.unsupported, 'error');
-              return false;
+                            const removeTimer = window.setTimeout(() => {
+                              notice.remove();
+                            }, 2400);
+
+                            notice.addEventListener('transitionend', event => {
+                              if (event.propertyName === 'opacity' && !notice.classList.contains('copy-notice_visible')) {
+                                window.clearTimeout(removeTimer);
+                                notice.remove();
+                              }
+                            });
+                          }
+
+                          function ensureClipboardSupport(trigger) {
+                            if (!navigator.clipboard?.writeText) {
+                              showCopyNotice(trigger, copyMessages.unsupported, 'error');
+                              return false;
+                            }
+                            return true;
+                          }
+
+                          async function copyToClipboard(value, trigger, successMessage = copyMessages.success) {
+                            try {
+                              await navigator.clipboard.writeText(value ?? '');
+                              showCopyNotice(trigger, successMessage, 'success');
+                              return true;
+                            } catch {
+                              showCopyNotice(trigger, copyMessages.error, 'error');
+                              return false;
+                            }
+                          }
+
+                          // Copy endpoints
+                          root.querySelectorAll('button[data-copy]')?.forEach(btn => {
+                            if (!(btn instanceof HTMLElement)) return;
+                            btn.addEventListener('click', async () => {
+                              if (!ensureClipboardSupport(btn)) return;
+                              const sel = btn.getAttribute('data-copy');
+                              const target = sel ? root.querySelector(sel) : null;
+                              const val = target?.value || target?.textContent || '';
+                              await copyToClipboard(val, btn);
+                            });
+                          });
+
+                          // Copy credentials & manage secret
+                          const btnCopyClientId = document.getElementById('btnCopyClientId');
+                          btnCopyClientId?.addEventListener('click', async () => {
+                            if (!ensureClipboardSupport(btnCopyClientId)) return;
+                            const val = document.getElementById('credClientId')?.value || '';
+                            await copyToClipboard(val, btnCopyClientId);
+                          });
+
+                          const secretMask = '••••••••••••••';
+                          let secretVisible = false;
+
+                          async function fetchSecret(method = 'GET') {
+                            const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`, { method });
+                            if (resp.ok) {
+                              const data = await resp.json();
+                              return data.secret || '';
+                            }
+                            return '';
+                          }
+
+                          const btnShowSecret = document.getElementById('btnShowSecret');
+                          btnShowSecret?.addEventListener('click', async () => {
+                            const input = document.getElementById('credSecret');
+                            if (!input) return;
+                            if (secretVisible) {
+                              input.value = secretMask;
+                              secretVisible = false;
+                              btnShowSecret.title = 'Показать';
+                              btnShowSecret.setAttribute('aria-label','Показать');
+                            } else {
+                              const secret = await fetchSecret('GET');
+                              input.value = secret;
+                              secretVisible = true;
+                              btnShowSecret.title = 'Скрыть';
+                              btnShowSecret.setAttribute('aria-label','Скрыть');
+                            }
+                          });
+
+                          const btnCopySecret = document.getElementById('btnCopySecret');
+                          btnCopySecret?.addEventListener('click', async () => {
+                            if (!ensureClipboardSupport(btnCopySecret)) return;
+                            const secret = secretVisible
+                              ? (document.getElementById('credSecret')?.value || '')
+                              : await fetchSecret('GET');
+                            const input = document.getElementById('credSecret');
+                            if (input && !secretVisible) input.value = secretMask;
+                            if (!secretVisible) {
+                              btnShowSecret && (btnShowSecret.title = 'Показать', btnShowSecret.setAttribute('aria-label','Показать'));
+                            }
+                            await copyToClipboard(secret, btnCopySecret);
+                          });
+
+                          document.getElementById('btnRegenSecret')?.addEventListener('click', async () => {
+                            const secret = await fetchSecret('POST');
+                            const input = document.getElementById('credSecret');
+                            if (input) input.value = secret;
+                            secretVisible = true;
+                            btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
+                          });
+
+                          // ---------- Events (ленивая инициализация) ----------
+                          window.initEvents = function(){
+                            const PAGE_URL = '@Url.Page(null)';
+                            const pageSize = 10;
+                            const rowsEl  = document.getElementById('eventsRows');
+                            const pagerEl = document.getElementById('eventsPager');
+                            const inType  = document.getElementById('evFilterType');
+                            const ddType  = document.getElementById('evTypeDd');
+                            const inFrom  = document.getElementById('evFrom');
+                            const inTo    = document.getElementById('evTo');
+                            const inUser  = document.getElementById('evUser');
+                            const inIp    = document.getElementById('evIp');
+                            const btnSearch = document.getElementById('evSearchBtn');
+
+                            const types = JSON.parse('@Html.Raw(Model.EventTypesJson)');
+
+                            function renderTypeDd(){
+                              if(!ddType) return;
+                              const q = (inType.value||'').trim().toLowerCase();
+                              ddType.innerHTML = '';
+                              const hits = types.filter(t=> t.toLowerCase().includes(q)).slice(0,20);
+                              hits.forEach(t=>{
+                                const div = document.createElement('div');
+                                div.className = 'px-3 py-1 cursor-pointer hover:bg-white/10 rounded';
+                                div.textContent = t;
+                                div.addEventListener('click', ()=>{ inType.value=t; ddType.classList.add('hidden'); });
+                                ddType.appendChild(div);
+                              });
+                              ddType.classList.toggle('hidden', hits.length===0);
+                            }
+
+                            inType?.addEventListener('input', renderTypeDd);
+                            inType?.addEventListener('focus', renderTypeDd);
+                            document.addEventListener('click', e=>{ if(!ddType) return; if(e.target!==inType && !ddType.contains(e.target)) ddType.classList.add('hidden'); });
+
+                            [inType,inFrom,inTo,inUser,inIp].forEach(el=> el?.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); load(); }}));
+
+                            let all = [];
+                            let page = 1;
+                            const fmt = s => new Date(s).toLocaleString();
+
+                            async function fetchJson(url){
+                              const r = await fetch(url,{headers:{'Accept':'application/json'}});
+                              if(!r.ok) throw new Error('HTTP '+r.status);
+                              return r.json();
+                            }
+
+                            async function load(){
+                              const params = new URLSearchParams({ realm, clientId });
+                              const typeVal = (inType.value||'').trim();
+                              if (typeVal) params.set('type', typeVal);
+                              if (inFrom.value) params.set('from', inFrom.value);
+                              if (inTo.value) params.set('to', inTo.value);
+                              if ((inUser.value||'').trim()) params.set('user', inUser.value.trim());
+                              if ((inIp.value||'').trim()) params.set('ip', inIp.value.trim());
+                              const url = `${PAGE_URL}?handler=Events&${params.toString()}`;
+                              try { all = await fetchJson(url); } catch { all = []; }
+                              page = 1;
+                              render();
+                            }
+
+                            function render(){
+                              const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
+                              if (page > totalPages) page = totalPages;
+
+                              rowsEl.innerHTML = '';
+                              const slice = all.slice((page-1)*pageSize, page*pageSize);
+                              slice.forEach(e=>{
+                                rowsEl.insertAdjacentHTML('beforeend', `
+                                  <div class="grid grid-cols-12 gap-2 text-sm py-2 border-b border-white/5 px-1">
+                                    <div class="col-span-3 text-slate-200">${e.type}</div>
+                                    <div class="col-span-3 text-slate-300">${fmt(e.at)}</div>
+                                    <div class="col-span-3 text-slate-300">${e.user||''}</div>
+                                    <div class="col-span-3 text-slate-400">${e.ip||''}</div>
+                                  </div>
+                                `);
+                              });
+
+                              pagerEl.innerHTML = '';
+                              if (totalPages > 1){
+                                const mk = (label,target,disabled=false,active=false)=>
+                                  `<a class="rounded-lg px-3 py-1 text-sm border border-white/10 ${active?'bg-white/10 text-white':(disabled?'pointer-events-none opacity-50':'bg-white/5 hover:bg-white/10')}" href="#tab=Events" data-page="${target}">${label}</a>`;
+                                const inner = [
+                                  mk('Prev', Math.max(1,page-1), page===1),
+                                  ...Array.from({length: totalPages}, (_,i)=> mk(String(i+1), i+1, false, i+1===page)),
+                                  mk('Next', Math.min(totalPages,page+1), page===totalPages)
+                                ].join('');
+                                pagerEl.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-center gap-1 mt-4">${inner}</div>`);
+                                pagerEl.querySelectorAll('a[data-page]').forEach(a => a.addEventListener('click', ev=>{ ev.preventDefault(); page = parseInt(a.dataset.page,10); render(); }));
+                              }
+                            }
+
+                            btnSearch?.addEventListener('click', load);
+                            load();
+                          };
+                          if (root.querySelector('.tab-btn.active')?.dataset.tab === 'Events'){
+                            ensureEventsInit();
+                          }
+                          // ---------- Сбор данных перед Save ----------
+                          const saveForm = document.getElementById('saveForm');
+                          const btnDelete = document.getElementById('btnDelete');
+                          function collect()
+                          {
+                            // базовые
+                            document.getElementById('hidClientId').value       = (document.getElementById('ovClientId').value||'').trim();
+                            document.getElementById('hidDescription').value    = (document.getElementById('ovDesc').value||'').trim();
+                            document.getElementById('hidEnabled').value        = document.getElementById('swEnabled').checked ? 'true' : 'false';
+                            document.getElementById('hidClientAuth').value     = document.getElementById('swClientAuth').checked ? 'true' : 'false';
+                            document.getElementById('hidStandardFlow').value   = document.getElementById('swStandard').checked ? 'true' : 'false';
+                            document.getElementById('hidServiceAccount').value = document.getElementById('swService').checked ? 'true' : 'false';
+                            // массивы
+                            document.getElementById('hidRedirects').value    = JSON.stringify(redirs);
+                            document.getElementById('hidLocalRoles').value   = JSON.stringify(locals);
+                            document.getElementById('hidServiceRoles').value = JSON.stringify(svcRoles);
+                          }
+                          btnDelete?.addEventListener('click', e=>{ if(!confirm('Вы действительно хотите удалить клиента?')) e.preventDefault(); });
+                          saveForm?.addEventListener('submit', collect);
+                        })();
+                        (function(){
+                          const $  = (s, r=document)=>r.querySelector(s);
+                          const el = (t, cls, html)=>{ const n=document.createElement(t); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
+                          const safe = fn => (...a)=>{ try { return fn(...a); } catch(e){ console.error('[ServiceRolesUI]', e); } };
+
+                          const hidRoles       = document.getElementById('hidServiceRoles');
+                          const svcList        = $('#svcList');
+                          const svcSearchInput = $('#svcSearchInput');
+                          const svcSearchBtn   = $('#svcSearchBtn');
+                          const svcSearchDd    = $('#svcSearchDd');
+
+                          const svcChosen      = $('#svcChosen');
+                          const svcChosenTag   = $('#svcChosenTag');
+                          const svcChangeBtn   = $('#svcChange');
+
+                          const svcRoleList    = $('#svcRoleList');
+                          const btnMoreRoles   = $('#btnMoreRoles');
+                          const svcErr         = $('#svcErr');
+
+                          const PAGE_URL = '@Url.Page(null)';
+                          const realm = '@realm';
+                          const MIN_LEN = 3;
+
+                          const state = {
+                            chips: Array.isArray(svcRoles) ? svcRoles : [],
+                            currentClient: null,
+                            page: 0, size: 50, more: false,
+                            cacheClients: new Map(),
+                            cacheClientRoles: new Map(),
+                            lastQuery: '',
+                            roleScanCursor: 0,
+                            roleScanHasMore: false,
+                            pendingEmpty: false
+                          };
+
+                          function persist(){ if(hidRoles) hidRoles.value = JSON.stringify(state.chips); }
+
+                          function renderChips(){
+                            if(!svcList) return;
+                            svcList.innerHTML = '';
+                            for (const s of state.chips){
+                              const chip = el('div','kc-chip'); chip.textContent = s;
+                              const x = el('button','kc-chip-x','×'); x.type='button'; x.title='Удалить';
+                              x.addEventListener('click', safe(()=>{
+                                const i = state.chips.indexOf(s);
+                                if(i>=0){ state.chips.splice(i,1); renderChips(); persist(); }
+                              }));
+                              chip.appendChild(x);
+                              svcList.appendChild(chip);
+                            }
+                          }
+                          renderChips(); persist();
+
+                          async function fetchJson(url, opts){
+                            const r = await fetch(url, {headers:{'Accept':'application/json'}, ...opts});
+                            if(!r.ok) throw new Error(`HTTP ${r.status}`);
+                            return r.json();
+                          }
+                          function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; svcSearchDd.style.minHeight=''; }
+                          function showDd(){ if(!svcSearchDd) return; svcSearchDd.classList.remove('hidden'); }
+                          function showLoading(){
+                            if (!svcSearchDd) return;
+                            svcSearchDd.innerHTML = `<div class="px-3 py-2 text-slate-400">Ищем...</div>`;
+                            svcSearchDd.style.minHeight = '56px';
+                            showDd();
+                          }
+
+                          async function searchClients(q){
+                            if (state.cacheClients.has(q)) return state.cacheClients.get(q);
+                            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(realm)}&q=${encodeURIComponent(q)}&first=0&max=12`;
+                            const clients = await fetchJson(url);
+                            state.cacheClients.set(q, clients || []);
+                            return clients || [];
+                          }
+
+                          async function searchRolesAcrossClients(q, append=false, isFirst=false){
+                            const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(realm)}&q=${encodeURIComponent(q)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
+                            const res = await fetchJson(url);
+                            const hits = res.hits || [];
+                            renderRoleHits(hits, append);
+                            if (typeof res.nextClientFirst === 'number' && res.nextClientFirst >= 0){
+                              state.roleScanCursor = res.nextClientFirst;
+                              state.roleScanHasMore = true;
+                              ensureMoreHitsButton();
+                            } else {
+                              state.roleScanHasMore = false;
+                              removeMoreHitsButton();
+                            }
+                            if (isFirst){
+                              if (state.pendingEmpty && hits.length === 0){
+                                svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`;
+                                showDd();
+                              }
+                              state.pendingEmpty = false;
+                            }
+                          }
+
+                          function ensureMoreHitsButton(){
+                            if (!svcSearchDd) return;
+                            if (svcSearchDd.querySelector('#roleHitsMoreBtn')) return;
+                            const btn = el('button','w-full text-center px-3 py-2 mt-2 hover:bg-slate-700 rounded-md','Показать ещё совпадения');
+                            btn.type='button';
+                            btn.id='roleHitsMoreBtn';
+                            btn.addEventListener('click', safe(()=> searchRolesAcrossClients(state.lastQuery, true, false)));
+                            svcSearchDd.appendChild(btn);
+                          }
+                          function removeMoreHitsButton(){
+                            document.getElementById('roleHitsMoreBtn')?.remove();
+                          }
+
+                          function renderRoleHits(hits, append){
+                            if (!svcSearchDd || !hits.length) return;
+                            let roleSec = svcSearchDd.querySelector('#roleHitsSection');
+                            if (!append){
+                              roleSec?.remove();
+                              roleSec = el('div', null, '');
+                              roleSec.id = 'roleHitsSection';
+                              roleSec.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Роли (совпадения)'));
+                              svcSearchDd.appendChild(roleSec);
+                            }
+                            hits.forEach(it=>{
+                              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
+                              line.type='button';
+                              line.textContent = `${it.clientId}: ${it.role}`;
+                              line.addEventListener('click', safe(()=>{
+                                const val = `${it.clientId}: ${it.role}`;
+                                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
+                              }));
+                              roleSec.appendChild(line);
+                            });
+                          }
+
+                          function renderClientList(clients){
+                            if (!svcSearchDd) return;
+                            if (!clients.length){ svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`; showDd(); return; }
+                            const wrap = el('div', null, '');
+                            clients.forEach(it=>{
+                              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
+                              line.type='button';
+                              line.textContent = it.clientId;
+                              line.addEventListener('click', safe(()=> selectClient(it)));
+                              wrap.appendChild(line);
+                            });
+                            svcSearchDd.innerHTML = '';
+                            svcSearchDd.appendChild(wrap);
+                            svcSearchDd.appendChild(el('div','divider my-2',''));
+                            showDd();
+                          }
+
+                          async function unifiedSearch(qRaw){
+                            const q = (qRaw||'').trim();
+                            if (q.length < MIN_LEN){
+                              svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Введите минимум ${MIN_LEN} символа</div>`;
+                              showDd();
+                              return;
+                            }
+                            state.lastQuery = q;
+                            state.roleScanCursor = 0;
+                            state.roleScanHasMore = false;
+                            state.pendingEmpty = true;
+                            removeMoreHitsButton();
+                            showLoading();
+                            const clients = await searchClients(q);
+                            if (clients.length){
+                              renderClientList(clients);
+                              state.pendingEmpty = false;
+                            }
+                            searchRolesAcrossClients(q, false, true).catch(()=>{});
+                          }
+
+                          function selectClient(it){
+                            state.currentClient = { id: it.id, clientId: it.clientId };
+                            if (svcChosenTag) svcChosenTag.textContent = it.clientId;
+                            svcChosen?.classList.remove('hidden');
+                            hideDd();
+                            if (svcSearchInput) svcSearchInput.value = it.clientId;
+                            state.page = 0;
+                            svcRoleList && (svcRoleList.innerHTML = '');
+                            loadRoles({append:false});
+                          }
+                          svcChangeBtn?.addEventListener('click', safe(()=>{
+                            state.currentClient = null;
+                            svcChosen?.classList.add('hidden');
+                            svcSearchInput?.focus();
+                          }));
+
+                          async function loadRoles({append}){
+                            if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
+                            if (!state.currentClient) return;
+
+                            const key = `${state.currentClient.clientId}|${state.page}`;
+                            try{
+                              let roles = state.cacheClientRoles.get(key);
+                              if (!roles){
+                                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(realm)}&first=${state.page*state.size}&max=${state.size}`;
+                                roles = await fetchJson(url);
+                                state.cacheClientRoles.set(key, roles || []);
+                              }
+                              renderRoles(roles || [], {append});
+                              state.more = (roles?.length || 0) === state.size;
+                              btnMoreRoles?.classList.toggle('hidden', !state.more);
+                            }catch(e){
+                              if (svcErr){ svcErr.textContent = `Не удалось загрузить роли: ${e.message}`; svcErr.classList.add('show'); }
+                            }
+                          }
+                          function renderRoles(roles, {append}){
+                            if (!svcRoleList) return;
+                            if (!append) svcRoleList.innerHTML = '';
+                            if (!roles.length){
+                              if (!append) svcRoleList.innerHTML = `<div class="px-2 py-1 text-slate-400">Ролей не найдено</div>`;
+                              return;
+                            }
+                            roles.forEach(name=>{
+                              const item = el('button','kc-card px-3 py-2 hover:bg-slate-700 text-left');
+                              item.type = 'button';
+                              item.textContent = name;
+                              item.title = 'Добавить роль';
+                              item.addEventListener('click', safe(()=>{
+                                if (!state.currentClient) return;
+                                const val = `${state.currentClient.clientId}: ${name}`;
+                                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
+                              }));
+                              svcRoleList.appendChild(item);
+                            });
+                          }
+                          btnMoreRoles?.addEventListener('click', safe(()=>{
+                            state.page += 1;
+                            loadRoles({append:true});
+                          }));
+
+                          const updateBtnState = ()=> { if (svcSearchBtn && svcSearchInput) svcSearchBtn.disabled = (svcSearchInput.value.trim().length < MIN_LEN); };
+                          updateBtnState();
+                          svcSearchInput?.addEventListener('input', updateBtnState);
+
+                          svcSearchBtn?.addEventListener('click', safe(()=>{
+                            const q = svcSearchInput?.value || '';
+                            showLoading();
+                            requestAnimationFrame(()=> unifiedSearch(q));
+                          }));
+
+                          svcSearchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+                          document.addEventListener('click', safe((e)=>{
+                            if (!svcSearchDd) return;
+                            if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
+                          }));
+                        })();
+
             }
-            return true;
-          }
 
-          async function copyToClipboard(value, trigger, successMessage = copyMessages.success) {
-            try {
-              await navigator.clipboard.writeText(value ?? '');
-              showCopyNotice(trigger, successMessage, 'success');
-              return true;
-            } catch {
-              showCopyNotice(trigger, copyMessages.error, 'error');
-              return false;
+            if (window.__clientDetailsNavHandler) {
+                document.removeEventListener('soft:navigated', window.__clientDetailsNavHandler);
             }
-          }
+            window.__clientDetailsNavHandler = scheduleInit;
+            document.addEventListener('soft:navigated', scheduleInit);
 
-          // Copy endpoints
-          document.querySelectorAll('button[data-copy]')?.forEach(btn => {
-            if (!(btn instanceof HTMLElement)) return;
-            btn.addEventListener('click', async () => {
-              if (!ensureClipboardSupport(btn)) return;
-              const sel = btn.getAttribute('data-copy');
-              const target = sel ? document.querySelector(sel) : null;
-              const val = target?.value || target?.textContent || '';
-              await copyToClipboard(val, btn);
-            });
-          });
-
-          // Copy credentials & manage secret
-          const btnCopyClientId = document.getElementById('btnCopyClientId');
-          btnCopyClientId?.addEventListener('click', async () => {
-            if (!ensureClipboardSupport(btnCopyClientId)) return;
-            const val = document.getElementById('credClientId')?.value || '';
-            await copyToClipboard(val, btnCopyClientId);
-          });
-
-          const secretMask = '••••••••••••••';
-          let secretVisible = false;
-
-          async function fetchSecret(method = 'GET') {
-            const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`, { method });
-            if (resp.ok) {
-              const data = await resp.json();
-              return data.secret || '';
-            }
-            return '';
-          }
-
-          const btnShowSecret = document.getElementById('btnShowSecret');
-          btnShowSecret?.addEventListener('click', async () => {
-            const input = document.getElementById('credSecret');
-            if (!input) return;
-            if (secretVisible) {
-              input.value = secretMask;
-              secretVisible = false;
-              btnShowSecret.title = 'Показать';
-              btnShowSecret.setAttribute('aria-label','Показать');
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', scheduleInit);
             } else {
-              const secret = await fetchSecret('GET');
-              input.value = secret;
-              secretVisible = true;
-              btnShowSecret.title = 'Скрыть';
-              btnShowSecret.setAttribute('aria-label','Скрыть');
+                scheduleInit();
             }
-          });
-
-          const btnCopySecret = document.getElementById('btnCopySecret');
-          btnCopySecret?.addEventListener('click', async () => {
-            if (!ensureClipboardSupport(btnCopySecret)) return;
-            const secret = secretVisible
-              ? (document.getElementById('credSecret')?.value || '')
-              : await fetchSecret('GET');
-            const input = document.getElementById('credSecret');
-            if (input && !secretVisible) input.value = secretMask;
-            if (!secretVisible) {
-              btnShowSecret && (btnShowSecret.title = 'Показать', btnShowSecret.setAttribute('aria-label','Показать'));
-            }
-            await copyToClipboard(secret, btnCopySecret);
-          });
-
-          document.getElementById('btnRegenSecret')?.addEventListener('click', async () => {
-            const secret = await fetchSecret('POST');
-            const input = document.getElementById('credSecret');
-            if (input) input.value = secret;
-            secretVisible = true;
-            btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
-          });
-
-          // ---------- Events (ленивая инициализация) ----------
-          window.initEvents = function(){
-            const PAGE_URL = '@Url.Page(null)';
-            const pageSize = 10;
-            const rowsEl  = document.getElementById('eventsRows');
-            const pagerEl = document.getElementById('eventsPager');
-            const inType  = document.getElementById('evFilterType');
-            const ddType  = document.getElementById('evTypeDd');
-            const inFrom  = document.getElementById('evFrom');
-            const inTo    = document.getElementById('evTo');
-            const inUser  = document.getElementById('evUser');
-            const inIp    = document.getElementById('evIp');
-            const btnSearch = document.getElementById('evSearchBtn');
-
-            const types = JSON.parse('@Html.Raw(Model.EventTypesJson)');
-
-            function renderTypeDd(){
-              if(!ddType) return;
-              const q = (inType.value||'').trim().toLowerCase();
-              ddType.innerHTML = '';
-              const hits = types.filter(t=> t.toLowerCase().includes(q)).slice(0,20);
-              hits.forEach(t=>{
-                const div = document.createElement('div');
-                div.className = 'px-3 py-1 cursor-pointer hover:bg-white/10 rounded';
-                div.textContent = t;
-                div.addEventListener('click', ()=>{ inType.value=t; ddType.classList.add('hidden'); });
-                ddType.appendChild(div);
-              });
-              ddType.classList.toggle('hidden', hits.length===0);
-            }
-
-            inType?.addEventListener('input', renderTypeDd);
-            inType?.addEventListener('focus', renderTypeDd);
-            document.addEventListener('click', e=>{ if(!ddType) return; if(e.target!==inType && !ddType.contains(e.target)) ddType.classList.add('hidden'); });
-
-            [inType,inFrom,inTo,inUser,inIp].forEach(el=> el?.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); load(); }}));
-
-            let all = [];
-            let page = 1;
-            const fmt = s => new Date(s).toLocaleString();
-
-            async function fetchJson(url){
-              const r = await fetch(url,{headers:{'Accept':'application/json'}});
-              if(!r.ok) throw new Error('HTTP '+r.status);
-              return r.json();
-            }
-
-            async function load(){
-              const params = new URLSearchParams({ realm, clientId });
-              const typeVal = (inType.value||'').trim();
-              if (typeVal) params.set('type', typeVal);
-              if (inFrom.value) params.set('from', inFrom.value);
-              if (inTo.value) params.set('to', inTo.value);
-              if ((inUser.value||'').trim()) params.set('user', inUser.value.trim());
-              if ((inIp.value||'').trim()) params.set('ip', inIp.value.trim());
-              const url = `${PAGE_URL}?handler=Events&${params.toString()}`;
-              try { all = await fetchJson(url); } catch { all = []; }
-              page = 1;
-              render();
-            }
-
-            function render(){
-              const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
-              if (page > totalPages) page = totalPages;
-
-              rowsEl.innerHTML = '';
-              const slice = all.slice((page-1)*pageSize, page*pageSize);
-              slice.forEach(e=>{
-                rowsEl.insertAdjacentHTML('beforeend', `
-                  <div class="grid grid-cols-12 gap-2 text-sm py-2 border-b border-white/5 px-1">
-                    <div class="col-span-3 text-slate-200">${e.type}</div>
-                    <div class="col-span-3 text-slate-300">${fmt(e.at)}</div>
-                    <div class="col-span-3 text-slate-300">${e.user||''}</div>
-                    <div class="col-span-3 text-slate-400">${e.ip||''}</div>
-                  </div>
-                `);
-              });
-
-              pagerEl.innerHTML = '';
-              if (totalPages > 1){
-                const mk = (label,target,disabled=false,active=false)=>
-                  `<a class="rounded-lg px-3 py-1 text-sm border border-white/10 ${active?'bg-white/10 text-white':(disabled?'pointer-events-none opacity-50':'bg-white/5 hover:bg-white/10')}" href="#tab=Events" data-page="${target}">${label}</a>`;
-                const inner = [
-                  mk('Prev', Math.max(1,page-1), page===1),
-                  ...Array.from({length: totalPages}, (_,i)=> mk(String(i+1), i+1, false, i+1===page)),
-                  mk('Next', Math.min(totalPages,page+1), page===totalPages)
-                ].join('');
-                pagerEl.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-center gap-1 mt-4">${inner}</div>`);
-                pagerEl.querySelectorAll('a[data-page]').forEach(a => a.addEventListener('click', ev=>{ ev.preventDefault(); page = parseInt(a.dataset.page,10); render(); }));
-              }
-            }
-
-            btnSearch?.addEventListener('click', load);
-            load();
-          };
-          if (document.querySelector('.tab-btn.active')?.dataset.tab === 'Events'){
-            ensureEventsInit();
-          }
-          // ---------- Сбор данных перед Save ----------
-          const saveForm = document.getElementById('saveForm');
-          const btnDelete = document.getElementById('btnDelete');
-          function collect()
-          {
-            // базовые
-            document.getElementById('hidClientId').value       = (document.getElementById('ovClientId').value||'').trim();
-            document.getElementById('hidDescription').value    = (document.getElementById('ovDesc').value||'').trim();
-            document.getElementById('hidEnabled').value        = document.getElementById('swEnabled').checked ? 'true' : 'false';
-            document.getElementById('hidClientAuth').value     = document.getElementById('swClientAuth').checked ? 'true' : 'false';
-            document.getElementById('hidStandardFlow').value   = document.getElementById('swStandard').checked ? 'true' : 'false';
-            document.getElementById('hidServiceAccount').value = document.getElementById('swService').checked ? 'true' : 'false';
-            // массивы
-            document.getElementById('hidRedirects').value    = JSON.stringify(redirs);
-            document.getElementById('hidLocalRoles').value   = JSON.stringify(locals);
-            document.getElementById('hidServiceRoles').value = JSON.stringify(svcRoles);
-          }
-          btnDelete?.addEventListener('click', e=>{ if(!confirm('Вы действительно хотите удалить клиента?')) e.preventDefault(); });
-          saveForm?.addEventListener('submit', collect);
         })();
-        (function(){
-          const $  = (s, r=document)=>r.querySelector(s);
-          const el = (t, cls, html)=>{ const n=document.createElement(t); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
-          const safe = fn => (...a)=>{ try { return fn(...a); } catch(e){ console.error('[ServiceRolesUI]', e); } };
-
-          const hidRoles       = document.getElementById('hidServiceRoles');
-          const svcList        = $('#svcList');
-          const svcSearchInput = $('#svcSearchInput');
-          const svcSearchBtn   = $('#svcSearchBtn');
-          const svcSearchDd    = $('#svcSearchDd');
-
-          const svcChosen      = $('#svcChosen');
-          const svcChosenTag   = $('#svcChosenTag');
-          const svcChangeBtn   = $('#svcChange');
-
-          const svcRoleList    = $('#svcRoleList');
-          const btnMoreRoles   = $('#btnMoreRoles');
-          const svcErr         = $('#svcErr');
-
-          const PAGE_URL = '@Url.Page(null)';
-          const realm = '@realm';
-          const MIN_LEN = 3;
-
-          const state = {
-            chips: Array.isArray(svcRoles) ? svcRoles : [],
-            currentClient: null,
-            page: 0, size: 50, more: false,
-            cacheClients: new Map(),
-            cacheClientRoles: new Map(),
-            lastQuery: '',
-            roleScanCursor: 0,
-            roleScanHasMore: false,
-            pendingEmpty: false
-          };
-
-          function persist(){ if(hidRoles) hidRoles.value = JSON.stringify(state.chips); }
-
-          function renderChips(){
-            if(!svcList) return;
-            svcList.innerHTML = '';
-            for (const s of state.chips){
-              const chip = el('div','kc-chip'); chip.textContent = s;
-              const x = el('button','kc-chip-x','×'); x.type='button'; x.title='Удалить';
-              x.addEventListener('click', safe(()=>{
-                const i = state.chips.indexOf(s);
-                if(i>=0){ state.chips.splice(i,1); renderChips(); persist(); }
-              }));
-              chip.appendChild(x);
-              svcList.appendChild(chip);
-            }
-          }
-          renderChips(); persist();
-
-          async function fetchJson(url, opts){
-            const r = await fetch(url, {headers:{'Accept':'application/json'}, ...opts});
-            if(!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-          }
-          function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; svcSearchDd.style.minHeight=''; }
-          function showDd(){ if(!svcSearchDd) return; svcSearchDd.classList.remove('hidden'); }
-          function showLoading(){
-            if (!svcSearchDd) return;
-            svcSearchDd.innerHTML = `<div class="px-3 py-2 text-slate-400">Ищем...</div>`;
-            svcSearchDd.style.minHeight = '56px';
-            showDd();
-          }
-
-          async function searchClients(q){
-            if (state.cacheClients.has(q)) return state.cacheClients.get(q);
-            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(realm)}&q=${encodeURIComponent(q)}&first=0&max=12`;
-            const clients = await fetchJson(url);
-            state.cacheClients.set(q, clients || []);
-            return clients || [];
-          }
-
-          async function searchRolesAcrossClients(q, append=false, isFirst=false){
-            const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(realm)}&q=${encodeURIComponent(q)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
-            const res = await fetchJson(url);
-            const hits = res.hits || [];
-            renderRoleHits(hits, append);
-            if (typeof res.nextClientFirst === 'number' && res.nextClientFirst >= 0){
-              state.roleScanCursor = res.nextClientFirst;
-              state.roleScanHasMore = true;
-              ensureMoreHitsButton();
-            } else {
-              state.roleScanHasMore = false;
-              removeMoreHitsButton();
-            }
-            if (isFirst){
-              if (state.pendingEmpty && hits.length === 0){
-                svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`;
-                showDd();
-              }
-              state.pendingEmpty = false;
-            }
-          }
-
-          function ensureMoreHitsButton(){
-            if (!svcSearchDd) return;
-            if (svcSearchDd.querySelector('#roleHitsMoreBtn')) return;
-            const btn = el('button','w-full text-center px-3 py-2 mt-2 hover:bg-slate-700 rounded-md','Показать ещё совпадения');
-            btn.type='button';
-            btn.id='roleHitsMoreBtn';
-            btn.addEventListener('click', safe(()=> searchRolesAcrossClients(state.lastQuery, true, false)));
-            svcSearchDd.appendChild(btn);
-          }
-          function removeMoreHitsButton(){
-            document.getElementById('roleHitsMoreBtn')?.remove();
-          }
-
-          function renderRoleHits(hits, append){
-            if (!svcSearchDd || !hits.length) return;
-            let roleSec = svcSearchDd.querySelector('#roleHitsSection');
-            if (!append){
-              roleSec?.remove();
-              roleSec = el('div', null, '');
-              roleSec.id = 'roleHitsSection';
-              roleSec.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Роли (совпадения)'));
-              svcSearchDd.appendChild(roleSec);
-            }
-            hits.forEach(it=>{
-              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
-              line.type='button';
-              line.textContent = `${it.clientId}: ${it.role}`;
-              line.addEventListener('click', safe(()=>{
-                const val = `${it.clientId}: ${it.role}`;
-                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
-              }));
-              roleSec.appendChild(line);
-            });
-          }
-
-          function renderClientList(clients){
-            if (!svcSearchDd) return;
-            if (!clients.length){ svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`; showDd(); return; }
-            const wrap = el('div', null, '');
-            clients.forEach(it=>{
-              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
-              line.type='button';
-              line.textContent = it.clientId;
-              line.addEventListener('click', safe(()=> selectClient(it)));
-              wrap.appendChild(line);
-            });
-            svcSearchDd.innerHTML = '';
-            svcSearchDd.appendChild(wrap);
-            svcSearchDd.appendChild(el('div','divider my-2',''));
-            showDd();
-          }
-
-          async function unifiedSearch(qRaw){
-            const q = (qRaw||'').trim();
-            if (q.length < MIN_LEN){
-              svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Введите минимум ${MIN_LEN} символа</div>`;
-              showDd();
-              return;
-            }
-            state.lastQuery = q;
-            state.roleScanCursor = 0;
-            state.roleScanHasMore = false;
-            state.pendingEmpty = true;
-            removeMoreHitsButton();
-            showLoading();
-            const clients = await searchClients(q);
-            if (clients.length){
-              renderClientList(clients);
-              state.pendingEmpty = false;
-            }
-            searchRolesAcrossClients(q, false, true).catch(()=>{});
-          }
-
-          function selectClient(it){
-            state.currentClient = { id: it.id, clientId: it.clientId };
-            if (svcChosenTag) svcChosenTag.textContent = it.clientId;
-            svcChosen?.classList.remove('hidden');
-            hideDd();
-            if (svcSearchInput) svcSearchInput.value = it.clientId;
-            state.page = 0;
-            svcRoleList && (svcRoleList.innerHTML = '');
-            loadRoles({append:false});
-          }
-          svcChangeBtn?.addEventListener('click', safe(()=>{
-            state.currentClient = null;
-            svcChosen?.classList.add('hidden');
-            svcSearchInput?.focus();
-          }));
-
-          async function loadRoles({append}){
-            if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
-            if (!state.currentClient) return;
-
-            const key = `${state.currentClient.clientId}|${state.page}`;
-            try{
-              let roles = state.cacheClientRoles.get(key);
-              if (!roles){
-                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(realm)}&first=${state.page*state.size}&max=${state.size}`;
-                roles = await fetchJson(url);
-                state.cacheClientRoles.set(key, roles || []);
-              }
-              renderRoles(roles || [], {append});
-              state.more = (roles?.length || 0) === state.size;
-              btnMoreRoles?.classList.toggle('hidden', !state.more);
-            }catch(e){
-              if (svcErr){ svcErr.textContent = `Не удалось загрузить роли: ${e.message}`; svcErr.classList.add('show'); }
-            }
-          }
-          function renderRoles(roles, {append}){
-            if (!svcRoleList) return;
-            if (!append) svcRoleList.innerHTML = '';
-            if (!roles.length){
-              if (!append) svcRoleList.innerHTML = `<div class="px-2 py-1 text-slate-400">Ролей не найдено</div>`;
-              return;
-            }
-            roles.forEach(name=>{
-              const item = el('button','kc-card px-3 py-2 hover:bg-slate-700 text-left');
-              item.type = 'button';
-              item.textContent = name;
-              item.title = 'Добавить роль';
-              item.addEventListener('click', safe(()=>{
-                if (!state.currentClient) return;
-                const val = `${state.currentClient.clientId}: ${name}`;
-                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
-              }));
-              svcRoleList.appendChild(item);
-            });
-          }
-          btnMoreRoles?.addEventListener('click', safe(()=>{
-            state.page += 1;
-            loadRoles({append:true});
-          }));
-
-          const updateBtnState = ()=> { if (svcSearchBtn && svcSearchInput) svcSearchBtn.disabled = (svcSearchInput.value.trim().length < MIN_LEN); };
-          updateBtnState();
-          svcSearchInput?.addEventListener('input', updateBtnState);
-
-          svcSearchBtn?.addEventListener('click', safe(()=>{
-            const q = svcSearchInput?.value || '';
-            showLoading();
-            requestAnimationFrame(()=> unifiedSearch(q));
-          }));
-
-          svcSearchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
-          document.addEventListener('click', safe((e)=>{
-            if (!svcSearchDd) return;
-            if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
-          }));
-        })();
-      </script>
-  }
+    </script>
+}

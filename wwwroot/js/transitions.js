@@ -7,6 +7,7 @@
     let currentController = null;
     let navigationToken = 0;
     let scrollSaveTimer = null;
+    const softNavigateEventName = 'soft:navigated';
 
     const body = document.body;
     const initialFocusAttr = 'data-soft-nav-root';
@@ -53,6 +54,16 @@
             return;
         }
         requestAnimationFrame(() => body.classList.add('page-loaded'));
+    }
+
+    function dispatchSoftNavigated(main, url) {
+        const event = new CustomEvent(softNavigateEventName, {
+            detail: {
+                main,
+                url
+            }
+        });
+        document.dispatchEvent(event);
     }
 
     function executeScripts(root) {
@@ -139,6 +150,7 @@
 
         const main = document.querySelector(mainSelector);
         focusMain(main);
+        dispatchSoftNavigated(main, normalizedUrl);
         endTransition();
     }
 
@@ -323,12 +335,19 @@
     document.addEventListener('submit', handleFormSubmit, true);
     window.addEventListener('scroll', scheduleScrollSave, { passive: true });
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function handleInitialLoad() {
         endTransition();
         storeScrollPosition();
         const main = document.querySelector(mainSelector);
         if (main && main.hasAttribute(initialFocusAttr)) {
             focusMain(main);
         }
-    });
+        dispatchSoftNavigated(main, window.location.href);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', handleInitialLoad);
+    } else {
+        handleInitialLoad();
+    }
 })();
