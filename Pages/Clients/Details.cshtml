@@ -141,7 +141,10 @@
             <div class="text-slate-200 font-semibold mb-3">Локальные роли</div>
             <div id="locList" class="flex flex-wrap gap-2 mb-2"></div>
             <div class="flex gap-2 mb-2 items-center">
-                <input id="locInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[360px]" placeholder="Например: app.read" />
+                <div class="prefix-wrap w-full md:w-[360px]">
+                    <span class="prefix-chip" id="locPrefix">kc-gf-</span>
+                    <input id="locInput" class="prefix-input text-sm" placeholder="Например: app.read" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                </div>
                 <button type="button" class="btn-subtle" id="btnAddLocal">Добавить</button>
             </div>
             <div class="kc-th mb-2">Создаются роли текущего клиента для назначения другим.</div>
@@ -553,12 +556,23 @@
           updateRedirectDisabled();
 
           // Local roles
+          const localRolePrefix = 'kc-gf-';
+          const ensureLocalRolePrefix = (value) => {
+            const v = (value ?? '').trim();
+            return v ? (v.startsWith(localRolePrefix) ? v : localRolePrefix + v) : v;
+          };
           const locInput = document.getElementById('locInput');
           const locList  = document.getElementById('locList');
+          const locPrefixEl = document.getElementById('locPrefix');
+          if (locPrefixEl) locPrefixEl.textContent = localRolePrefix;
+          if (Array.isArray(locals)) {
+            const normalized = locals.map(ensureLocalRolePrefix);
+            locals.splice(0, locals.length, ...normalized);
+          }
           renderChips(locList, locals);
           document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
             const v = (locInput.value||'').trim(); if(!v) return;
-            locals.push(v); locInput.value=''; renderChips(locList, locals);
+            locals.push(ensureLocalRolePrefix(v)); locInput.value=''; renderChips(locList, locals);
           });
 
           // Default scopes (disabled)
