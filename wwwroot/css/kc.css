@@ -536,6 +536,10 @@ body.page-loaded #app {
     transform: translateY(0);
 }
 
+main#app:focus {
+    outline: none;
+}
+
 /* ===== Events filters ===== */
 .event-filters {
     width: 100%;
