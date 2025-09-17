@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         anchor.addEventListener('click', ev => {
+            if (anchor.dataset.noTransition !== undefined) {
+                return;
+            }
             const url = anchor.href;
             if (url && anchor.origin === window.location.origin) {
                 ev.preventDefault();
