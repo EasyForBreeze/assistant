@@ -558,7 +558,9 @@
           renderChips(locList, locals);
           document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
             const v = (locInput.value||'').trim(); if(!v) return;
-            locals.push(v); locInput.value=''; renderChips(locList, locals);
+            const prefix = 'kc-gf-';
+            const valueWithPrefix = v.startsWith(prefix) ? v : prefix + v;
+            locals.push(valueWithPrefix); locInput.value=''; renderChips(locList, locals);
           });
 
           // Default scopes (disabled)
