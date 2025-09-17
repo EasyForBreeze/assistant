@@ -1,4 +1,5 @@
 ﻿// Assistant/KeyCloak/ClientsService.cs
+using Assistant.Services;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Net;
@@ -111,11 +112,16 @@ namespace Assistant.KeyCloak
     {
         private readonly IHttpClientFactory _factory;
         private readonly AdminApiOptions _opt;
+        private readonly ServiceRoleExclusionsRepository _exclusions;
 
-        public ClientsService(IHttpClientFactory factory, IOptions<AdminApiOptions> opt)
+        public ClientsService(
+            IHttpClientFactory factory,
+            IOptions<AdminApiOptions> opt,
+            ServiceRoleExclusionsRepository exclusions)
         {
             _factory = factory;
             _opt = opt.Value;
+            _exclusions = exclusions;
         }
 
         private string BaseUrl => _opt.BaseUrl.TrimEnd('/');
@@ -143,6 +149,7 @@ namespace Assistant.KeyCloak
             max = Math.Clamp(max <= 0 ? 20 : max, 1, 200);
 
             var http = _factory.CreateClient("kc-admin");
+            var excluded = await _exclusions.GetAllAsync(ct);
 
             // 1) Точное clientId=
             var urlExactNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?clientId={UR(query)}&briefRepresentation=true";
@@ -160,6 +167,7 @@ namespace Assistant.KeyCloak
                 .Select(MapClient)
                 .Where(c => ContainsCi(c.ClientId, query))
                 .ToList();
+            mappedExact = FilterExcluded(mappedExact, excluded);
 
             if (mappedExact.Count > 0) return mappedExact;
 
@@ -171,11 +179,13 @@ namespace Assistant.KeyCloak
             EnsureAuthOrThrow(resp2);
             var list = await ReadJson<List<ClientRep>>(resp2, ct) ?? new();
 
-            return list
+            var mapped = list
                 .Where(x => !string.IsNullOrWhiteSpace(x.ClientId))
                 .Select(MapClient)
                 .Where(c => ContainsCi(c.ClientId, query))
                 .ToList();
+
+            return FilterExcluded(mapped, excluded);
 
             static ClientShort MapClient(ClientRep c) => new ClientShort(
                 c.Id ?? string.Empty,
@@ -185,12 +195,13 @@ namespace Assistant.KeyCloak
         /// <summary>
         /// Плоский листинг клиентов (для сканирования при поиске роли, когда клиент неизвестен).
         /// </summary>
-        public async Task<List<ClientShort>> ListClientsAsync(string realm, int first = 0, int max = 50, CancellationToken ct = default)
+        public async Task<(List<ClientShort> Clients, int TotalFetched)> ListClientsAsync(string realm, int first = 0, int max = 50, CancellationToken ct = default)
         {
             first = Math.Max(0, first);
             max = Math.Clamp(max <= 0 ? 50 : max, 1, 200);
 
             var http = _factory.CreateClient("kc-admin");
+            var excluded = await _exclusions.GetAllAsync(ct);
 
             var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?first={first}&max={max}&briefRepresentation=true";
             var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?first={first}&max={max}&briefRepresentation=true";
@@ -199,10 +210,13 @@ namespace Assistant.KeyCloak
             EnsureAuthOrThrow(resp);
             var list = await ReadJson<List<ClientRep>>(resp, ct) ?? new();
 
-            return list
+            var mapped = list
                 .Where(x => !string.IsNullOrWhiteSpace(x.ClientId))
                 .Select(c => new ClientShort(c.Id ?? string.Empty, c.ClientId ?? string.Empty))
                 .ToList();
+            var total = mapped.Count;
+
+            return (FilterExcluded(mapped, excluded), total);
         }
 
         /// <summary>
@@ -309,7 +323,7 @@ namespace Assistant.KeyCloak
             roleQuery = (roleQuery ?? "").Trim();
             if (roleQuery.Length == 0) return (new(), -1);
 
-            var clients = await ListClientsAsync(realm, clientFirst, clientsToScan, ct);
+            var (clients, fetched) = await ListClientsAsync(realm, clientFirst, clientsToScan, ct);
             var hits = new List<RoleHit>();
 
             foreach (var c in clients)
@@ -319,8 +333,15 @@ namespace Assistant.KeyCloak
                     hits.Add(new RoleHit(c.Id, c.ClientId, r));
             }
 
-            var next = clients.Count < clientsToScan ? -1 : clientFirst + clients.Count;
+            var next = fetched < clientsToScan ? -1 : clientFirst + fetched;
             return (hits, next);
+        }
+
+        private static List<ClientShort> FilterExcluded(List<ClientShort> source, HashSet<string> excluded)
+        {
+            if (excluded.Count == 0) return source;
+            source.RemoveAll(c => excluded.Contains(c.ClientId));
+            return source;
         }
 
         private async Task<List<(string ClientId, string Role)>> GetServiceAccountRolesAsync(string realm, string clientUuid, CancellationToken ct)
