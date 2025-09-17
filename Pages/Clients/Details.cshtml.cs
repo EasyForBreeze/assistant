@@ -106,11 +106,13 @@ namespace Assistant.Pages.Clients
             catch (Exception ex)
             {
                 TempData["FlashError"] = $"Не удалось обновить клиента: {ex.Message}";
-                return RedirectToPage(new { realm = Realm, clientId = ClientId });
+                return RedirectToPage("/Clients/Details", pageHandler: null,
+                    values: new { realm = Realm, clientId = ClientId });
             }
 
             TempData["FlashOk"] = "Клиент успешно обновлён.";
-            return RedirectToPage(new { realm = Realm, clientId = newId });
+            return RedirectToPage("/Clients/Details", pageHandler: null,
+                values: new { realm = Realm, clientId = newId });
         }
 
         public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct)
