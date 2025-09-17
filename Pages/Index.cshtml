@@ -28,25 +28,18 @@
                        class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
             </div>
 
-            @if (User.IsInRole("assistant-admin"))
-            {
-                <form method="get"
-                      class="flex items-center gap-2 kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[260px] focus-within:border-white/20">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.3-4.3" />
-                    </svg>
-                    <input name="q" value="@Model.Q" placeholder="Search all realms..."
-                           class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
-                </form>
-            }
-
             <a asp-page="/Clients/Create" class="btn-primary">
                 Создать клиента
             </a>
         </div>
     </div>
 </div>
+@if (User.IsInRole("assistant-admin"))
+{
+    <div class="kc-card mb-5 p-5 text-sm text-slate-300/90">
+        Используйте пункт «Поиск клиентов» в панели слева, чтобы найти клиентов во всех реалмах.
+    </div>
+}
 <div id="clientsContainer">
     @await Html.PartialAsync("_ClientsList", Model)
 </div>
