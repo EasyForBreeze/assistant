@@ -99,8 +99,17 @@ namespace Assistant.Pages.Clients
                 svc
             );
 
-            await _clients.UpdateClientAsync(spec, ct);
-            TempData["Flash"] = "Changes saved.";
+            try
+            {
+                await _clients.UpdateClientAsync(spec, ct);
+            }
+            catch (Exception ex)
+            {
+                TempData["FlashError"] = $"Не удалось обновить клиента: {ex.Message}";
+                return RedirectToPage(new { realm = Realm, clientId = ClientId });
+            }
+
+            TempData["FlashOk"] = "Клиент успешно обновлён.";
             return RedirectToPage(new { realm = Realm, clientId = newId });
         }
 
