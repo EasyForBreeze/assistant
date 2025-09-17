@@ -166,7 +166,6 @@ namespace Assistant.KeyCloak
             query = (query ?? "").Trim();
             if (string.IsNullOrEmpty(query))
             {
-                await AuditAsync("client:search", realm, string.Empty, ct);
                 return new();
             }
             first = Math.Max(0, first);
@@ -195,7 +194,6 @@ namespace Assistant.KeyCloak
 
             if (mappedExact.Count > 0)
             {
-                await AuditAsync("client:search", realm, query, ct);
                 return mappedExact;
             }
 
@@ -214,7 +212,6 @@ namespace Assistant.KeyCloak
                 .ToList();
 
             var filtered = FilterExcluded(mapped, excluded);
-            await AuditAsync("client:search", realm, query, ct);
             return filtered;
 
             static ClientShort MapClient(ClientRep c) => new ClientShort(
@@ -298,7 +295,6 @@ namespace Assistant.KeyCloak
             var details = await GetClientDetailsAsync(realm, clientId, ct);
             if (details == null)
             {
-                await AuditAsync("client-secret:get", realm, clientId, ct);
                 return null;
             }
 
@@ -310,7 +306,6 @@ namespace Assistant.KeyCloak
             EnsureAuthOrThrow(resp);
             var rep = await ReadJson<ClientSecretRep>(resp, ct);
             var secret = rep?.Value;
-            await AuditAsync("client-secret:get", realm, details.ClientId, ct);
             return secret;
         }
 
@@ -408,7 +403,6 @@ namespace Assistant.KeyCloak
             userResp.Dispose();
             if (svcUser?.Id == null)
             {
-                await AuditAsync("service-account:roles:get", realm, clientUuid, ct);
                 return new();
             }
 
@@ -432,7 +426,6 @@ namespace Assistant.KeyCloak
                             list.Add((kv.Key, r.Name!));
                 }
             }
-            await AuditAsync("service-account:roles:get", realm, clientUuid, ct);
             return list;
         }
 
