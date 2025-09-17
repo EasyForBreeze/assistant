@@ -141,10 +141,7 @@
             <div class="text-slate-200 font-semibold mb-3">Локальные роли</div>
             <div id="locList" class="flex flex-wrap gap-2 mb-2"></div>
             <div class="flex gap-2 mb-2 items-center">
-                <div class="prefix-wrap w-full md:w-[360px]">
-                    <span class="prefix-chip">kc-gf-</span>
-                    <input id="locInput" class="prefix-input" placeholder="Например: read" autocomplete="off" autocapitalize="off" spellcheck="false" />
-                </div>
+                <input id="locInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[360px]" placeholder="Например: app.read" />
                 <button type="button" class="btn-subtle" id="btnAddLocal">Добавить</button>
             </div>
             <div class="kc-th mb-2">Создаются роли текущего клиента для назначения другим.</div>
@@ -558,36 +555,11 @@
           // Local roles
           const locInput = document.getElementById('locInput');
           const locList  = document.getElementById('locList');
-          const localPrefix = 'kc-gf-';
-          normalizeLocalRoles();
           renderChips(locList, locals);
           document.getElementById('btnAddLocal')?.addEventListener('click', ()=>{
-            const normalized = ensureLocalPrefix(locInput?.value);
-            if (!normalized) return;
-            const exists = locals.some(v => (v ?? '').toLowerCase() === normalized.toLowerCase());
-            if (!exists){
-              locals.push(normalized);
-              renderChips(locList, locals);
-            }
-            if (locInput) locInput.value = '';
+            const v = (locInput.value||'').trim(); if(!v) return;
+            locals.push(v); locInput.value=''; renderChips(locList, locals);
           });
-
-          function normalizeLocalRoles(){
-            if (!Array.isArray(locals)) return;
-            for (let i = locals.length - 1; i >= 0; i--){
-              const normalized = ensureLocalPrefix(locals[i]);
-              if (!normalized) locals.splice(i,1);
-              else locals[i] = normalized;
-            }
-          }
-          function ensureLocalPrefix(value){
-            const raw = (value ?? '').toString();
-            const trimmed = raw.trim();
-            if (!trimmed) return '';
-            if (trimmed.toLowerCase().startsWith(localPrefix)) return trimmed;
-            const withoutBase = trimmed.replace(/^kc-gf[-_]?/i, '').replace(/^[-\s]+/, '');
-            return localPrefix + withoutBase;
-          }
 
           // Default scopes (disabled)
           // const scopesList = document.getElementById('scopesList');
@@ -847,8 +819,7 @@
             document.getElementById('hidServiceAccount').value = document.getElementById('swService').checked ? 'true' : 'false';
             // массивы
             document.getElementById('hidRedirects').value    = JSON.stringify(redirs);
-            const normalizedLocals = locals.map(ensureLocalPrefix).filter(v => !!v);
-            document.getElementById('hidLocalRoles').value   = JSON.stringify(normalizedLocals);
+            document.getElementById('hidLocalRoles').value   = JSON.stringify(locals);
             document.getElementById('hidServiceRoles').value = JSON.stringify(svcRoles);
           }
           btnDelete?.addEventListener('click', e=>{ if(!confirm('Вы действительно хотите удалить клиента?')) e.preventDefault(); });

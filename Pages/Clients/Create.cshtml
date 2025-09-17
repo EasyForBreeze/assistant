@@ -2,38 +2,6 @@
 @model Assistant.Pages.Clients.CreateModel
 @{
     ViewData["Title"] = "Create client";
-    var clientIdValue = Model.ClientId ?? string.Empty;
-    var cidPrefixes = Model.ClientIdPrefixOptions ?? Array.Empty<string>();
-    var selectedCidPrefix = cidPrefixes.Count > 0 ? cidPrefixes[0] : "app-bank-";
-    var clientSuffix = clientIdValue;
-    var prefixMatched = false;
-    foreach (var prefix in cidPrefixes)
-    {
-        if (!string.IsNullOrEmpty(prefix) && clientIdValue.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
-        {
-            selectedCidPrefix = prefix;
-            clientSuffix = clientIdValue.Substring(prefix.Length);
-            prefixMatched = true;
-            break;
-        }
-    }
-    if (!prefixMatched && !string.IsNullOrEmpty(clientIdValue))
-    {
-        foreach (var prefix in cidPrefixes)
-        {
-            if (string.IsNullOrEmpty(prefix)) continue;
-            var trimmedPrefix = prefix.TrimEnd('-');
-            if (string.IsNullOrEmpty(trimmedPrefix)) continue;
-            if (clientIdValue.StartsWith(trimmedPrefix, System.StringComparison.OrdinalIgnoreCase))
-            {
-                selectedCidPrefix = prefix;
-                clientSuffix = clientIdValue.Substring(trimmedPrefix.Length);
-                prefixMatched = true;
-                break;
-            }
-        }
-    }
-    clientSuffix = clientSuffix.TrimStart('-');
 }
 
 <div class="space-y-5">
@@ -118,23 +86,16 @@
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Client ID</label>
                         <div class="prefix-wrap">
-                            <select id="cidPrefix" class="prefix-chip prefix-select">
-                                @foreach (var prefix in cidPrefixes)
-                                {
-                                    var isSelected = string.Equals(prefix, selectedCidPrefix, StringComparison.OrdinalIgnoreCase);
-                                    var display = string.Equals(prefix, "app-dom-", StringComparison.OrdinalIgnoreCase) ? "app-dom" : prefix;
-                                    <option value="@prefix"@(isSelected ? " selected" : string.Empty)>@display</option>
-                                }
-                            </select>
+                            <span class="prefix-chip" id="cidPrefix">app-bank-</span>
                             <input id="cidInput"
                                    class="prefix-input"
                                    maxlength="25"
                                    placeholder="my-service"
                                    autocomplete="off" autocapitalize="off" spellcheck="false"
-                                   value="@clientSuffix" />
+                                   value="@(Model.ClientId != null && Model.ClientId.StartsWith("app-bank-") ? Model.ClientId.Substring("app-bank-".Length) : (Model.ClientId ?? ""))" />
                         </div>
                         <div id="errCid" class="err">Укажите Client ID (часть после префикса).</div>
-                        <div class="hint mt-1">Префикс помогает соблюдать корпоративный стандарт (например, <b>app-bank-</b> или <b>app-dom</b>).</div>
+                        <div class="hint mt-1">Префикс <b>app-bank-</b> помогает соблюдать корпоративный стандарт.</div>
                     </div>
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Description <span class="text-slate-500">(необязательно)</span></label>
@@ -260,10 +221,7 @@
                 <div class="hint">Создаются на этом клиенте для назначения другим клиентам/пользователям для доступа.</div>
                 <div id="locList" class="flex flex-wrap gap-2"></div>
                 <div class="flex gap-2">
-                    <div class="prefix-wrap w-full md:w-72">
-                        <span class="prefix-chip">kc-gf-</span>
-                        <input id="locInput" maxlength="25" class="prefix-input" placeholder="Например: read" autocomplete="off" autocapitalize="off" spellcheck="false" />
-                    </div>
+                    <input id="locInput" maxlength="25" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-72" placeholder="Например: app.read" autocomplete="off" autocapitalize="off" spellcheck="false" />
                     <button type="button" class="btn-subtle" onclick="addLocal()">Add</button>
                 </div>
             </div>
@@ -370,7 +328,7 @@
           if (btnSkip) btnSkip.style.display = 'none';
 
           // Basics
-          const cidPrefixEl = $('#cidPrefix');
+          const cidPrefix = 'app-bank-';
           const cidInput  = $('#cidInput');
           const errCid    = $('#errCid');
           const descInput = $('#descInput');
@@ -392,8 +350,6 @@
           const locInput   = $('#locInput'),   locList   = $('#locList');
           const svcList    = $('#svcList');
 
-          const localPrefix = 'kc-gf-';
-
           // Hidden fields (BindProperty)
           const hidClientId      = $('#hidClientId');
           const hidDesc          = $('#hidDesc');
@@ -412,7 +368,6 @@
           const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
           const locals   = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
           const svcRoles = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
-          normalizeLocalRoles();
           renderChips(redirList, redirs);
           renderChips(locList,  locals);
           renderChips(svcList,  svcRoles);
@@ -565,34 +520,13 @@
               listEl.appendChild(span);
             });
           }
-          function normalizeLocalRoles(){
-            if (!Array.isArray(locals)) return;
-            for (let i = locals.length - 1; i >= 0; i--){
-              const normalized = ensureLocalPrefix(locals[i]);
-              if (!normalized) locals.splice(i,1);
-              else locals[i] = normalized;
-            }
-          }
-          function ensureLocalPrefix(value){
-            const trimmed = trim(typeof value === 'string' ? value : '');
-            if (!trimmed) return '';
-            if (trimmed.toLowerCase().startsWith(localPrefix)) return trimmed;
-            const withoutBase = trimmed.replace(/^kc-gf[-_]?/i, '').replace(/^[-\s]+/, '');
-            return localPrefix + withoutBase;
-          }
           window.addRedirect = function(){
             const v = trim(redirInput?.value); if(!v) return;
             redirs.push(v); redirInput.value=''; renderChips(redirList, redirs);
           };
           window.addLocal = function(){
-            const normalized = ensureLocalPrefix(locInput?.value);
-            if (!normalized) return;
-            const exists = locals.some(v => (v ?? '').toLowerCase() === normalized.toLowerCase());
-            if (!exists){
-              locals.push(normalized);
-              renderChips(locList, locals);
-            }
-            if (locInput) locInput.value='';
+            const v = trim(locInput?.value); if(!v) return;
+            locals.push(v); locInput.value=''; renderChips(locList, locals);
           };
 
           // Submit
@@ -605,10 +539,8 @@
               if (!validateStep(3)) return showStep(3);
             }
 
-            const suffixRaw = trim(cidInput?.value).replace(/^[-]+/, '');
-            const prefixRaw = cidPrefixEl?.value || 'app-bank-';
-            const prefix    = prefixRaw.endsWith('-') ? prefixRaw : `${prefixRaw}-`;
-            const clientId  = prefix + suffixRaw;
+            const suffix   = trim(cidInput?.value);
+            const clientId = 'app-bank-' + suffix;
 
             hidClientId.value       = clientId;
             hidDesc.value           = trim(descInput?.value);
@@ -617,8 +549,7 @@
             hidFlowService.value    = swService?.checked    ? 'true':'false';
 
             hidRedirects.value      = JSON.stringify(redirs);
-            const normalizedLocals = locals.map(ensureLocalPrefix).filter(v => !!v);
-            hidLocalRoles.value     = JSON.stringify(normalizedLocals);
+            hidLocalRoles.value     = JSON.stringify(locals);
             //hidServiceRoles.value   = JSON.stringify(svcRoles);
 
             hidAppName.value        = trim(appNameInput?.value);
