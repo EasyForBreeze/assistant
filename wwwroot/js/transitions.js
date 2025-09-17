@@ -30,40 +30,5 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
-    // Handle form submissions for fade-out
-    document.querySelectorAll('form').forEach(form => {
-        if (form.target && form.target !== '_self') {
-            return;
-        }
-
-        if (form.dataset.noTransition !== undefined) {
-            return;
-        }
-
-        form.addEventListener('submit', ev => {
-            if (ev.defaultPrevented) {
-                return;
-            }
-
-            const actionUrl = form.getAttribute('action') || window.location.href;
-            let url;
-            try {
-                url = new URL(actionUrl, window.location.href);
-            } catch (_) {
-                return;
-            }
-
-            if (url.origin !== window.location.origin) {
-                return;
-            }
-
-            ev.preventDefault();
-            document.body.classList.remove('page-loaded');
-            setTimeout(() => {
-                form.submit();
-            }, TRANSITION_MS);
-        });
-    });
 });
 

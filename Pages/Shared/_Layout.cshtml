@@ -29,39 +29,9 @@
         </div>
     </header>
 
-    @{
-        var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? string.Empty;
-        var isAdmin = User.IsInRole("assistant-admin");
-        var searchActive = string.Equals(currentPage, "/Clients/Search", System.StringComparison.OrdinalIgnoreCase);
-        var linkBase = "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition";
-        var linkClass = searchActive
-            ? $"{linkBase} bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
-            : $"{linkBase} text-slate-300 hover:bg-white/5";
-    }
-    <div class="container mx-auto px-4 md:px-6 py-6">
-        <div class="flex flex-col md:flex-row gap-6">
-            @if (isAdmin)
-            {
-                <aside class="md:w-64 md:flex-shrink-0">
-                    <div class="kc-card p-4 mb-4 md:mb-0 md:sticky md:top-6">
-                        <div class="text-xs uppercase tracking-wide text-slate-400 mb-3">Администрирование</div>
-                        <nav class="flex flex-col gap-1">
-                            <a asp-page="/Clients/Search" class="@linkClass">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8" />
-                                    <path d="m21 21-4.3-4.3" />
-                                </svg>
-                                <span>Поиск клиентов</span>
-                            </a>
-                        </nav>
-                    </div>
-                </aside>
-            }
-            <main id="app" class="flex-1">
-                @RenderBody()
-            </main>
-        </div>
-    </div>
+    <main id="app" class="container mx-auto px-4 md:px-6 py-6">
+        @RenderBody()
+    </main>
     @RenderSection("Toasts", required: false)
     <div id="globalSpinner" class="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 hidden">
         <div class="w-16 h-16 border-4 border-slate-300 border-t-transparent rounded-full animate-spin"></div>

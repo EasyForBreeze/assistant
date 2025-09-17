@@ -1,8 +1,4 @@
-@model Assistant.Pages.ClientsPageModel
-
-@{
-    var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? string.Empty;
-}
+@model Assistant.Pages.IndexModel
 
 @if (!Model.Clients.Any() && Model.ShowEmptyMessage)
 {
@@ -74,12 +70,12 @@ else if (Model.Clients.Any())
             <nav class="flex items-center gap-2">
                 @if (Model.HasPreviousPage)
                 {
-                    <a asp-page="@currentPage" asp-page-handler="Clients" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber - 1)" class="btn-subtle" data-page-link>Previous</a>
+                    <a asp-page="./Index" asp-page-handler="Clients" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber - 1)" class="btn-subtle" data-page-link>Previous</a>
                 }
                 <span class="text-sm text-slate-400">Page @Model.PageNumber of @Model.TotalPages</span>
                 @if (Model.HasNextPage)
                 {
-                    <a asp-page="@currentPage" asp-page-handler="Clients" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber + 1)" class="btn-subtle" data-page-link>Next</a>
+                    <a asp-page="./Index" asp-page-handler="Clients" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber + 1)" class="btn-subtle" data-page-link>Next</a>
                 }
             </nav>
         </div>
