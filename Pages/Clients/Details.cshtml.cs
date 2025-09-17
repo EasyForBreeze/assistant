@@ -102,6 +102,8 @@ namespace Assistant.Pages.Clients
             try
             {
                 await _clients.UpdateClientAsync(spec, ct);
+                await _repo.UpdateClientAsync(Realm!, ClientId!, newId, Enabled, StandardFlow, ServiceAccount, ct);
+                ClientId = newId;
             }
             catch (Exception ex)
             {
