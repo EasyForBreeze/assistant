@@ -21,6 +21,7 @@ builder.Services.Configure<Assistant.KeyCloak.AdminApiOptions>(
     builder.Configuration.GetSection("KeycloakAdmin"));
 
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<Assistant.KeyCloak.IAdminTokenProvider, Assistant.KeyCloak.AdminTokenProvider>();
 builder.Services.AddTransient<Assistant.KeyCloak.AdminBearerHandler>();
@@ -125,30 +126,18 @@ app.MapGet("/api/client-secret", async (
     string realm,
     string clientId,
     ClientsService clients,
-    ApiLogRepository logs,
-    ClaimsPrincipal user,
     CancellationToken ct) =>
 {
     var secret = await clients.GetClientSecretAsync(realm, clientId, ct);
-    var username = user.Identity?.Name;
-    if (string.IsNullOrWhiteSpace(username))
-        username = "unknown";
-    await logs.LogAsync("client-secret:get", username, realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
 app.MapPost("/api/client-secret", async (
     string realm,
     string clientId,
     ClientsService clients,
-    ApiLogRepository logs,
-    ClaimsPrincipal user,
     CancellationToken ct) =>
 {
     var secret = await clients.RegenerateClientSecretAsync(realm, clientId, ct);
-    var username = user.Identity?.Name;
-    if (string.IsNullOrWhiteSpace(username))
-        username = "unknown";
-    await logs.LogAsync("client-secret:regenerate", username, realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
 app.MapRazorPages().WithStaticAssets();

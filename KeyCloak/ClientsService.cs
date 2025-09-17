@@ -1,5 +1,6 @@
 ﻿// Assistant/KeyCloak/ClientsService.cs
 using Assistant.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Net;
@@ -113,18 +114,37 @@ namespace Assistant.KeyCloak
         private readonly IHttpClientFactory _factory;
         private readonly AdminApiOptions _opt;
         private readonly ServiceRoleExclusionsRepository _exclusions;
+        private readonly ApiLogRepository _logs;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public ClientsService(
             IHttpClientFactory factory,
             IOptions<AdminApiOptions> opt,
-            ServiceRoleExclusionsRepository exclusions)
+            ServiceRoleExclusionsRepository exclusions,
+            ApiLogRepository logs,
+            IHttpContextAccessor httpContextAccessor)
         {
             _factory = factory;
             _opt = opt.Value;
             _exclusions = exclusions;
+            _logs = logs;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         private string BaseUrl => _opt.BaseUrl.TrimEnd('/');
+
+        private string ResolveUsername()
+        {
+            var username = _httpContextAccessor.HttpContext?.User?.Identity?.Name;
+            return string.IsNullOrWhiteSpace(username) ? "unknown" : username;
+        }
+
+        private Task AuditAsync(string operationType, string realm, string targetId, CancellationToken ct)
+        {
+            realm = string.IsNullOrWhiteSpace(realm) ? "-" : realm;
+            targetId = string.IsNullOrWhiteSpace(targetId) ? "-" : targetId;
+            return _logs.LogAsync(operationType, ResolveUsername(), realm, targetId, ct);
+        }
 
         private static readonly JsonSerializerOptions JsonOpts = new()
         {
@@ -144,7 +164,11 @@ namespace Assistant.KeyCloak
             string realm, string query, int first = 0, int max = 20, CancellationToken ct = default)
         {
             query = (query ?? "").Trim();
-            if (string.IsNullOrEmpty(query)) return new();
+            if (string.IsNullOrEmpty(query))
+            {
+                await AuditAsync("client:search", realm, string.Empty, ct);
+                return new();
+            }
             first = Math.Max(0, first);
             max = Math.Clamp(max <= 0 ? 20 : max, 1, 200);
 
@@ -169,7 +193,11 @@ namespace Assistant.KeyCloak
                 .ToList();
             mappedExact = FilterExcluded(mappedExact, excluded);
 
-            if (mappedExact.Count > 0) return mappedExact;
+            if (mappedExact.Count > 0)
+            {
+                await AuditAsync("client:search", realm, query, ct);
+                return mappedExact;
+            }
 
             // 2) search= + пагинация
             var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
@@ -185,7 +213,9 @@ namespace Assistant.KeyCloak
                 .Where(c => ContainsCi(c.ClientId, query))
                 .ToList();
 
-            return FilterExcluded(mapped, excluded);
+            var filtered = FilterExcluded(mapped, excluded);
+            await AuditAsync("client:search", realm, query, ct);
+            return filtered;
 
             static ClientShort MapClient(ClientRep c) => new ClientShort(
                 c.Id ?? string.Empty,
@@ -215,8 +245,9 @@ namespace Assistant.KeyCloak
                 .Select(c => new ClientShort(c.Id ?? string.Empty, c.ClientId ?? string.Empty))
                 .ToList();
             var total = mapped.Count;
-
-            return (FilterExcluded(mapped, excluded), total);
+            var filtered = FilterExcluded(mapped, excluded);
+            await AuditAsync("client:list", realm, $"{first}:{max}", ct);
+            return (filtered, total);
         }
 
         /// <summary>
@@ -234,7 +265,10 @@ namespace Assistant.KeyCloak
             var list = await ReadJson<List<ClientFullRep>>(resp, ct) ?? new();
             var rep = list.FirstOrDefault(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
             if (rep == null || string.IsNullOrWhiteSpace(rep.Id) || string.IsNullOrWhiteSpace(rep.ClientId))
+            {
+                await AuditAsync("client:details", realm, clientId, ct);
                 return null;
+            }
 
             var localRoles = await GetClientRolesAsync(realm, rep.Id!, 0, 1000, null, ct);
             var svcRoles = (rep.ServiceAccountsEnabled ?? false)
@@ -242,7 +276,7 @@ namespace Assistant.KeyCloak
                 : new List<(string ClientId, string Role)>();
             var defaultScopes = rep.DefaultClientScopes?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!).ToList() ?? new();
 
-            return new ClientDetails(
+            var details = new ClientDetails(
                 rep.Id!,
                 rep.ClientId!,
                 rep.Enabled ?? false,
@@ -255,12 +289,18 @@ namespace Assistant.KeyCloak
                 svcRoles,
                 defaultScopes
             );
+            await AuditAsync("client:details", realm, rep.ClientId!, ct);
+            return details;
         }
 
         public async Task<string?> GetClientSecretAsync(string realm, string clientId, CancellationToken ct = default)
         {
             var details = await GetClientDetailsAsync(realm, clientId, ct);
-            if (details == null) return null;
+            if (details == null)
+            {
+                await AuditAsync("client-secret:get", realm, clientId, ct);
+                return null;
+            }
 
             var http = _factory.CreateClient("kc-admin");
             var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
@@ -269,13 +309,19 @@ namespace Assistant.KeyCloak
             using var resp = await GetAsyncWithFallback(http, urlNew, urlLegacy, ct);
             EnsureAuthOrThrow(resp);
             var rep = await ReadJson<ClientSecretRep>(resp, ct);
-            return rep?.Value;
+            var secret = rep?.Value;
+            await AuditAsync("client-secret:get", realm, details.ClientId, ct);
+            return secret;
         }
 
         public async Task<string?> RegenerateClientSecretAsync(string realm, string clientId, CancellationToken ct = default)
         {
             var details = await GetClientDetailsAsync(realm, clientId, ct);
-            if (details == null) return null;
+            if (details == null)
+            {
+                await AuditAsync("client-secret:regenerate", realm, clientId, ct);
+                return null;
+            }
 
             var http = _factory.CreateClient("kc-admin");
             var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
@@ -284,7 +330,9 @@ namespace Assistant.KeyCloak
             using var resp = await PostWithFallback(http, urlNew, urlLegacy, ct);
             EnsureAuthOrThrow(resp);
             var rep = await ReadJson<ClientSecretRep>(resp, ct);
-            return rep?.Value;
+            var secret = rep?.Value;
+            await AuditAsync("client-secret:regenerate", realm, details.ClientId, ct);
+            return secret;
         }
 
         /// <summary>
@@ -307,10 +355,13 @@ namespace Assistant.KeyCloak
             EnsureAuthOrThrow(resp);
             var roles = await ReadJson<List<RoleRep>>(resp, ct) ?? new();
 
-            return roles.Select(r => r.Name)
-                        .Where(n => !string.IsNullOrWhiteSpace(n))
-                        .Select(n => n!)
-                        .ToList();
+            var list = roles.Select(r => r.Name)
+                             .Where(n => !string.IsNullOrWhiteSpace(n))
+                             .Select(n => n!)
+                             .ToList();
+            var target = string.IsNullOrWhiteSpace(search) ? clientUuid : $"{clientUuid}:{search}";
+            await AuditAsync("client-roles:list", realm, target, ct);
+            return list;
         }
 
         /// <summary>
@@ -355,7 +406,11 @@ namespace Assistant.KeyCloak
             EnsureAuthOrThrow(userResp);
             var svcUser = await ReadJson<KcUserRep>(userResp, ct);
             userResp.Dispose();
-            if (svcUser?.Id == null) return new();
+            if (svcUser?.Id == null)
+            {
+                await AuditAsync("service-account:roles:get", realm, clientUuid, ct);
+                return new();
+            }
 
             var mapUrlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings";
             var mapUrlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings";
@@ -377,6 +432,7 @@ namespace Assistant.KeyCloak
                             list.Add((kv.Key, r.Name!));
                 }
             }
+            await AuditAsync("service-account:roles:get", realm, clientUuid, ct);
             return list;
         }
 
@@ -437,6 +493,7 @@ namespace Assistant.KeyCloak
                     $"Клиент '{spec.ClientId}' создан, но при назначении ролей произошла ошибка: {ex.Message}", ex);
             }
 
+            await AuditAsync("client:create", spec.Realm, spec.ClientId, ct);
             return createdId;
         }
 
@@ -471,6 +528,8 @@ namespace Assistant.KeyCloak
 
             if (spec.ServiceAccount && spec.ServiceRoles?.Count > 0)
                 await AssignServiceRolesToServiceAccountAsync(spec.Realm, existing.Id, spec.ServiceRoles, ct);
+
+            await AuditAsync("client:update", spec.Realm, spec.ClientId, ct);
         }
 
         public async Task DeleteClientAsync(string realm, string clientId, CancellationToken ct = default)
@@ -486,6 +545,7 @@ namespace Assistant.KeyCloak
 
             using var resp = await DeleteWithFallback(http, delNew, delLegacy, ct);
             EnsureAuthOrThrow(resp);
+            await AuditAsync("client:delete", realm, clientId, ct);
         }
 
         // ======= Internal helpers for Create =======
@@ -508,9 +568,11 @@ namespace Assistant.KeyCloak
                     if (resp.StatusCode == HttpStatusCode.Conflict)
                     {
                         // роль уже существует — ок
+                        await AuditAsync("client-role:ensure", realm, $"{clientUuid}:{name}", ct);
                         continue;
                     }
                     EnsureAuthOrThrow(resp);
+                    await AuditAsync("client-role:ensure", realm, $"{clientUuid}:{name}", ct);
                 }
                 catch (Exception ex)
                 {
@@ -565,6 +627,7 @@ namespace Assistant.KeyCloak
 
                         using var mapResp = await PostJsonWithFallback(http, mapNewBase, mapLegacyBase, new[] { rep }, ct);
                         EnsureAuthOrThrow(mapResp);
+                        await AuditAsync("service-account:role-assign", realm, $"{newClientUuid}:{srcClientId}:{roleName}", ct);
                     }
                     catch (Exception ex)
                     {
