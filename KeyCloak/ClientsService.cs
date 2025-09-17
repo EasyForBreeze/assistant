@@ -139,11 +139,103 @@ namespace Assistant.KeyCloak
             return string.IsNullOrWhiteSpace(username) ? "unknown" : username;
         }
 
-        private Task AuditAsync(string operationType, string realm, string targetId, CancellationToken ct)
+        private Task AuditAsync(string operationType, string realm, string targetId, CancellationToken ct, string? details = null)
         {
             realm = string.IsNullOrWhiteSpace(realm) ? "-" : realm;
             targetId = string.IsNullOrWhiteSpace(targetId) ? "-" : targetId;
-            return _logs.LogAsync(operationType, ResolveUsername(), realm, targetId, ct);
+            return _logs.LogAsync(operationType, ResolveUsername(), realm, targetId, details, ct);
+        }
+
+        private static string? DescribeClientUpdateChanges(ClientDetails before, UpdateClientSpec after)
+        {
+            var changes = new List<string>();
+
+            static string NormalizeSingle(string? value)
+                => string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
+
+            void AddStringChange(string field, string? oldValue, string? newValue)
+            {
+                var oldNorm = NormalizeSingle(oldValue);
+                var newNorm = NormalizeSingle(newValue);
+                if (!string.Equals(oldNorm, newNorm, StringComparison.Ordinal))
+                {
+                    changes.Add($"{field}: '{oldNorm}' → '{newNorm}'");
+                }
+            }
+
+            void AddBoolChange(string field, bool oldValue, bool newValue)
+            {
+                if (oldValue != newValue)
+                {
+                    changes.Add($"{field}: {oldValue.ToString().ToLowerInvariant()} → {newValue.ToString().ToLowerInvariant()}");
+                }
+            }
+
+            static IEnumerable<string> NormalizeList(IEnumerable<string> source)
+                => source
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim());
+
+            void AddSetChange(string field, IEnumerable<string> beforeSet, IEnumerable<string> afterSet, bool includeRemoved = true)
+            {
+                var beforeList = NormalizeList(beforeSet).Distinct(StringComparer.Ordinal).ToList();
+                var afterList = NormalizeList(afterSet).Distinct(StringComparer.Ordinal).ToList();
+
+                var beforeHash = new HashSet<string>(beforeList, StringComparer.Ordinal);
+                var afterHash = new HashSet<string>(afterList, StringComparer.Ordinal);
+
+                var added = afterList.Where(item => !beforeHash.Contains(item)).ToList();
+                var removed = includeRemoved
+                    ? beforeList.Where(item => !afterHash.Contains(item)).ToList()
+                    : new List<string>();
+
+                if (added.Count == 0 && removed.Count == 0)
+                {
+                    return;
+                }
+
+                var parts = new List<string>();
+                if (added.Count > 0)
+                {
+                    parts.Add($"added [{string.Join(", ", added)}]");
+                }
+
+                if (includeRemoved && removed.Count > 0)
+                {
+                    parts.Add($"removed [{string.Join(", ", removed)}]");
+                }
+
+                if (parts.Count > 0)
+                {
+                    changes.Add($"{field}: {string.Join("; ", parts)}");
+                }
+            }
+
+            AddStringChange("clientId", before.ClientId, after.ClientId);
+            AddBoolChange("enabled", before.Enabled, after.Enabled);
+            AddStringChange("description", before.Description, after.Description);
+            AddBoolChange("clientAuth", before.ClientAuth, after.ClientAuth);
+            AddBoolChange("standardFlow", before.StandardFlow, after.StandardFlow);
+            AddBoolChange("serviceAccount", before.ServiceAccount, after.ServiceAccount);
+
+            var desiredRedirects = after.StandardFlow
+                ? after.RedirectUris ?? new List<string>()
+                : new List<string>();
+            AddSetChange("redirectUris", before.RedirectUris, desiredRedirects);
+
+            AddSetChange("localRoles", before.LocalRoles, after.LocalRoles ?? new List<string>(), includeRemoved: false);
+
+            var beforeServiceRoles = before.ServiceRoles
+                .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
+                .Select(p => $"{p.ClientId.Trim()}:{p.Role.Trim()}")
+                .ToList();
+            var afterServiceRoles = (after.ServiceRoles ?? new List<(string ClientId, string Role)>())
+                .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
+                .Select(p => $"{p.ClientId.Trim()}:{p.Role.Trim()}")
+                .ToList();
+            AddSetChange("serviceRoles", beforeServiceRoles, afterServiceRoles, includeRemoved: false);
+
+            return changes.Count == 0 ? null : string.Join("; ", changes);
         }
 
         private static readonly JsonSerializerOptions JsonOpts = new()
@@ -490,8 +582,7 @@ namespace Assistant.KeyCloak
         {
             var http = _factory.CreateClient("kc-admin");
 
-            var existing = (await SearchClientsAsync(spec.Realm, spec.CurrentClientId, 0, 1, ct))
-                .FirstOrDefault(c => string.Equals(c.ClientId, spec.CurrentClientId, StringComparison.OrdinalIgnoreCase))
+            var existingDetails = await GetClientDetailsAsync(spec.Realm, spec.CurrentClientId, ct)
                 ?? throw new InvalidOperationException($"Client '{spec.CurrentClientId}' not found.");
 
             var body = new
@@ -506,19 +597,20 @@ namespace Assistant.KeyCloak
                 description = spec.Description
             };
 
-            var putNew = $"{BaseUrl}/admin/realms/{UR(spec.Realm)}/clients/{UR(existing.Id)}";
-            var putLegacy = $"{BaseUrl}/auth/admin/realms/{UR(spec.Realm)}/clients/{UR(existing.Id)}";
+            var putNew = $"{BaseUrl}/admin/realms/{UR(spec.Realm)}/clients/{UR(existingDetails.Id)}";
+            var putLegacy = $"{BaseUrl}/auth/admin/realms/{UR(spec.Realm)}/clients/{UR(existingDetails.Id)}";
 
             using var resp = await PutJsonWithFallback(http, putNew, putLegacy, body, ct);
             EnsureAuthOrThrow(resp);
 
             if (spec.LocalRoles?.Count > 0)
-                await EnsureLocalRolesAsync(spec.Realm, existing.Id, spec.LocalRoles, ct);
+                await EnsureLocalRolesAsync(spec.Realm, existingDetails.Id, spec.LocalRoles, ct);
 
             if (spec.ServiceAccount && spec.ServiceRoles?.Count > 0)
-                await AssignServiceRolesToServiceAccountAsync(spec.Realm, existing.Id, spec.ServiceRoles, ct);
+                await AssignServiceRolesToServiceAccountAsync(spec.Realm, existingDetails.Id, spec.ServiceRoles, ct);
 
-            await AuditAsync("client:update", spec.Realm, spec.ClientId, ct);
+            var diff = DescribeClientUpdateChanges(existingDetails, spec);
+            await AuditAsync("client:update", spec.Realm, spec.ClientId, ct, diff);
         }
 
         public async Task DeleteClientAsync(string realm, string clientId, CancellationToken ct = default)
