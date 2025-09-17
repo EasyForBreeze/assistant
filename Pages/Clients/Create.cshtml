@@ -296,7 +296,7 @@
             <button type="button" class="kc-toast-close" aria-label="Закрыть"
                     onclick="this.closest('.kc-toast').remove()">×</button>
         </div>
-        <script>
+        <script data-soft-nav>
             setTimeout(() => document.getElementById('formErrorToast')?.remove(), 10000);
         </script>
     }
@@ -306,9 +306,9 @@
 {
     @if (Model.StepToShow > 0)
     {
-        <script>window.__stepToShow = @Model.StepToShow;</script>
+        <script data-soft-nav>window.__stepToShow = @Model.StepToShow;</script>
     }
-    <script>
+    <script data-soft-nav>
         (function()
         {
           // ---- DOM helpers

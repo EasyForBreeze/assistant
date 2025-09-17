@@ -21,7 +21,7 @@
 
         <div class="flex items-center gap-2">
             <span class="text-lg text-slate-300">Hello, @User.Identity!.Name</span>
-            <form method="post" asp-page="/Account/Logout">
+            <form method="post" asp-page="/Account/Logout" data-soft-ignore>
                 <button class="rounded-xl px-3 py-1.5 text-sm bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10">
                     Sign out
                 </button>
@@ -38,7 +38,7 @@
             ? $"{linkBase} bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
             : $"{linkBase} text-slate-300 hover:bg-white/5";
     }
-    <div class="container mx-auto px-4 md:px-6 py-6">
+    <div class="container mx-auto px-4 md:px-6 py-6" data-soft-root>
         <div class="flex flex-col md:flex-row gap-6">
             @if (isAdmin)
             {
@@ -62,32 +62,15 @@
             </main>
         </div>
     </div>
-    @RenderSection("Toasts", required: false)
+    <div id="toastsHost">
+        @RenderSection("Toasts", required: false)
+    </div>
     <div id="globalSpinner" class="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 hidden">
         <div class="w-16 h-16 border-4 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
     </div>
-    <script>
-        (() =>
-        {
-          // also track XMLHttpRequest calls
-          if (window.XMLHttpRequest) {
-            const origOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function(...a) {
-              this.addEventListener('loadstart', () => {
-                pending++;
-                updateSpinner();
-              });
-              this.addEventListener('loadend', () => {
-                pending--;
-                if (pending < 0) pending = 0;
-                updateSpinner();
-              });
-              return origOpen.apply(this, a);
-            };
-          }
-      })();
-      </script>
-    <script src="~/js/transitions.js" asp-append-version="true"></script>
-    @RenderSection("Scripts", required: false)
+    <div id="pageScripts">
+        @RenderSection("Scripts", required: false)
+    </div>
+    <script src="~/js/soft-navigation.js" asp-append-version="true"></script>
 </body>
 </html>
