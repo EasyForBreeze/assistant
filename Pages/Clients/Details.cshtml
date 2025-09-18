@@ -450,12 +450,17 @@
           const btns  = document.querySelectorAll('.tab-btn');
           const panes = document.querySelectorAll('.tab-pane');
 
+          const prevEventsDocClick = window.__eventsDocClick;
+          if (typeof prevEventsDocClick === 'function') {
+            document.removeEventListener('click', prevEventsDocClick);
+            delete window.__eventsDocClick;
+          }
+
+          let eventsInitialized = false;
           const ensureEventsInit = () => {
-            if (window.__eventsInited) return;
-            if (typeof window.initEvents === 'function'){
-              window.initEvents();
-              window.__eventsInited = true;
-            }
+            if (eventsInitialized) return;
+            initEvents();
+            eventsInitialized = true;
           };
 
           function showTab(tab){
@@ -713,7 +718,7 @@
           });
 
           // ---------- Events (ленивая инициализация) ----------
-          window.initEvents = function(){
+          function initEvents(){
             const PAGE_URL = '@Url.Page(null)';
             const pageSize = 10;
             const rowsEl  = document.getElementById('eventsRows');
@@ -745,7 +750,14 @@
 
             inType?.addEventListener('input', renderTypeDd);
             inType?.addEventListener('focus', renderTypeDd);
-            document.addEventListener('click', e=>{ if(!ddType) return; if(e.target!==inType && !ddType.contains(e.target)) ddType.classList.add('hidden'); });
+            const onDocumentClick = e => {
+              if (!ddType) return;
+              if (e.target !== inType && !ddType.contains(e.target)) {
+                ddType.classList.add('hidden');
+              }
+            };
+            document.addEventListener('click', onDocumentClick);
+            window.__eventsDocClick = onDocumentClick;
 
             [inType,inFrom,inTo,inUser,inIp].forEach(el=> el?.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); load(); }}));
 
@@ -806,7 +818,7 @@
 
             btnSearch?.addEventListener('click', load);
             load();
-          };
+          }
           if (document.querySelector('.tab-btn.active')?.dataset.tab === 'Events'){
             ensureEventsInit();
           }
