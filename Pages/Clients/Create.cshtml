@@ -623,11 +623,12 @@
           // state
           const state = {
             chips: [],
-            currentClient: null,           // { id, clientId }
+            currentClient: null,           // { id, clientId, realm }
             page: 0, size: 50, more: false,
-            cacheClients: new Map(),       // q → [{id,clientId}]
-            cacheClientRoles: new Map(),   // clientId|page → ["roleA",...]
+            cacheClients: new Map(),       // realm|q → [{id,clientId}]
+            cacheClientRoles: new Map(),   // realm|clientId|page → ["roleA",...]
             lastQuery: '',
+            lastRealm: (realmEl?.value ?? '').trim(),
             roleScanCursor: 0,
             roleScanHasMore: false,
             pendingEmpty: false
@@ -641,6 +642,23 @@
           }
           function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; svcSearchDd.style.minHeight=''; }
           function showDd(){ if(!svcSearchDd) return; svcSearchDd.classList.remove('hidden'); }
+          function showInfo(message){
+            if (!svcSearchDd) return;
+            svcSearchDd.innerHTML = '';
+            svcSearchDd.appendChild(el('div', 'px-2 py-1 text-slate-400', message));
+            showDd();
+          }
+          function showError(message, { append = false } = {}){
+            if (!svcSearchDd) return;
+            const node = el('div', 'px-2 py-1 text-rose-400', message);
+            if (append){
+              svcSearchDd.appendChild(node);
+            } else {
+              svcSearchDd.innerHTML = '';
+              svcSearchDd.appendChild(node);
+            }
+            showDd();
+          }
           function showLoading(){
             if (!svcSearchDd) return;
             svcSearchDd.innerHTML = `<div class="px-3 py-2 text-slate-400">Ищем...</div>`;
@@ -672,18 +690,44 @@
           })();
 
           // ------- SEARCH: clients + roles (когда клиента не знаем)
-          async function searchClients(q){
-            if (state.cacheClients.has(q)) return state.cacheClients.get(q);
-            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(realm())}&q=${encodeURIComponent(q)}&first=0&max=12`;
+          const cacheClientsKey = (rlm, q) => `${rlm}::${q}`;
+          const cacheClientRolesKey = (rlm, clientId, page) => `${rlm}::${clientId}::${page}`;
+
+          async function searchClients(q, currentRealm){
+            const key = cacheClientsKey(currentRealm, q);
+            if (state.cacheClients.has(key)) return state.cacheClients.get(key);
+            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(currentRealm)}&q=${encodeURIComponent(q)}&first=0&max=12`;
             const clients = await fetchJson(url); // [{id, clientId}]
-            state.cacheClients.set(q, clients || []);
+            state.cacheClients.set(key, clients || []);
             return clients || [];
           }
 
-          async function searchRolesAcrossClients(q, append=false, isFirst=false){
-            const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(realm())}`
+          async function searchRolesAcrossClients(q, append=false, isFirst=false, realmOverride){
+            const currentRealm = (realmOverride ?? state.lastRealm ?? realm()) || '';
+            if (!currentRealm){
+              if (isFirst){
+                showInfo('Сначала выберите Realm.');
+              }
+              return;
+            }
+            const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(currentRealm)}`
                       + `&q=${encodeURIComponent(q)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
-            const res = await fetchJson(url); // { hits:[{clientUuid,clientId,role}], nextClientFirst }
+            let res;
+            try {
+              res = await fetchJson(url); // { hits:[{clientUuid,clientId,role}], nextClientFirst }
+            } catch (e){
+              console.error('[ServiceRolesUI] role lookup failed', e);
+              if (isFirst){
+                const msg = `Не удалось загрузить роли: ${e?.message ?? e}`;
+                if (state.pendingEmpty){
+                  showError(msg);
+                } else {
+                  showError(msg, { append: true });
+                }
+                state.pendingEmpty = false;
+              }
+              return;
+            }
             const hits = res.hits || [];
 
             renderRoleHits(hits, append);
@@ -745,7 +789,11 @@
 
           // clients list: ТОЛЬКО clientId
           function renderClientList(clients){
-            if (!svcSearchDd || !clients.length) return;
+            if (!svcSearchDd) return;
+            if (!clients.length){
+              showInfo('Совпадений не найдено');
+              return;
+            }
             const wrap = el('div', null, '');
             wrap.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Клиенты'));
             clients.forEach(it=>{
@@ -769,7 +817,14 @@
               return;
             }
 
+            const currentRealm = realm();
+            if (!currentRealm){
+              showInfo('Сначала выберите Realm.');
+              return;
+            }
+
             state.lastQuery = q;
+            state.lastRealm = currentRealm;
             state.roleScanCursor = 0;
             state.roleScanHasMore = false;
             state.pendingEmpty = true;
@@ -778,19 +833,28 @@
             showLoading();
 
             // 1) Клиенты — ждём и рисуем
-            const clients = await searchClients(q);
+            let clients = [];
+            try {
+              clients = await searchClients(q, currentRealm);
+            } catch (e){
+              console.error('[ServiceRolesUI] client search failed', e);
+              showError(`Не удалось выполнить поиск: ${e?.message ?? e}`);
+              state.pendingEmpty = false;
+              return;
+            }
             if (clients.length){
               renderClientList(clients);
               state.pendingEmpty = false;
             }
 
             // 2) Роли — фоном
-            searchRolesAcrossClients(q, false, true).catch(()=>{});
+            searchRolesAcrossClients(q, false, true, currentRealm).catch(()=>{});
           }
 
           // выбор клиента
           function selectClient(it){
-            state.currentClient = { id: it.id, clientId: it.clientId };
+            const currentRealm = state.lastRealm || realm();
+            state.currentClient = { id: it.id, clientId: it.clientId, realm: currentRealm };
             if (svcChosenTag) svcChosenTag.textContent = it.clientId;
             svcChosen?.classList.remove('hidden');
             hideDd();
@@ -811,11 +875,18 @@
             if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
             if (!state.currentClient) return;
 
-            const key = `${state.currentClient.clientId}|${state.page}`;
+            const currentRealm = state.currentClient.realm || realm();
+            if (!currentRealm){
+              svcErr?.classList.add('show');
+              if (svcErr) svcErr.textContent = 'Сначала выберите Realm.';
+              return;
+            }
+
+            const key = cacheClientRolesKey(currentRealm, state.currentClient.clientId, state.page);
             try{
               let roles = state.cacheClientRoles.get(key);
               if (!roles){
-                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(realm())}&first=${state.page*state.size}&max=${state.size}`;
+                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(currentRealm)}&first=${state.page*state.size}&max=${state.size}`;
                 roles = await fetchJson(url);
                 state.cacheClientRoles.set(key, roles || []);
               }
@@ -867,6 +938,26 @@
             if (!svcSearchDd) return;
             if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
           }));
+
+          function resetForRealmChange(){
+            state.cacheClients.clear();
+            state.cacheClientRoles.clear();
+            state.currentClient = null;
+            state.page = 0;
+            state.more = false;
+            state.lastQuery = '';
+            state.lastRealm = (realmEl?.value ?? '').trim();
+            state.roleScanCursor = 0;
+            state.roleScanHasMore = false;
+            state.pendingEmpty = false;
+            hideDd();
+            svcChosen?.classList.add('hidden');
+            svcRoleList && (svcRoleList.innerHTML = '');
+            if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
+            if (svcSearchInput){ svcSearchInput.value=''; updateBtnState(); }
+          }
+
+          realmEl?.addEventListener('change', safe(resetForRealmChange));
         })();
     </script>
 }
