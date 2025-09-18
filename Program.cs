@@ -39,6 +39,14 @@ builder.Services.AddSingleton<UserClientsRepository>();
 builder.Services.AddSingleton<ServiceRoleExclusionsRepository>();
 builder.Services.AddSingleton<ApiLogRepository>();
 builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();
+var confluenceOptions = ConfluenceOptions.FromConnectionString(builder.Configuration.GetConnectionString("ConnectionWiki"));
+builder.Services.AddSingleton(confluenceOptions);
+builder.Services.AddSingleton<ConfluenceTemplateProvider>();
+builder.Services.AddHttpClient("confluence-wiki", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(100);
+});
+builder.Services.AddSingleton<ConfluenceWikiService>();
 builder.Services.AddAuthorization();
 
 builder.Services.Configure<ForwardedHeadersOptions>(opt =>
