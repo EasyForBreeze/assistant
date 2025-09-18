@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -17,17 +18,23 @@ public class CreateModel : PageModel
     private readonly ClientsService _clients;
     private readonly UserClientsRepository _repo;
     private readonly ServiceRoleExclusionsRepository _exclusions;
+    private readonly ConfluenceWikiService _wiki;
+    private readonly ILogger<CreateModel> _logger;
 
     public CreateModel(
         RealmsService realms,
         ClientsService clients,
         UserClientsRepository repo,
-        ServiceRoleExclusionsRepository exclusions)
+        ServiceRoleExclusionsRepository exclusions,
+        ConfluenceWikiService wiki,
+        ILogger<CreateModel> logger)
     {
         _realms = realms;
         _clients = clients;
         _repo = repo;
         _exclusions = exclusions;
+        _wiki = wiki;
+        _logger = logger;
     }
 
     public int StepToShow { get; set; }
@@ -200,6 +207,7 @@ public class CreateModel : PageModel
             return Page();
         }
 
+        var serviceRolePairs = ClientFormUtilities.ParseServiceRolePairs(ServiceRolesJson);
         var spec = new NewClientSpec(
             Realm: Realm!,
             ClientId: ClientId!,
@@ -209,7 +217,7 @@ public class CreateModel : PageModel
             ServiceAccount: FlowService,
             RedirectUris: redirects,
             LocalRoles: locals,
-            ServiceRoles: ClientFormUtilities.ParseServiceRolePairs(ServiceRolesJson)
+            ServiceRoles: serviceRolePairs
         );
 
         try
@@ -229,11 +237,32 @@ public class CreateModel : PageModel
                 await _repo.AddAsync(username, summary, ct);
             }
 
+            var accessType = ClientAuth ? "confidential" : "public";
+            if (FlowService)
+            {
+                accessType += " + service-account";
+            }
+
+            await _wiki.CreatePageAsync(new ConfluenceWikiService.ClientWikiPayload(
+                Realm: spec.Realm,
+                ClientId: spec.ClientId,
+                ClientName: AppName ?? spec.ClientId,
+                AccessType: accessType,
+                RedirectUris: redirects,
+                LocalRoles: locals,
+                ServiceRoles: serviceRolePairs,
+                AppName: AppName,
+                AppUrl: AppUrl,
+                ServiceOwner: ServiceOwner,
+                ServiceManager: ServiceManager),
+                ct);
+
             TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
             return RedirectToPage("/Index");
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create Keycloak client or wiki page for {ClientId}", ClientId);
             ModelState.AddModelError(string.Empty, $"Ошибка создания клиента: {ex.Message}");
             StepToShow = DetermineStepFromErrors(ModelState);
             return Page();
