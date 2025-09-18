@@ -92,6 +92,7 @@
     }
 
     function updateSpinner() {
+        return;
         if (!spinner) {
             return;
         }

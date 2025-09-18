@@ -2,23 +2,6 @@
 @model Assistant.Pages.Clients.CreateModel
 @{
     ViewData["Title"] = "Create client";
-
-    var clientIdPrefixes = new[] { "app-bank-", "app-dom-" };
-    var selectedPrefix = clientIdPrefixes[0];
-    var clientIdSuffix = Model.ClientId ?? string.Empty;
-
-    if (!string.IsNullOrWhiteSpace(Model.ClientId))
-    {
-        foreach (var prefix in clientIdPrefixes)
-        {
-            if (Model.ClientId.StartsWith(prefix, System.StringComparison.Ordinal))
-            {
-                selectedPrefix = prefix;
-                clientIdSuffix = Model.ClientId.Substring(prefix.Length);
-                break;
-            }
-        }
-    }
 }
 
 <div class="space-y-5">
@@ -103,28 +86,16 @@
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Client ID</label>
                         <div class="prefix-wrap">
-                            <select id="cidPrefixSelect" class="prefix-select">
-                                @foreach (var prefix in clientIdPrefixes)
-                                {
-                                    if (prefix == selectedPrefix)
-                                    {
-                                        <option value="@prefix" selected>@prefix</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@prefix">@prefix</option>
-                                    }
-                                }
-                            </select>
+                            <span class="prefix-chip" id="cidPrefix">app-bank-</span>
                             <input id="cidInput"
                                    class="prefix-input"
                                    maxlength="25"
                                    placeholder="my-service"
                                    autocomplete="off" autocapitalize="off" spellcheck="false"
-                                   value="@clientIdSuffix" />
+                                   value="@(Model.ClientId != null && Model.ClientId.StartsWith("app-bank-") ? Model.ClientId.Substring("app-bank-".Length) : (Model.ClientId ?? ""))" />
                         </div>
                         <div id="errCid" class="err">Укажите Client ID (часть после префикса).</div>
-                        <div class="hint mt-1">Выберите префикс <b>app-bank-</b> или <b>app-dom-</b>, чтобы соблюдать корпоративный стандарт.</div>
+                        <div class="hint mt-1">Префикс <b>app-bank-</b> помогает соблюдать корпоративный стандарт.</div>
                     </div>
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Description <span class="text-slate-500">(необязательно)</span></label>
@@ -274,7 +245,7 @@
                     <div class="flex gap-2 items-center">
                         <input id="svcSearchInput"
                                class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full md:w-[360px]"
-                               placeholder="например: app-bank-portal, app-dom-service или 'read'"
+                               placeholder="например: app-bank-portal или 'read'"
                                autocomplete="off" autocapitalize="off" spellcheck="false"/>
                         <button type="button" id="svcSearchBtn" class="btn-subtle">Найти</button>
                     </div>
@@ -360,11 +331,7 @@
           if (btnSkip) btnSkip.style.display = 'none';
 
           // Basics
-          const cidPrefixSelect = $('#cidPrefixSelect');
-          const cidPrefixOptions = cidPrefixSelect
-              ? Array.from(cidPrefixSelect.options).map(opt => opt.value)
-              : ['app-bank-','app-dom-'];
-          const defaultCidPrefix = cidPrefixOptions[0] || 'app-bank-';
+          const cidPrefix = 'app-bank-';
           const cidInput  = $('#cidInput');
           const errCid    = $('#errCid');
           const descInput = $('#descInput');
@@ -450,8 +417,7 @@
             }
             if (n===2)
             {
-              const parts = getClientIdParts(true);
-              if (!parts.suffix){ errCid?.classList.add('show'); cidInput?.focus(); return false; }
+              if (!trim(cidInput?.value)){ errCid?.classList.add('show'); cidInput?.focus(); return false; }
             }
             if (n===3)
             {
@@ -578,15 +544,8 @@
               if (!validateStep(3)) return showStep(3);
             }
 
-            const parts = getClientIdParts(true);
-            if (!parts.suffix){
-              errCid?.classList.add('show');
-              cidInput?.focus();
-              e.preventDefault();
-              return;
-            }
-
-            const clientId = parts.prefix + parts.suffix;
+            const suffix   = trim(cidInput?.value);
+            const clientId = 'app-bank-' + suffix;
 
             hidClientId.value       = clientId;
             hidDesc.value           = trim(descInput?.value);
@@ -603,39 +562,6 @@
             hidServiceOwner.value   = trim(ownerInput?.value);
             hidServiceManager.value = trim(managerInput?.value);
           });
-
-          cidInput?.addEventListener('blur', () => {
-            const parts = getClientIdParts(true);
-            if (cidInput && parts.suffix !== trim(cidInput.value)){
-              cidInput.value = parts.suffix;
-            }
-          });
-
-          function getClientIdParts(updatePrefixSelect = false)
-          {
-            let value = trim(cidInput?.value);
-            let prefix = cidPrefixSelect?.value || defaultCidPrefix;
-
-            if (!value)
-            {
-              return { prefix, suffix: '' };
-            }
-
-            const lowerValue = value.toLowerCase();
-            const matched = cidPrefixOptions.find(p => lowerValue.startsWith(p.toLowerCase()));
-
-            if (matched)
-            {
-              prefix = matched;
-              value = value.substring(matched.length);
-              if (updatePrefixSelect && cidPrefixSelect)
-              {
-                cidPrefixSelect.value = matched;
-              }
-            }
-
-            return { prefix, suffix: value.trim() };
-          }
 
           // старт
           enforceServiceAuth();
