@@ -146,6 +146,33 @@
     border-right: 1px solid var(--kc-border);
 }
 
+.prefix-select {
+    background: rgba(99,102,241,.15);
+    color: var(--kc-ink);
+    border: none;
+    border-right: 1px solid var(--kc-border);
+    padding: .5rem .65rem;
+    padding-right: 2.25rem;
+    height: 100%;
+    font: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 12px;
+    background-position: right 10px center;
+}
+
+.prefix-select:focus {
+    outline: none;
+}
+
+.prefix-select option {
+    color: #0f172a;
+}
+
 .prefix-input {
     flex: 1;
     background: transparent;
