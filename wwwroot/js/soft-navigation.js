@@ -6,12 +6,18 @@
 
     function showApp() {
         requestAnimationFrame(() => {
+            body.classList.remove('page-transitioning');
             body.classList.add('page-loaded');
         });
     }
 
     function hideApp() {
+        body.classList.add('page-transitioning');
         body.classList.remove('page-loaded');
+        if (!app) {
+            return Promise.resolve();
+        }
+        return waitForTransition(app, 'opacity');
     }
 
     showApp();
@@ -26,6 +32,64 @@
     }
 
     let pending = 0;
+
+    function parseTimeToMs(time) {
+        if (!time) {
+            return 0;
+        }
+        const trimmed = time.trim();
+        if (trimmed.endsWith('ms')) {
+            return parseFloat(trimmed) || 0;
+        }
+        if (trimmed.endsWith('s')) {
+            const value = parseFloat(trimmed);
+            return isNaN(value) ? 0 : value * 1000;
+        }
+        const value = parseFloat(trimmed);
+        return isNaN(value) ? 0 : value;
+    }
+
+    function getTransitionTimeout(element) {
+        const style = window.getComputedStyle(element);
+        const durations = style.transitionDuration.split(',').map(parseTimeToMs);
+        const delays = style.transitionDelay.split(',').map(parseTimeToMs);
+        let max = 0;
+        for (let i = 0; i < durations.length; i++) {
+            const duration = durations[i] || 0;
+            const delay = delays[i] !== undefined ? delays[i] : (delays.length > 0 ? delays[delays.length - 1] : 0);
+            max = Math.max(max, duration + delay);
+        }
+        return max;
+    }
+
+    function waitForTransition(element, property) {
+        const timeout = getTransitionTimeout(element);
+        if (timeout <= 0) {
+            return Promise.resolve();
+        }
+        return new Promise(resolve => {
+            let resolved = false;
+            const cleanup = () => {
+                if (resolved) {
+                    return;
+                }
+                resolved = true;
+                element.removeEventListener('transitionend', onTransitionEnd);
+                resolve();
+            };
+            const onTransitionEnd = (event) => {
+                if (event.target !== element) {
+                    return;
+                }
+                if (property && event.propertyName !== property) {
+                    return;
+                }
+                cleanup();
+            };
+            element.addEventListener('transitionend', onTransitionEnd);
+            setTimeout(cleanup, timeout + 50);
+        });
+    }
 
     function updateSpinner() {
         if (!spinner) {
@@ -154,7 +218,7 @@
         return url.toString();
     }
 
-    async function fetchAndSwap(url, options) {
+    async function fetchAndSwap(url, options, hidePromise) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const fetchInit = {
@@ -205,6 +269,13 @@
         }
 
         const importedMain = document.importNode(newMain, true);
+        if (hidePromise) {
+            try {
+                await hidePromise;
+            } catch (_) {
+                // Ignore transition wait failures and continue swapping.
+            }
+        }
         app.replaceWith(importedMain);
         app = importedMain;
         executeSoftScripts(app);
@@ -238,8 +309,8 @@
             window.location.href = url;
             return;
         }
-        hideApp();
-        const success = await fetchAndSwap(url, options);
+        const hidePromise = hideApp();
+        const success = await fetchAndSwap(url, options, hidePromise);
         showApp();
         return success;
     }
