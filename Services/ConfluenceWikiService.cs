@@ -123,10 +123,15 @@ public sealed class ConfluenceWikiService
             ["{{INFO_SYSTEM_CELL}}"] = BuildInfoSystemCell(payload),
             ["{{REALM_CELL}}"] = BuildRealmCell(payload.Realm),
             ["{{CLIENT_ID}}"] = WebUtility.HtmlEncode(payload.ClientId),
-            ["{{CLIENT_NAME}}"] = WebUtility.HtmlEncode(payload.ClientName),
-            ["{{ACCESS_TYPE}}"] = WebUtility.HtmlEncode(payload.AccessType),
+            ["{{CLIENT_NAME}}"] = WebUtility.HtmlEncode(BuildClientName(payload.ClientId)),
+            ["{{ACCESS_TYPE}}"] = WebUtility.HtmlEncode(payload.ClientAuthEnabled ? "confidential" : "public"),
+            ["{{DESCRIPTION}}"] = BuildDescription(payload.Description),
             ["{{SERVICE_OWNER_CELL}}"] = BuildPersonCell(payload.ServiceOwner),
             ["{{SERVICE_MANAGER_CELL}}"] = BuildPersonCell(payload.ServiceManager),
+            ["{{STANDARD_FLOW}}"] = FormatToggle(payload.StandardFlowEnabled),
+            ["{{DIRECT_ACCESS_GRANTS}}"] = FormatToggle(false),
+            ["{{SERVICE_ACCOUNTS}}"] = FormatToggle(payload.ServiceAccountEnabled),
+            ["{{DEVICE_AUTHORIZATION}}"] = FormatToggle(false),
             ["{{REDIRECT_TABLE}}"] = BuildRedirectTable(payload.RedirectUris),
             ["{{LOCAL_ROLES_TABLE}}"] = BuildLocalRolesTable(payload.LocalRoles),
             ["{{SERVICE_ROLES_TABLE}}"] = BuildServiceRolesTable(payload.ServiceRoles)
@@ -145,7 +150,7 @@ public sealed class ConfluenceWikiService
     {
         var name = !string.IsNullOrWhiteSpace(payload.AppName)
             ? WebUtility.HtmlEncode(payload.AppName)
-            : WebUtility.HtmlEncode(payload.ClientName);
+            : WebUtility.HtmlEncode(BuildClientName(payload.ClientId));
 
         if (!string.IsNullOrWhiteSpace(payload.AppUrl))
         {
@@ -158,12 +163,40 @@ public sealed class ConfluenceWikiService
     private static string BuildRealmCell(string realm)
         => $"<td>{WebUtility.HtmlEncode(realm)}</td>";
 
+    private static string BuildDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return "—";
+        }
+
+        var normalized = description
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+        var encoded = WebUtility.HtmlEncode(normalized);
+        return encoded.Replace("\n", "<br />", StringComparison.Ordinal);
+    }
+
     private static string BuildPersonCell(string? name)
     {
         var display = string.IsNullOrWhiteSpace(name)
             ? "—"
             : WebUtility.HtmlEncode(name);
         return $"<td><div class=\"content-wrapper\"><p>{display}</p></div></td>";
+    }
+
+    private static string FormatToggle(bool enabled)
+    {
+        var state = enabled ? "On" : "Off";
+        return $"<span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">{state}</span>";
+    }
+
+    private static string BuildClientName(string clientId)
+    {
+        const string Prefix = "app-bank-";
+        return clientId.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)
+            ? clientId[Prefix.Length..]
+            : clientId;
     }
 
     private static string BuildRedirectTable(IReadOnlyList<string> redirects)
@@ -256,7 +289,7 @@ public sealed class ConfluenceWikiService
             {
                 sb.Append("<tr><td>");
                 sb.Append(WebUtility.HtmlEncode(role));
-                sb.Append("</td><td>—</td><td>—</td></tr>");
+                sb.Append("</td><td></td><td>TEST</td></tr>");
             }
         }
 
@@ -285,7 +318,7 @@ public sealed class ConfluenceWikiService
                 sb.Append(WebUtility.HtmlEncode(role));
                 sb.Append("</td><td>");
                 sb.Append(WebUtility.HtmlEncode(clientId));
-                sb.Append("</td><td>—</td></tr>");
+                sb.Append("</td><td>TEST</td></tr>");
             }
         }
 
@@ -296,8 +329,10 @@ public sealed class ConfluenceWikiService
     public sealed record ClientWikiPayload(
         string Realm,
         string ClientId,
-        string ClientName,
-        string AccessType,
+        string? Description,
+        bool ClientAuthEnabled,
+        bool StandardFlowEnabled,
+        bool ServiceAccountEnabled,
         IReadOnlyList<string> RedirectUris,
         IReadOnlyList<string> LocalRoles,
         IReadOnlyList<(string ClientId, string Role)> ServiceRoles,

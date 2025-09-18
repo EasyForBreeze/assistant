@@ -237,17 +237,13 @@ public class CreateModel : PageModel
                 await _repo.AddAsync(username, summary, ct);
             }
 
-            var accessType = ClientAuth ? "confidential" : "public";
-            if (FlowService)
-            {
-                accessType += " + service-account";
-            }
-
             await _wiki.CreatePageAsync(new ConfluenceWikiService.ClientWikiPayload(
                 Realm: spec.Realm,
                 ClientId: spec.ClientId,
-                ClientName: AppName ?? spec.ClientId,
-                AccessType: accessType,
+                Description: Description,
+                ClientAuthEnabled: ClientAuth,
+                StandardFlowEnabled: spec.StandardFlow,
+                ServiceAccountEnabled: spec.ServiceAccount,
                 RedirectUris: redirects,
                 LocalRoles: locals,
                 ServiceRoles: serviceRolePairs,
