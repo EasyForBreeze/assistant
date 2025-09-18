@@ -1,0 +1,173 @@
+{
+    "id": "131186",
+    "type": "page",
+    "status": "current",
+    "title": "Шаблон \"Конфигурация ClientID\" (не заполенный)",
+    "space": {
+        "id": 98315,
+        "key": "DOM",
+        "name": "Dom.Lgin",
+        "status": "current",
+        "type": "global",
+        "creator": {
+            "type": "known",
+            "username": "admin",
+            "userKey": "2c928084995c210c01995c229efa0000",
+            "displayName": "admin",
+            "_links": {
+                "self": "http://localhost:8090/rest/api/user?key=2c928084995c210c01995c229efa0000"
+            },
+            "_expandable": {
+                "profilePicture": "",
+                "status": ""
+            }
+        },
+        "creationDate": "2025-09-18T09:24:06.670Z",
+        "lastModifier": {
+            "type": "known",
+            "username": "admin",
+            "userKey": "2c928084995c210c01995c229efa0000",
+            "displayName": "admin",
+            "_links": {
+                "self": "http://localhost:8090/rest/api/user?key=2c928084995c210c01995c229efa0000"
+            },
+            "_expandable": {
+                "profilePicture": "",
+                "status": ""
+            }
+        },
+        "lastModificationDate": "2025-09-18T09:24:07.213Z",
+        "_links": {
+            "webui": "/spaces/DOM/overview",
+            "self": "http://localhost:8090/rest/api/space/DOM"
+        },
+        "_expandable": {
+            "metadata": "",
+            "permissions": "",
+            "icon": "",
+            "description": "",
+            "retentionPolicy": "",
+            "homepage": "/rest/api/content/131148"
+        }
+    },
+    "version": {
+        "by": {
+            "email": "admin@domrf.ru",
+            "type": "known",
+            "username": "admin",
+            "userKey": "2c928084995c210c01995c229efa0000",
+            "profilePicture": {
+                "path": "/images/icons/profilepics/default.svg",
+                "width": 48,
+                "height": 48,
+                "isDefault": true
+            },
+            "displayName": "admin",
+            "_links": {
+                "self": "http://localhost:8090/rest/api/user?key=2c928084995c210c01995c229efa0000"
+            },
+            "_expandable": {
+                "status": ""
+            }
+        },
+        "when": "2025-09-18T12:13:23.450Z",
+        "message": "",
+        "number": 4,
+        "minorEdit": false,
+        "hidden": false,
+        "_links": {
+            "self": "http://localhost:8090/rest/experimental/content/131186/version/4"
+        },
+        "_expandable": {
+            "content": "/rest/api/content/131186"
+        }
+    },
+    "ancestors": [
+        {
+            "id": "131148",
+            "type": "page",
+            "status": "current",
+            "title": "Dom.Lgin",
+            "position": -1,
+            "extensions": {
+                "position": "none"
+            },
+            "_links": {
+                "webui": "/spaces/DOM/pages/131148/Dom.Lgin",
+                "edit": "/pages/resumedraft.action?draftId=131148",
+                "tinyui": "/x/TAAC",
+                "self": "http://localhost:8090/rest/api/content/131148"
+            },
+            "_expandable": {
+                "container": "/rest/api/space/DOM",
+                "metadata": "",
+                "operations": "",
+                "children": "/rest/api/content/131148/child",
+                "restrictions": "/rest/api/content/131148/restriction/byOperation",
+                "history": "/rest/api/content/131148/history",
+                "ancestors": "",
+                "body": "",
+                "version": "",
+                "descendants": "/rest/api/content/131148/descendant",
+                "space": "/rest/api/space/DOM",
+                "relevantViewRestrictions": "/rest/api/content/131148/restriction/relevantViewRestrictions"
+            }
+        }
+    ],
+    "position": -1,
+    "body": {
+        "storage": {
+            "value": "<h2 class=\"auto-cursor-target\">Общая информация</h2><ac:structured-macro ac:name=\"details\" ac:schema-version=\"1\" ac:macro-id=\"603005b4-1bd4-4dd8-87c7-1a038c368d0f\"><ac:rich-text-body><p class=\"auto-cursor-target\"><br /></p><table class=\"wrapped relative-table\" style=\"width: 100.0%;\"><colgroup><col style=\"width: 15.8659%;\" /><col style=\"width: 84.1341%;\" /></colgroup><tbody><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Банк/ДОМ</span></th><td>Банк</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Информационная система</span></th><td><a href=\"http://localhost:8090/spaces/DOM/pages/131148/Dom.Lgin\">АС КЕК</a></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Realm (Пространство)</span></th><td><ac:link><ri:page ri:content-title=\"Dom.Login\" /></ac:link></td></tr><tr><th style=\"text-align: left;\"><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Client ID (ID клиента)</span></th><td style=\"text-align: left;\">app-bank-qwe</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Name (Имя)</span></th><td>bank-qwe</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Access Type (Тип доступа)</span></th><td>сonfidential</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Бизнес владелец</span></th><td><div class=\"content-wrapper\"><p><ac:link><ri:user ri:userkey=\"2c928084995c210c01995c229efa0000\" /></ac:link> </p></div></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Менеджер поддержки</span></th><td><ac:link><ri:user ri:userkey=\"2c928084995c210c01995c229efa0000\" /></ac:link> </td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Уровень критичности ИС</span></th><td><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">BC</span></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Заявка FTEST</span></th><td><br /></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Заявка PrePROD</span></th><td><br /></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Заявка PROD</span></th><td><br /></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Статус публикации</span></th><td><div class=\"content-wrapper\"><p>TEST</p></div></td></tr></tbody></table></ac:rich-text-body></ac:structured-macro><h2 class=\"auto-cursor-target\"><span>Конфигурация клиента</span></h2><table class=\"relative-table wrapped\" style=\"width: 99.0228%;\"><colgroup><col style=\"width: 16.7215%;\" /><col style=\"width: 83.2785%;\" /></colgroup><tbody><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Description (Описание)</span></th><td><br /></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Enabled (Включено)</span></th><td><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">On</span></td></tr><tr><th style=\"text-align: left;\"><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Client Scopes</span></th><td style=\"text-align: left;\"><em><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">email, profile, roles, web-origins - указываются только скоупы, выбранные как default</span></em></td></tr><tr><th style=\"text-align: left;\"><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Full Scope Allowed</span></th><td style=\"text-align: left;\"><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">On</span></td></tr><tr><th style=\"text-align: left;\"><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Standart flow</span></th><td style=\"text-align: left;\"><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">On</span></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Implicit Flow</span></th><td><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">Off</span></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Direct Access Grants </span></th><td><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">On</span></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Service Accounts</span></th><td><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">On</span></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">OAuth 2.0 Device Authorization Grant</span></th><td><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">On</span></td></tr><tr><th style=\"text-align: left;\"><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\"><strong style=\"text-align: left;\">Valid Redirect URIs</strong></span></th><td style=\"text-align: left;\"><p class=\"auto-cursor-target\"><br /></p><table class=\"wrapped\" data-mce-resize=\"false\"><colgroup><col /><col /><col /></colgroup><tbody><tr><th scope=\"col\"><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">TEST</span></th><th scope=\"col\"><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">STAGE</span></th><th scope=\"col\"><span style=\"color:var(--ds-text-accent-blue-bolder,#09326c);\">PROD</span></th></tr><tr><td><span class=\"nolink\">https://www.cybersport.ru/players/dota-2/qwe</span></td><td><br /></td><td><br /></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Valid post logout redirect URIs</span></th><td>+</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Web Origins</span></th><td>+</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Access Token Lifespan</span></th><td>5 min</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Client Session Idle</span></th><td>30 min</td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Client Roles (Роль клиента)</span></th><td><p class=\"auto-cursor-target\"><br /></p><table class=\"wrapped\" data-mce-resize=\"false\"><colgroup><col /><col /><col /></colgroup><tbody><tr><th scope=\"col\"><span style=\"color:var(--ds-text,#333333);\">Role Name</span></th><th scope=\"col\"><span style=\"color:var(--ds-text,#333333);\">Description</span></th><th scope=\"col\"><span style=\"color:var(--ds-text,#333333);\">Контур</span></th></tr><tr><td>localrole</td><td>desc</td><td>TEST</td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p></td></tr><tr><th><span style=\"color:var(--ds-background-accent-lime-bolder,#5b7f24);\">Service Account Role</span></th><td><p class=\"auto-cursor-target\"><br /></p><table class=\"wrapped\" data-mce-resize=\"false\"><colgroup><col /><col /><col /></colgroup><tbody><tr><th scope=\"col\"><span style=\"color:var(--ds-text,#333333);\">Role Name</span></th><th scope=\"col\"><span style=\"color:var(--ds-text,#333333);\">Client</span></th><th scope=\"col\"><span style=\"color:var(--ds-text,#333333);\">Контур</span></th></tr><tr><td>servicerol</td><td>client</td><td>TEST</td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p></td></tr></tbody></table>",
+            "representation": "storage",
+            "_expandable": {
+                "content": "/rest/api/content/131186"
+            }
+        },
+        "_expandable": {
+            "editor": "",
+            "view": "",
+            "export_view": "",
+            "styled_view": "",
+            "anonymous_export_view": ""
+        }
+    },
+    "metadata": {
+        "labels": {
+            "results": [],
+            "start": 0,
+            "limit": 200,
+            "size": 0,
+            "_links": {
+                "self": "http://localhost:8090/rest/api/content/131186/label"
+            }
+        },
+        "_expandable": {
+            "currentuser": "",
+            "reactionsCount": "",
+            "properties": "",
+            "frontend": "",
+            "editorHtml": ""
+        }
+    },
+    "extensions": {
+        "position": "none"
+    },
+    "_links": {
+        "webui": "/spaces/DOM/pages/131186/%D0%A8%D0%B0%D0%B1%D0%BB%D0%BE%D0%BD+%D0%9A%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D1%8F+ClientID+%D0%BD%D0%B5+%D0%B7%D0%B0%D0%BF%D0%BE%D0%BB%D0%B5%D0%BD%D0%BD%D1%8B%D0%B9",
+        "edit": "/pages/resumedraft.action?draftId=131186",
+        "tinyui": "/x/cgAC",
+        "collection": "/rest/api/content",
+        "base": "http://localhost:8090",
+        "context": "",
+        "self": "http://localhost:8090/rest/api/content/131186"
+    },
+    "_expandable": {
+        "container": "/rest/api/space/DOM",
+        "operations": "",
+        "children": "/rest/api/content/131186/child",
+        "restrictions": "/rest/api/content/131186/restriction/byOperation",
+        "history": "/rest/api/content/131186/history",
+        "descendants": "/rest/api/content/131186/descendant",
+        "relevantViewRestrictions": "/rest/api/content/131186/restriction/relevantViewRestrictions"
+    }
+}
