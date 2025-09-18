@@ -444,8 +444,9 @@
 
 @section Scripts {
     <script data-soft-nav>
-        const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
-        (function(){
+        (() => {
+          const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
+          (function(svcRoles){
           // ---------- Вкладки ----------
           const btns  = document.querySelectorAll('.tab-btn');
           const panes = document.querySelectorAll('.tab-pane');
@@ -841,8 +842,8 @@
           }
           btnDelete?.addEventListener('click', e=>{ if(!confirm('Вы действительно хотите удалить клиента?')) e.preventDefault(); });
           saveForm?.addEventListener('submit', collect);
-        })();
-        (function(){
+        })(svcRoles);
+        (function(svcRoles){
           const $  = (s, r=document)=>r.querySelector(s);
           const el = (t, cls, html)=>{ const n=document.createElement(t); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
           const safe = fn => (...a)=>{ try { return fn(...a); } catch(e){ console.error('[ServiceRolesUI]', e); } };
@@ -1087,6 +1088,7 @@
             if (!svcSearchDd) return;
             if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
           }));
+        })(svcRoles);
         })();
-      </script>
+    </script>
   }
