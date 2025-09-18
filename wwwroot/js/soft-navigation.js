@@ -1,4 +1,21 @@
 (function () {
+    const body = document.body;
+    if (!body) {
+        return;
+    }
+
+    function showApp() {
+        requestAnimationFrame(() => {
+            body.classList.add('page-loaded');
+        });
+    }
+
+    function hideApp() {
+        body.classList.remove('page-loaded');
+    }
+
+    showApp();
+
     const root = document.querySelector('[data-soft-root]');
     let app = document.getElementById('app');
     const spinner = document.getElementById('globalSpinner');
@@ -162,20 +179,20 @@
             response = await fetch(requestUrl, fetchInit);
         } catch (_) {
             window.location.href = requestUrl;
-            return;
+            return false;
         } finally {
             endPending();
         }
 
         if (!response || response.status === 204) {
             window.location.href = requestUrl;
-            return;
+            return false;
         }
 
         const contentType = response.headers.get('Content-Type') || '';
         if (!contentType.includes('text/html')) {
             window.location.href = response.url || requestUrl;
-            return;
+            return false;
         }
 
         const text = await response.text();
@@ -184,7 +201,7 @@
         const newMain = doc.getElementById('app');
         if (!newMain) {
             window.location.href = response.url || requestUrl;
-            return;
+            return false;
         }
 
         const importedMain = document.importNode(newMain, true);
@@ -210,15 +227,21 @@
         } else if (options.replaceState) {
             history.replaceState({ url: finalUrl }, '', finalUrl);
         }
+
+        return true;
     }
 
     async function handleNavigation(url, opts) {
         const options = Object.assign({ method: 'GET', pushState: true }, opts || {});
         if (!sameOrigin(url)) {
+            hideApp();
             window.location.href = url;
             return;
         }
-        await fetchAndSwap(url, options);
+        hideApp();
+        const success = await fetchAndSwap(url, options);
+        showApp();
+        return success;
     }
 
     function onLinkClick(event) {
