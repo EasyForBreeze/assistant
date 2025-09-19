@@ -232,7 +232,7 @@ public class CreateModel : PageModel
                 FlowStandard: spec.StandardFlow,
                 FlowService: spec.ServiceAccount);
             var username = User.Identity?.Name ?? string.Empty;
-            if (!string.IsNullOrEmpty(username))
+            if (!string.IsNullOrEmpty(username) && !User.IsInRole("assistant-admin"))
             {
                 await _repo.AddAsync(username, summary, ct);
             }

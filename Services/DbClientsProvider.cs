@@ -17,8 +17,12 @@ public sealed class DbClientsProvider : IClientsProvider
         var username = user.Identity?.Name ?? string.Empty;
         if (string.IsNullOrEmpty(username)) return Array.Empty<ClientSummary>();
 
-        var isAdmin = user.IsInRole("assistant-admin");
-        return await _repo.GetForUserAsync(username, isAdmin, ct);
+        if (user.IsInRole("assistant-admin"))
+        {
+            return Array.Empty<ClientSummary>();
+        }
+
+        return await _repo.GetForUserAsync(username, isAdmin: false, ct);
     }
 }
 
