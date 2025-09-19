@@ -34,6 +34,7 @@ builder.Services.AddHttpClient("kc-admin", (sp, c) =>
 
 builder.Services.AddScoped<Assistant.KeyCloak.RealmsService>();
 builder.Services.AddScoped<Assistant.KeyCloak.ClientsService>();
+builder.Services.AddScoped<Assistant.KeyCloak.UsersService>();
 builder.Services.AddScoped<Assistant.KeyCloak.EventsService>();
 builder.Services.AddSingleton<UserClientsRepository>();
 builder.Services.AddSingleton<ServiceRoleExclusionsRepository>();

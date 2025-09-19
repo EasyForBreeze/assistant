@@ -1,0 +1,259 @@
+@page
+@model Assistant.Pages.Admin.UserClientsModel
+@{
+    ViewData["Title"] = "Назначение доступа к клиентам";
+}
+
+<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-5">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(14,165,233,.55), rgba(59,130,246,.35))"></div>
+        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(45,212,191,.6), rgba(99,102,241,.35))"></div>
+    </div>
+
+    <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h3 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(59,130,246,0.25)]">
+                Назначение доступа к клиентам
+            </h3>
+            <p class="text-slate-200/80 mt-2 text-sm max-w-2xl">
+                Выберите клиента Keycloak и пользователя домена, чтобы предоставить доступ к карточке клиента в Assistant.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-2">
+    <section class="kc-card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-lg font-semibold text-slate-200">Поиск клиента</h4>
+            @if (!string.IsNullOrWhiteSpace(Model.SelectedClientId))
+            {
+                <span class="text-xs text-slate-400">Выбрано: @Model.SelectedClientId (@Model.SelectedClientRealm)</span>
+            }
+        </div>
+
+        <form method="get" class="flex flex-col gap-3">
+            <div class="kc-input rounded-xl px-3 py-2 text-sm focus-within:border-white/20 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input name="clientQuery" value="@Model.ClientQuery" placeholder="Введите clientId"
+                       class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
+            </div>
+            <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+            <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
+            <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
+            <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
+            <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
+            <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
+            <button type="submit" class="btn-subtle self-start">Найти клиента</button>
+        </form>
+
+        <div class="mt-4 space-y-3">
+            @if (Model.ClientResults.Any())
+            {
+                foreach (var client in Model.ClientResults)
+                {
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-3">
+                        <div>
+                            <div class="text-slate-100 font-medium">@client.ClientId</div>
+                            <div class="text-xs text-slate-400 uppercase tracking-wide">Realm: @client.Realm</div>
+                        </div>
+                        <form method="get" class="flex items-center gap-2">
+                            <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+                            <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                            <input type="hidden" name="selectedClientId" value="@client.ClientId" />
+                            <input type="hidden" name="selectedClientRealm" value="@client.Realm" />
+                            <input type="hidden" name="selectedClientName" value="@client.Name" />
+                            <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
+                            <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
+                            <button type="submit" class="btn-subtle whitespace-nowrap">Выбрать</button>
+                        </form>
+                    </div>
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(Model.ClientQuery))
+            {
+                <div class="text-sm text-slate-400">Клиенты не найдены.</div>
+            }
+            else
+            {
+                <div class="text-sm text-slate-400">Введите идентификатор клиента, чтобы увидеть результаты.</div>
+            }
+        </div>
+    </section>
+
+    <section class="kc-card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-lg font-semibold text-slate-200">Поиск пользователя</h4>
+            <span class="text-xs text-slate-400">Realm: @Model.PrimaryRealm</span>
+        </div>
+
+        <form method="get" class="flex flex-col gap-3">
+            <div class="kc-input rounded-xl px-3 py-2 text-sm focus-within:border-white/20 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input name="userQuery" value="@Model.UserQuery" placeholder="username, email или ФИО"
+                       class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
+            </div>
+            <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+            <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
+            <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
+            <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
+            <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
+            <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
+            <button type="submit" class="btn-subtle self-start">Найти пользователя</button>
+        </form>
+
+        <div class="mt-4 space-y-3">
+            @if (Model.UserResults.Any())
+            {
+                foreach (var user in Model.UserResults)
+                {
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-3">
+                        <div>
+                            <div class="text-slate-100 font-medium">@user.Username</div>
+                            <div class="text-xs text-slate-400">@user.DisplayName</div>
+                        </div>
+                        <form method="get" class="flex items-center gap-2">
+                            <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+                            <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                            <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
+                            <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
+                            <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
+                            <input type="hidden" name="selectedUsername" value="@user.Username" />
+                            <input type="hidden" name="selectedUserDisplay" value="@user.DisplayName" />
+                            <button type="submit" class="btn-subtle whitespace-nowrap">Выбрать</button>
+                        </form>
+                    </div>
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(Model.UserQuery))
+            {
+                <div class="text-sm text-slate-400">Пользователи не найдены.</div>
+            }
+            else
+            {
+                <div class="text-sm text-slate-400">Введите имя пользователя или email для поиска.</div>
+            }
+        </div>
+    </section>
+</div>
+
+@if (Model.HasClientSelection || Model.HasUserSelection)
+{
+    <div class="grid gap-6 mt-6 lg:grid-cols-2">
+        @if (Model.HasClientSelection)
+        {
+            <div class="kc-card p-5">
+                <h4 class="text-lg font-semibold text-slate-200 mb-3">Выбранный клиент</h4>
+                <div class="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
+                    <div class="text-slate-100 font-medium text-lg">@Model.SelectedClientId</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wide">Realm: @Model.SelectedClientRealm</div>
+                </div>
+            </div>
+        }
+
+        @if (Model.HasUserSelection)
+        {
+            <div class="kc-card p-5">
+                <h4 class="text-lg font-semibold text-slate-200 mb-3">Выбранный пользователь</h4>
+                <div class="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
+                    <div class="text-slate-100 font-medium text-lg">@Model.SelectedUsername</div>
+                    <div class="text-xs text-slate-400">@Model.SelectedUserDisplay</div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (Model.CanGrant)
+{
+    <div class="kc-card p-5 mt-6">
+        <h4 class="text-lg font-semibold text-slate-200">Предоставить доступ</h4>
+        <p class="text-sm text-slate-400 mt-2">
+            Клиент <span class="text-slate-200 font-medium">@Model.SelectedClientId</span> из realm
+            <span class="text-slate-200 font-medium">@Model.SelectedClientRealm</span> будет доступен пользователю
+            <span class="text-slate-200 font-medium">@Model.SelectedUsername</span>.
+        </p>
+
+        <form method="post" asp-page-handler="Grant" class="mt-4 flex flex-wrap items-center gap-3">
+            <input type="hidden" name="realm" value="@Model.SelectedClientRealm" />
+            <input type="hidden" name="clientId" value="@Model.SelectedClientId" />
+            <input type="hidden" name="clientName" value="@Model.SelectedClientName" />
+            <input type="hidden" name="username" value="@Model.SelectedUsername" />
+            <input type="hidden" name="userDisplay" value="@Model.SelectedUserDisplay" />
+            <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+            <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+            <button type="submit" class="btn-primary">Назначить доступ</button>
+        </form>
+    </div>
+}
+
+@if (Model.HasUserSelection)
+{
+    <div class="kc-card p-5 mt-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-lg font-semibold text-slate-200">Клиенты пользователя @Model.SelectedUsername</h4>
+            <span class="text-xs text-slate-400">Всего: @Model.Assignments.Count</span>
+        </div>
+
+        @if (Model.Assignments.Any())
+        {
+            <div class="space-y-3">
+                @foreach (var client in Model.Assignments.OrderBy(c => c.Realm).ThenBy(c => c.ClientId))
+                {
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-3">
+                        <div>
+                            <div class="text-slate-100 font-medium">@client.ClientId</div>
+                            <div class="text-xs text-slate-400 uppercase tracking-wide">Realm: @client.Realm</div>
+                        </div>
+                        <form method="post" asp-page-handler="Revoke" class="flex items-center gap-2">
+                            <input type="hidden" name="realm" value="@client.Realm" />
+                            <input type="hidden" name="clientId" value="@client.ClientId" />
+                            <input type="hidden" name="username" value="@Model.SelectedUsername" />
+                            <input type="hidden" name="userDisplay" value="@Model.SelectedUserDisplay" />
+                            <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+                            <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                            <button type="submit" class="btn-danger whitespace-nowrap">Удалить</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-sm text-slate-400">Для выбранного пользователя пока нет назначенных клиентов.</div>
+        }
+    </div>
+}
+
+@section Toasts {
+    @if (TempData["FlashOk"] is string ok)
+    {
+        <div class="kc-toast kc-toast-success" id="flashToastOk" role="alert">
+            <div class="kc-toast-icon">✓</div>
+            <div class="kc-toast-body">
+                <div class="kc-toast-title">@ok</div>
+            </div>
+            <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
+        </div>
+        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastOk')?.remove(), 10000);</script>
+    }
+    @if (TempData["FlashError"] is string err)
+    {
+        <div class="kc-toast kc-toast-error" id="flashToastError" role="alert">
+            <div class="kc-toast-icon">!</div>
+            <div class="kc-toast-body">
+                <div class="kc-toast-title">@err</div>
+            </div>
+            <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
+        </div>
+        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastError')?.remove(), 10000);</script>
+    }
+}
