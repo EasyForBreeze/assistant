@@ -132,18 +132,19 @@
 .prefix-wrap {
     display: flex;
     align-items: center;
-    border: 1px solid var(--kc-card-border);
-    background: rgba(255,255,255,.05);
+    border: 1px solid var(--kc-border-strong);
+    background: #0a0f18;
     border-radius: .75rem;
     overflow: hidden;
+    transition: border-color .2s ease;
 }
 
 .prefix-chip {
     padding: .5rem .65rem;
-    background: rgba(99,102,241,.15);
+    background: rgba(99,102,241,.2);
     color: var(--kc-ink);
     white-space: nowrap;
-    border-right: 1px solid var(--kc-border);
+    border-right: 1px solid var(--kc-border-strong);
 }
 
 .prefix-input {
@@ -152,6 +153,16 @@
     outline: none;
     padding: .55rem .75rem;
     color: var(--kc-ink);
+    font-size: .875rem;
+    border: none;
+}
+
+.prefix-input::placeholder {
+    color: rgba(226,232,240,.6);
+}
+
+.prefix-wrap:focus-within {
+    border-color: rgba(255,255,255,.25);
 }
 
 /* ===== Chips ===== */
