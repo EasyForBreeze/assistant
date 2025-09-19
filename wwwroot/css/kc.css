@@ -603,6 +603,48 @@ body.page-loaded #app {
     transform: translateY(0);
 }
 
+[data-soft-panel] {
+    position: relative;
+}
+
+[data-soft-panel][data-soft-loading="true"] {
+    pointer-events: none;
+}
+
+[data-soft-panel][data-soft-loading="true"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    border-radius: inherit;
+    z-index: 10;
+}
+
+[data-soft-panel][data-soft-loading="true"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-top: -1.25rem;
+    margin-left: -1.25rem;
+    border-radius: 9999px;
+    border: 3px solid rgba(148, 163, 184, 0.35);
+    border-top-color: rgba(226, 232, 240, 0.85);
+    z-index: 11;
+    animation: soft-panel-spin 0.8s linear infinite;
+}
+
+@keyframes soft-panel-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* ===== Events filters ===== */
 .event-filters {
     width: 100%;
