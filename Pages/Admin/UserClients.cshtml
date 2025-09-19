@@ -41,6 +41,7 @@
                     <path d="m21 21-4.3-4.3" />
                 </svg>
                 <input name="clientQuery" value="@Model.ClientQuery" placeholder="Введите clientId"
+                       minlength="3"
                        class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
             </div>
             <input type="hidden" name="clientPage" value="1" />
@@ -82,7 +83,7 @@
                 @if (Model.ClientHasPreviousPage || Model.ClientHasNextPage)
                 {
                     <div class="flex items-center justify-between pt-2 text-sm text-slate-400">
-                        <div>Страница @Model.ClientPage</div>
+                        <div>Страница @Model.ClientPage из @Model.ClientTotalPages</div>
                         <div class="flex items-center gap-2">
                             @if (Model.ClientHasPreviousPage)
                             {
@@ -119,6 +120,10 @@
                     </div>
                 }
             }
+            else if (Model.ClientQueryTooShort)
+            {
+                <div class="text-sm text-slate-400">Введите минимум @Model.MinimumQueryLength символов для поиска.</div>
+            }
             else if (!string.IsNullOrWhiteSpace(Model.ClientQuery))
             {
                 <div class="text-sm text-slate-400">Клиенты не найдены.</div>
@@ -143,6 +148,7 @@
                     <path d="m21 21-4.3-4.3" />
                 </svg>
                 <input name="userQuery" value="@Model.UserQuery" placeholder="username, email или ФИО"
+                       minlength="3"
                        class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
             </div>
             <input type="hidden" name="userPage" value="1" />
@@ -184,7 +190,7 @@
                 @if (Model.UserHasPreviousPage || Model.UserHasNextPage)
                 {
                     <div class="flex items-center justify-between pt-2 text-sm text-slate-400">
-                        <div>Страница @Model.UserPage</div>
+                        <div>Страница @Model.UserPage из @Model.UserTotalPages</div>
                         <div class="flex items-center gap-2">
                             @if (Model.UserHasPreviousPage)
                             {
@@ -220,6 +226,10 @@
                         </div>
                     </div>
                 }
+            }
+            else if (Model.UserQueryTooShort)
+            {
+                <div class="text-sm text-slate-400">Введите минимум @Model.MinimumQueryLength символов для поиска.</div>
             }
             else if (!string.IsNullOrWhiteSpace(Model.UserQuery))
             {

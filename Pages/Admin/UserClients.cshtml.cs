@@ -11,6 +11,7 @@ namespace Assistant.Pages.Admin;
 public sealed class UserClientsModel : PageModel
 {
     private const int PageSize = 5;
+    private const int MinimumQueryLengthValue = 3;
 
     private readonly RealmsService _realms;
     private readonly ClientsService _clients;
@@ -43,6 +44,9 @@ public sealed class UserClientsModel : PageModel
     public List<UserSearchResult> UserResults { get; private set; } = [];
     public List<ClientSummary> Assignments { get; private set; } = [];
 
+    public int ClientTotalPages { get; private set; }
+    public int UserTotalPages { get; private set; }
+
     public bool ClientHasNextPage { get; private set; }
     public bool UserHasNextPage { get; private set; }
 
@@ -57,6 +61,11 @@ public sealed class UserClientsModel : PageModel
 
     public bool ClientHasPreviousPage => ClientPage > 1;
     public bool UserHasPreviousPage => UserPage > 1;
+
+    public int MinimumQueryLength => MinimumQueryLengthValue;
+
+    public bool ClientQueryTooShort => IsQueryTooShort(ClientQuery);
+    public bool UserQueryTooShort => IsQueryTooShort(UserQuery);
 
     public async Task OnGetAsync(CancellationToken ct)
     {
@@ -91,14 +100,16 @@ public sealed class UserClientsModel : PageModel
         {
             ClientResults = [];
             ClientHasNextPage = false;
+            ClientTotalPages = 0;
             return;
         }
 
         var query = ClientQuery!.Trim();
-        if (query.Length == 0)
+        if (query.Length < MinimumQueryLengthValue)
         {
             ClientResults = [];
             ClientHasNextPage = false;
+            ClientTotalPages = 0;
             return;
         }
 
@@ -138,6 +149,7 @@ public sealed class UserClientsModel : PageModel
         {
             ClientResults = [];
             ClientHasNextPage = false;
+            ClientTotalPages = 0;
             return;
         }
 
@@ -148,6 +160,7 @@ public sealed class UserClientsModel : PageModel
             skip = (ClientPage - 1) * pageSize;
         }
 
+        ClientTotalPages = totalPages;
         ClientHasNextPage = ordered.Count > skip + pageSize;
         ClientResults = ordered
             .Skip(skip)
@@ -163,14 +176,16 @@ public sealed class UserClientsModel : PageModel
         {
             UserResults = [];
             UserHasNextPage = false;
+            UserTotalPages = 0;
             return;
         }
 
         var query = UserQuery!.Trim();
-        if (query.Length == 0)
+        if (query.Length < MinimumQueryLengthValue)
         {
             UserResults = [];
             UserHasNextPage = false;
+            UserTotalPages = 0;
             return;
         }
 
@@ -184,6 +199,7 @@ public sealed class UserClientsModel : PageModel
         {
             UserResults = [];
             UserHasNextPage = false;
+            UserTotalPages = 0;
             return;
         }
 
@@ -194,6 +210,7 @@ public sealed class UserClientsModel : PageModel
             skip = (UserPage - 1) * pageSize;
         }
 
+        UserTotalPages = totalPages;
         UserHasNextPage = results.Count > skip + pageSize;
         UserResults = results
             .Skip(skip)
@@ -299,5 +316,11 @@ public sealed class UserClientsModel : PageModel
             selectedUsername = username,
             selectedUserDisplay = string.IsNullOrWhiteSpace(userDisplay) ? username : userDisplay
         });
+    }
+
+    private static bool IsQueryTooShort(string? query)
+    {
+        var trimmed = query?.Trim();
+        return !string.IsNullOrEmpty(trimmed) && trimmed.Length < MinimumQueryLengthValue;
     }
 }
