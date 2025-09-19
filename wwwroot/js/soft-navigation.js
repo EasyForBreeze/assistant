@@ -4,21 +4,7 @@
         return;
     }
 
-    let disablePageTransition = false;
-
-    function isPageTransitionDisabled(container) {
-        if (!container) {
-            return false;
-        }
-        return !!container.querySelector('[data-soft-disable-page-transition]');
-    }
-
     function showApp() {
-        if (disablePageTransition) {
-            body.classList.remove('page-transitioning');
-            body.classList.add('page-loaded');
-            return;
-        }
         requestAnimationFrame(() => {
             body.classList.remove('page-transitioning');
             body.classList.add('page-loaded');
@@ -26,11 +12,6 @@
     }
 
     function hideApp() {
-        if (disablePageTransition) {
-            body.classList.remove('page-transitioning');
-            body.classList.add('page-loaded');
-            return Promise.resolve();
-        }
         body.classList.add('page-transitioning');
         body.classList.remove('page-loaded');
         if (!app) {
@@ -39,20 +20,18 @@
         return waitForTransition(app, 'opacity');
     }
 
+    showApp();
+
     const root = document.querySelector('[data-soft-root]');
     let app = document.getElementById('app');
-    disablePageTransition = isPageTransitionDisabled(app);
     const spinner = document.getElementById('globalSpinner');
     const toastsHost = document.getElementById('toastsHost');
     const scriptHost = document.getElementById('pageScripts');
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
     const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
     if (!root || !app) {
-        showApp();
         return;
     }
-
-    showApp();
 
     let pending = 0;
 
@@ -335,7 +314,6 @@
         }
         app.replaceWith(importedMain);
         app = importedMain;
-        disablePageTransition = isPageTransitionDisabled(app);
         executeSoftScripts(app);
 
         refreshToasts(doc);
