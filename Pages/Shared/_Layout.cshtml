@@ -72,6 +72,9 @@
     <div id="toastsHost">
         @RenderSection("Toasts", required: false)
     </div>
+    <div id="globalSpinner" class="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 hidden">
+        <div class="w-16 h-16 border-4 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+    </div>
     <div id="pageScripts">
         @RenderSection("Scripts", required: false)
     </div>
