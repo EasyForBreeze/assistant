@@ -69,7 +69,10 @@
 .glow-blob {
     animation: kc-floatGlow 6s ease-in-out infinite;
 }
-
+.pp-y {
+    padding-top: 0.5rem;
+    padding-bottom: 0.65rem;
+}
 /* ===== Cards / Panels ===== */
 .kc-card {
     position: relative;
@@ -565,7 +568,6 @@ body.page-loaded #app {
     width: 100%;
     min-width: 0;
 }
-
 @media (min-width: 768px) {
     .event-filters {
         grid-template-columns: 1.5fr repeat(5, minmax(0, 1fr));
