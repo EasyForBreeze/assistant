@@ -149,6 +149,67 @@
         element.removeAttribute('data-soft-loading');
     }
 
+    function runFadeTransition(element, phase) {
+        if (!element) {
+            return Promise.resolve();
+        }
+        const startClass = phase === 'enter' ? 'fade-enter' : 'fade-leave';
+        const activeClass = phase === 'enter' ? 'fade-enter-active' : 'fade-leave-active';
+        element.classList.add(startClass);
+        return new Promise(resolve => {
+            const finish = () => {
+                element.classList.remove(startClass);
+                element.classList.remove(activeClass);
+                resolve();
+            };
+            const activate = () => {
+                element.classList.add(activeClass);
+                waitForTransition(element, 'opacity').then(finish).catch(finish);
+            };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(activate);
+            } else {
+                activate();
+            }
+        });
+    }
+
+    async function swapPanelWithFade(current, incoming) {
+        if (!current || !incoming) {
+            return null;
+        }
+        const parent = current.parentNode;
+        if (!parent) {
+            try {
+                current.replaceWith(incoming);
+                return incoming;
+            } catch (_) {
+                return null;
+            }
+        }
+        const placeholder = document.createComment('soft-panel-placeholder');
+        parent.insertBefore(placeholder, current);
+        try {
+            await runFadeTransition(current, 'leave');
+        } catch (_) {
+            // Ignore transition issues and continue swapping.
+        } finally {
+            current.remove();
+        }
+        try {
+            placeholder.replaceWith(incoming);
+        } catch (_) {
+            placeholder.remove();
+            return null;
+        }
+        try {
+            await runFadeTransition(incoming, 'enter');
+        } catch (_) {
+            incoming.classList.remove('fade-enter', 'fade-enter-active', 'fade-leave', 'fade-leave-active');
+        }
+        return incoming;
+    }
+
     function parseTargetList(value) {
         if (!value) {
             return [];
@@ -434,17 +495,20 @@
         if (panelSelectors.length > 0) {
             const uniqueSelectors = Array.from(new Set(panelSelectors));
             let swapped = false;
-            uniqueSelectors.forEach(selector => {
+            for (const selector of uniqueSelectors) {
                 const incoming = doc.querySelector(selector);
                 const current = document.querySelector(selector);
                 if (!incoming || !current) {
-                    return;
+                    continue;
                 }
                 const imported = document.importNode(incoming, true);
-                current.replaceWith(imported);
-                executeSoftScripts(imported);
+                const swappedElement = await swapPanelWithFade(current, imported);
+                if (!swappedElement) {
+                    continue;
+                }
+                executeSoftScripts(swappedElement);
                 swapped = true;
-            });
+            }
 
             if (swapped) {
                 refreshToasts(doc);
