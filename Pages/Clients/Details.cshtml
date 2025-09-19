@@ -18,7 +18,7 @@
 <!-- Хедер -->
 <div class="kc-header p-5 md:p-6 relative overflow-hidden mb-5">
     <div class="flex items-center">
-        <a asp-page="/Index" class="text-slate-400 text-sm hover:text-slate-200">&larr; Back to Clients</a>
+        <a href="@Model.BackUrl" class="text-slate-400 text-sm hover:text-slate-200">&larr; Back to Clients</a>
         <div class="ml-auto text-slate-400 text-sm">Realm: <span class="text-slate-200">@realm</span></div>
     </div>
     <div class="absolute inset-0 pointer-events-none">
@@ -404,6 +404,7 @@
 
 <!-- Hidden form for saving -->
 <form method="post" id="saveForm" asp-page-handler="Save" asp-route-realm="@realm" asp-route-clientId="@clientId" class="hidden">
+    <input type="hidden" asp-for="ReturnUrl" />
     <input type="hidden" asp-for="NewClientId" id="hidClientId" />
     <input type="hidden" asp-for="Description" id="hidDescription" />
     <input type="hidden" asp-for="Enabled" id="hidEnabled" />
@@ -415,7 +416,9 @@
     <input type="hidden" asp-for="ServiceRolesJson" id="hidServiceRoles" />
 </form>
 
-<form method="post" id="deleteForm" asp-page-handler="Delete" asp-route-realm="@realm" asp-route-clientId="@clientId" class="hidden"></form>
+<form method="post" id="deleteForm" asp-page-handler="Delete" asp-route-realm="@realm" asp-route-clientId="@clientId" class="hidden">
+    <input type="hidden" asp-for="ReturnUrl" />
+</form>
 
 @section Toasts {
     @if (TempData["FlashOk"] is string ok)
