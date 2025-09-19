@@ -131,7 +131,7 @@
 /* inp-with-prefix */
 .prefix-wrap {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     border: 1px solid var(--kc-border-strong);
     background: #0a0f18;
     border-radius: .75rem;
@@ -140,25 +140,34 @@
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+    min-height: calc(0.875rem * 1.25 + 1rem);
 }
 
 .prefix-chip {
-    padding: .5rem .65rem;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 .75rem;
     background: rgba(99,102,241,.2);
     color: var(--kc-ink);
     white-space: nowrap;
     border-right: 1px solid var(--kc-border-strong);
+    font-size: .875rem;
+    line-height: 1.25;
 }
 
 .prefix-input {
     flex: 1 1 0%;
     min-width: 0;
+    height: 100%;
     background: transparent;
     outline: none;
-    padding: .55rem .75rem;
+    padding: 0 .75rem;
     color: var(--kc-ink);
     font-size: .875rem;
+    line-height: 1.25;
     border: none;
+    box-sizing: border-box;
 }
 
 .prefix-input::placeholder {
