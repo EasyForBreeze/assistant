@@ -27,11 +27,46 @@
     const spinner = document.getElementById('globalSpinner');
     const toastsHost = document.getElementById('toastsHost');
     const scriptHost = document.getElementById('pageScripts');
+    const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
+    const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
     if (!root || !app) {
         return;
     }
 
     let pending = 0;
+
+    function updateAdminNavActive(url) {
+        const nav = document.querySelector('[data-admin-nav]');
+        if (!nav) {
+            return;
+        }
+
+        let targetPath = window.location.pathname;
+        if (url) {
+            try {
+                targetPath = new URL(url, window.location.href).pathname;
+            } catch (_) {
+                // Fallback to current location if URL parsing fails.
+            }
+        }
+
+        nav.querySelectorAll('a[href]').forEach(anchor => {
+            let anchorPath = '';
+            try {
+                anchorPath = new URL(anchor.href, window.location.href).pathname;
+            } catch (_) {
+                anchorPath = anchor.getAttribute('href') || '';
+            }
+
+            const isActive = anchorPath === targetPath;
+            anchor.classList.remove(...ADMIN_ACTIVE_CLASSES, ...ADMIN_INACTIVE_CLASSES);
+            if (isActive) {
+                anchor.classList.add(...ADMIN_ACTIVE_CLASSES);
+            } else {
+                anchor.classList.add(...ADMIN_INACTIVE_CLASSES);
+            }
+        });
+    }
 
     function parseTimeToMs(time) {
         if (!time) {
@@ -300,6 +335,8 @@
             history.replaceState({ url: finalUrl }, '', finalUrl);
         }
 
+        updateAdminNavActive(finalUrl);
+
         return true;
     }
 
@@ -409,6 +446,8 @@
     hookXmlHttpRequest();
     hookFetch();
     history.replaceState({ url: window.location.href }, '', window.location.href);
+
+    updateAdminNavActive(window.location.href);
 
     document.addEventListener('click', onLinkClick);
     document.addEventListener('submit', onFormSubmit);
