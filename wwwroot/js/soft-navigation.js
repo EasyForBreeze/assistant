@@ -24,7 +24,6 @@
 
     const root = document.querySelector('[data-soft-root]');
     let app = document.getElementById('app');
-    const spinner = document.getElementById('globalSpinner');
     const toastsHost = document.getElementById('toastsHost');
     const scriptHost = document.getElementById('pageScripts');
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
@@ -33,7 +32,93 @@
         return;
     }
 
-    let pending = 0;
+    const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
+    const buttonLoadingCounts = new WeakMap();
+
+    function resolveLoadableElement(element) {
+        if (!element || !(element instanceof HTMLElement)) {
+            return null;
+        }
+        if (element.matches(LOADABLE_SELECTOR)) {
+            return element;
+        }
+        return element.closest(LOADABLE_SELECTOR);
+    }
+
+    function startButtonLoading(element) {
+        const target = resolveLoadableElement(element);
+        if (!target) {
+            return null;
+        }
+        const count = buttonLoadingCounts.get(target) || 0;
+        if (count === 0) {
+            target.setAttribute('data-loading', 'true');
+            target.setAttribute('aria-busy', 'true');
+            if (target instanceof HTMLButtonElement || target instanceof HTMLInputElement) {
+                target.dataset.prevDisabled = target.disabled ? 'true' : 'false';
+                target.disabled = true;
+            } else if (target instanceof HTMLAnchorElement) {
+                const pointerState = target.style.pointerEvents ? target.style.pointerEvents : '__unset__';
+                target.dataset.prevPointerEvents = pointerState;
+                if (target.hasAttribute('tabindex')) {
+                    target.dataset.prevTabindex = target.getAttribute('tabindex') || '';
+                } else {
+                    target.dataset.prevTabindex = '__unset__';
+                }
+                target.setAttribute('aria-disabled', 'true');
+                target.style.pointerEvents = 'none';
+                target.setAttribute('tabindex', '-1');
+            }
+        }
+        buttonLoadingCounts.set(target, count + 1);
+        return target;
+    }
+
+    function stopButtonLoading(element) {
+        const target = resolveLoadableElement(element);
+        if (!target) {
+            return;
+        }
+        const count = buttonLoadingCounts.get(target);
+        if (!count) {
+            return;
+        }
+        if (count > 1) {
+            buttonLoadingCounts.set(target, count - 1);
+            return;
+        }
+        buttonLoadingCounts.delete(target);
+        target.removeAttribute('aria-busy');
+        target.removeAttribute('data-loading');
+        if (target instanceof HTMLButtonElement || target instanceof HTMLInputElement) {
+            if (target.dataset.prevDisabled === 'false') {
+                target.disabled = false;
+            }
+            delete target.dataset.prevDisabled;
+        } else if (target instanceof HTMLAnchorElement) {
+            if (target.dataset.prevPointerEvents) {
+                if (target.dataset.prevPointerEvents === '__unset__') {
+                    target.style.removeProperty('pointer-events');
+                } else {
+                    target.style.pointerEvents = target.dataset.prevPointerEvents;
+                }
+            } else {
+                target.style.removeProperty('pointer-events');
+            }
+            if (target.dataset.prevTabindex) {
+                if (target.dataset.prevTabindex === '__unset__') {
+                    target.removeAttribute('tabindex');
+                } else {
+                    target.setAttribute('tabindex', target.dataset.prevTabindex);
+                }
+            } else {
+                target.removeAttribute('tabindex');
+            }
+            target.removeAttribute('aria-disabled');
+            delete target.dataset.prevPointerEvents;
+            delete target.dataset.prevTabindex;
+        }
+    }
 
     function updateAdminNavActive(url) {
         const nav = document.querySelector('[data-admin-nav]');
@@ -126,27 +211,9 @@
         });
     }
 
-    function updateSpinner() {
-        return;
-        if (!spinner) {
-            return;
-        }
-        if (pending > 0) {
-            spinner.classList.remove('hidden');
-        } else {
-            spinner.classList.add('hidden');
-        }
-    }
+    function beginPending() { }
 
-    function beginPending() {
-        pending += 1;
-        updateSpinner();
-    }
-
-    function endPending() {
-        pending = Math.max(0, pending - 1);
-        updateSpinner();
-    }
+    function endPending() { }
 
     function executeSoftScripts(container) {
         if (!container) {
@@ -242,10 +309,29 @@
         return root.contains(form);
     }
 
-    function buildGetUrl(form) {
+    function resolveSubmitter(event) {
+        if (!event) {
+            return null;
+        }
+        const submitter = event.submitter;
+        if (submitter && submitter instanceof HTMLElement) {
+            return submitter;
+        }
+        const form = event.target;
+        if (!form || !(form instanceof HTMLFormElement)) {
+            return null;
+        }
+        return form.querySelector('button[type="submit"], input[type="submit"]');
+    }
+
+    function buildGetUrl(form, submitter) {
         const action = form.getAttribute('action') || window.location.href;
         const url = new URL(action, window.location.href);
         const formData = new FormData(form);
+        if (submitter && submitter.name) {
+            const submitValue = submitter.value != null ? submitter.value : '';
+            formData.append(submitter.name, submitValue);
+        }
         for (const [key, value] of formData.entries()) {
             if (typeof value === 'string') {
                 url.searchParams.set(key, value);
@@ -342,15 +428,28 @@
 
     async function handleNavigation(url, opts) {
         const options = Object.assign({ method: 'GET', pushState: true }, opts || {});
+        const trigger = options.trigger;
+        delete options.trigger;
+        const loadingTarget = trigger ? startButtonLoading(trigger) : null;
         if (!sameOrigin(url)) {
+            if (loadingTarget) {
+                stopButtonLoading(loadingTarget);
+            }
             hideApp();
             window.location.href = url;
             return;
         }
         const hidePromise = hideApp();
-        const success = await fetchAndSwap(url, options, hidePromise);
-        showApp();
-        return success;
+        let success;
+        try {
+            success = await fetchAndSwap(url, options, hidePromise);
+            return success;
+        } finally {
+            showApp();
+            if (loadingTarget) {
+                stopButtonLoading(loadingTarget);
+            }
+        }
     }
 
     function onLinkClick(event) {
@@ -362,7 +461,7 @@
             return;
         }
         event.preventDefault();
-        handleNavigation(anchor.href, { method: 'GET', pushState: true });
+        handleNavigation(anchor.href, { method: 'GET', pushState: true, trigger: anchor });
     }
 
     function onFormSubmit(event) {
@@ -371,15 +470,20 @@
             return;
         }
         event.preventDefault();
+        const submitter = resolveSubmitter(event);
         const method = (form.method || 'GET').toUpperCase();
         if (method === 'GET') {
-            const url = buildGetUrl(form);
-            handleNavigation(url, { method: 'GET', pushState: true });
+            const url = buildGetUrl(form, submitter);
+            handleNavigation(url, { method: 'GET', pushState: true, trigger: submitter });
             return;
         }
         const formData = new FormData(form);
+        if (submitter && submitter.name) {
+            const submitValue = submitter.value != null ? submitter.value : '';
+            formData.append(submitter.name, submitValue);
+        }
         const action = form.getAttribute('action') || window.location.href;
-        handleNavigation(action, { method, body: formData, pushState: true });
+        handleNavigation(action, { method, body: formData, pushState: true, trigger: submitter });
     }
 
     function onPopState(event) {
