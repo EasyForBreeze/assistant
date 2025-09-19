@@ -324,11 +324,20 @@
           const realmTitleEl  = $('#realmDescTitle');
           const realmBodyEl   = $('#realmDescBody');
 
-          const btnPrev   = $('#btnPrev');
-          const btnNext   = $('#btnNext');
-          const btnCreate = $('#btnCreate');
-          const btnSkip   = $('#btnSkip');
+          const btnPrev    = $('#btnPrev');
+          const btnNext    = $('#btnNext');
+          const btnCreate  = $('#btnCreate');
+          const btnSkip    = $('#btnSkip');
+          const createForm = document.getElementById('createForm');
           if (btnSkip) btnSkip.style.display = 'none';
+
+          createForm?.addEventListener('keydown', (event) =>
+          {
+            if (event.key === 'Enter')
+            {
+              event.preventDefault();
+            }
+          });
 
           // Basics
           const cidPrefix = 'app-bank-';
@@ -535,7 +544,7 @@
           };
 
           // Submit
-          document.getElementById('createForm')?.addEventListener('submit', (e)=>
+          createForm?.addEventListener('submit', (e)=>
           {
             if (!validateStep(1) || !validateStep(2) || !validateStep(3)){
               e.preventDefault();
