@@ -137,6 +137,9 @@
     border-radius: .75rem;
     overflow: hidden;
     transition: border-color .2s ease;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .prefix-chip {
@@ -148,7 +151,8 @@
 }
 
 .prefix-input {
-    flex: 1;
+    flex: 1 1 0%;
+    min-width: 0;
     background: transparent;
     outline: none;
     padding: .55rem .75rem;
