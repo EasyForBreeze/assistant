@@ -340,25 +340,6 @@
         return url.toString();
     }
 
-    function getPartialTargets(form, submitter) {
-        if (!form) {
-            return null;
-        }
-        let submitterValue = null;
-        if (submitter && submitter.dataset) {
-            submitterValue = submitter.dataset.softPartial || null;
-        }
-        const formValue = form.dataset ? form.dataset.softPartial || null : null;
-        const source = submitterValue || formValue;
-        if (!source) {
-            return null;
-        }
-        return source
-            .split(',')
-            .map(part => part.trim())
-            .filter(part => part.length > 0);
-    }
-
     async function fetchAndSwap(url, options, hidePromise) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
@@ -409,45 +390,6 @@
             return false;
         }
 
-        const partialTargets = Array.isArray(options.partialTargets) && options.partialTargets.length > 0
-            ? options.partialTargets
-            : null;
-        if (partialTargets) {
-            let replaced = false;
-            partialTargets.forEach(selector => {
-                if (!selector) {
-                    return;
-                }
-                const incoming = doc.querySelector(selector);
-                const current = document.querySelector(selector);
-                if (!incoming || !current) {
-                    return;
-                }
-                const imported = document.importNode(incoming, true);
-                current.replaceWith(imported);
-                executeSoftScripts(imported);
-                replaced = true;
-            });
-
-            if (!replaced) {
-                window.location.href = response.url || requestUrl;
-                return false;
-            }
-
-            refreshToasts(doc);
-            refreshScriptHost(doc);
-
-            const finalUrl = response.url || requestUrl;
-            if (options.pushState) {
-                history.pushState({ url: finalUrl }, '', finalUrl);
-            } else if (options.replaceState) {
-                history.replaceState({ url: finalUrl }, '', finalUrl);
-            }
-
-            updateAdminNavActive(finalUrl);
-            return true;
-        }
-
         const importedMain = document.importNode(newMain, true);
         if (hidePromise) {
             try {
@@ -489,7 +431,6 @@
         const trigger = options.trigger;
         delete options.trigger;
         const loadingTarget = trigger ? startButtonLoading(trigger) : null;
-        const usePartial = Array.isArray(options.partialTargets) && options.partialTargets.length > 0;
         if (!sameOrigin(url)) {
             if (loadingTarget) {
                 stopButtonLoading(loadingTarget);
@@ -498,15 +439,13 @@
             window.location.href = url;
             return;
         }
-        const hidePromise = usePartial ? null : hideApp();
+        const hidePromise = hideApp();
         let success;
         try {
             success = await fetchAndSwap(url, options, hidePromise);
             return success;
         } finally {
-            if (!usePartial) {
-                showApp();
-            }
+            showApp();
             if (loadingTarget) {
                 stopButtonLoading(loadingTarget);
             }
@@ -533,10 +472,9 @@
         event.preventDefault();
         const submitter = resolveSubmitter(event);
         const method = (form.method || 'GET').toUpperCase();
-        const partialTargets = getPartialTargets(form, submitter);
         if (method === 'GET') {
             const url = buildGetUrl(form, submitter);
-            handleNavigation(url, { method: 'GET', pushState: true, trigger: submitter, partialTargets });
+            handleNavigation(url, { method: 'GET', pushState: true, trigger: submitter });
             return;
         }
         const formData = new FormData(form);
@@ -545,7 +483,7 @@
             formData.append(submitter.name, submitValue);
         }
         const action = form.getAttribute('action') || window.location.href;
-        handleNavigation(action, { method, body: formData, pushState: true, trigger: submitter, partialTargets });
+        handleNavigation(action, { method, body: formData, pushState: true, trigger: submitter });
     }
 
     function onPopState(event) {
