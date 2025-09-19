@@ -43,6 +43,8 @@
                 <input name="clientQuery" value="@Model.ClientQuery" placeholder="Введите clientId"
                        class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
             </div>
+            <input type="hidden" name="clientPage" value="1" />
+            <input type="hidden" name="userPage" value="@Model.UserPage" />
             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
             <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
             <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
@@ -65,6 +67,8 @@
                         <form method="get" class="flex items-center gap-2">
                             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                            <input type="hidden" name="clientPage" value="@Model.ClientPage" />
+                            <input type="hidden" name="userPage" value="@Model.UserPage" />
                             <input type="hidden" name="selectedClientId" value="@client.ClientId" />
                             <input type="hidden" name="selectedClientRealm" value="@client.Realm" />
                             <input type="hidden" name="selectedClientName" value="@client.Name" />
@@ -72,6 +76,46 @@
                             <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
                             <button type="submit" class="btn-subtle whitespace-nowrap">Выбрать</button>
                         </form>
+                    </div>
+                }
+
+                @if (Model.ClientHasPreviousPage || Model.ClientHasNextPage)
+                {
+                    <div class="flex items-center justify-between pt-2 text-sm text-slate-400">
+                        <div>Страница @Model.ClientPage</div>
+                        <div class="flex items-center gap-2">
+                            @if (Model.ClientHasPreviousPage)
+                            {
+                                <form method="get" class="inline-flex">
+                                    <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+                                    <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                                    <input type="hidden" name="clientPage" value="@(Model.ClientPage - 1)" />
+                                    <input type="hidden" name="userPage" value="@Model.UserPage" />
+                                    <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
+                                    <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
+                                    <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
+                                    <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
+                                    <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
+                                    <button type="submit" class="btn-subtle whitespace-nowrap">← Назад</button>
+                                </form>
+                            }
+
+                            @if (Model.ClientHasNextPage)
+                            {
+                                <form method="get" class="inline-flex">
+                                    <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+                                    <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                                    <input type="hidden" name="clientPage" value="@(Model.ClientPage + 1)" />
+                                    <input type="hidden" name="userPage" value="@Model.UserPage" />
+                                    <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
+                                    <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
+                                    <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
+                                    <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
+                                    <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
+                                    <button type="submit" class="btn-subtle whitespace-nowrap">Вперёд →</button>
+                                </form>
+                            }
+                        </div>
                     </div>
                 }
             }
@@ -101,6 +145,8 @@
                 <input name="userQuery" value="@Model.UserQuery" placeholder="username, email или ФИО"
                        class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
             </div>
+            <input type="hidden" name="userPage" value="1" />
+            <input type="hidden" name="clientPage" value="@Model.ClientPage" />
             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
             <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
             <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
@@ -123,6 +169,8 @@
                         <form method="get" class="flex items-center gap-2">
                             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                            <input type="hidden" name="clientPage" value="@Model.ClientPage" />
+                            <input type="hidden" name="userPage" value="@Model.UserPage" />
                             <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
                             <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
                             <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
@@ -130,6 +178,46 @@
                             <input type="hidden" name="selectedUserDisplay" value="@user.DisplayName" />
                             <button type="submit" class="btn-subtle whitespace-nowrap">Выбрать</button>
                         </form>
+                    </div>
+                }
+
+                @if (Model.UserHasPreviousPage || Model.UserHasNextPage)
+                {
+                    <div class="flex items-center justify-between pt-2 text-sm text-slate-400">
+                        <div>Страница @Model.UserPage</div>
+                        <div class="flex items-center gap-2">
+                            @if (Model.UserHasPreviousPage)
+                            {
+                                <form method="get" class="inline-flex">
+                                    <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+                                    <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                                    <input type="hidden" name="clientPage" value="@Model.ClientPage" />
+                                    <input type="hidden" name="userPage" value="@(Model.UserPage - 1)" />
+                                    <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
+                                    <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
+                                    <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
+                                    <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
+                                    <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
+                                    <button type="submit" class="btn-subtle whitespace-nowrap">← Назад</button>
+                                </form>
+                            }
+
+                            @if (Model.UserHasNextPage)
+                            {
+                                <form method="get" class="inline-flex">
+                                    <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
+                                    <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                                    <input type="hidden" name="clientPage" value="@Model.ClientPage" />
+                                    <input type="hidden" name="userPage" value="@(Model.UserPage + 1)" />
+                                    <input type="hidden" name="selectedClientId" value="@Model.SelectedClientId" />
+                                    <input type="hidden" name="selectedClientRealm" value="@Model.SelectedClientRealm" />
+                                    <input type="hidden" name="selectedClientName" value="@Model.SelectedClientName" />
+                                    <input type="hidden" name="selectedUsername" value="@Model.SelectedUsername" />
+                                    <input type="hidden" name="selectedUserDisplay" value="@Model.SelectedUserDisplay" />
+                                    <button type="submit" class="btn-subtle whitespace-nowrap">Вперёд →</button>
+                                </form>
+                            }
+                        </div>
                     </div>
                 }
             }
@@ -190,6 +278,8 @@
             <input type="hidden" name="userDisplay" value="@Model.SelectedUserDisplay" />
             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+            <input type="hidden" name="clientPage" value="@Model.ClientPage" />
+            <input type="hidden" name="userPage" value="@Model.UserPage" />
             <button type="submit" class="btn-primary">Назначить доступ</button>
         </form>
     </div>
@@ -220,6 +310,8 @@
                             <input type="hidden" name="userDisplay" value="@Model.SelectedUserDisplay" />
                             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
+                            <input type="hidden" name="clientPage" value="@Model.ClientPage" />
+                            <input type="hidden" name="userPage" value="@Model.UserPage" />
                             <button type="submit" class="btn-danger whitespace-nowrap">Удалить</button>
                         </form>
                     </div>
