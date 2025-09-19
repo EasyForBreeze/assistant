@@ -34,6 +34,7 @@
 
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
     const buttonLoadingCounts = new WeakMap();
+    const panelLoadingCounts = new WeakMap();
 
     function resolveLoadableElement(element) {
         if (!element || !(element instanceof HTMLElement)) {
@@ -118,6 +119,47 @@
             delete target.dataset.prevPointerEvents;
             delete target.dataset.prevTabindex;
         }
+    }
+
+    function startPanelLoading(element) {
+        if (!element || !(element instanceof HTMLElement)) {
+            return null;
+        }
+        const count = panelLoadingCounts.get(element) || 0;
+        if (count === 0) {
+            element.setAttribute('data-soft-loading', 'true');
+        }
+        panelLoadingCounts.set(element, count + 1);
+        return element;
+    }
+
+    function stopPanelLoading(element) {
+        if (!element || !(element instanceof HTMLElement)) {
+            return;
+        }
+        const count = panelLoadingCounts.get(element);
+        if (!count) {
+            return;
+        }
+        if (count > 1) {
+            panelLoadingCounts.set(element, count - 1);
+            return;
+        }
+        panelLoadingCounts.delete(element);
+        element.removeAttribute('data-soft-loading');
+    }
+
+    function parseTargetList(value) {
+        if (!value) {
+            return [];
+        }
+        if (Array.isArray(value)) {
+            return value.map(item => typeof item === 'string' ? item.trim() : '').filter(Boolean);
+        }
+        if (typeof value === 'string') {
+            return value.split(',').map(part => part.trim()).filter(Boolean);
+        }
+        return [];
     }
 
     function updateAdminNavActive(url) {
@@ -384,6 +426,48 @@
         const text = await response.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, 'text/html');
+        const panelSelectors = Array.isArray(options.panelSelectors)
+            ? options.panelSelectors.map(selector => typeof selector === 'string' ? selector.trim() : '')
+                .filter(Boolean)
+            : [];
+
+        if (panelSelectors.length > 0) {
+            const uniqueSelectors = Array.from(new Set(panelSelectors));
+            let swapped = false;
+            uniqueSelectors.forEach(selector => {
+                const incoming = doc.querySelector(selector);
+                const current = document.querySelector(selector);
+                if (!incoming || !current) {
+                    return;
+                }
+                const imported = document.importNode(incoming, true);
+                current.replaceWith(imported);
+                executeSoftScripts(imported);
+                swapped = true;
+            });
+
+            if (swapped) {
+                refreshToasts(doc);
+                refreshScriptHost(doc);
+
+                const newTitle = doc.querySelector('title');
+                if (newTitle) {
+                    document.title = newTitle.textContent || document.title;
+                }
+
+                const finalUrl = response.url || requestUrl;
+                if (options.pushState) {
+                    history.pushState({ url: finalUrl }, '', finalUrl);
+                } else if (options.replaceState) {
+                    history.replaceState({ url: finalUrl }, '', finalUrl);
+                }
+
+                updateAdminNavActive(finalUrl);
+                app = document.getElementById('app');
+                return true;
+            }
+        }
+
         const newMain = doc.getElementById('app');
         if (!newMain) {
             window.location.href = response.url || requestUrl;
@@ -430,25 +514,63 @@
         const options = Object.assign({ method: 'GET', pushState: true }, opts || {});
         const trigger = options.trigger;
         delete options.trigger;
+
+        const targetSelectors = parseTargetList(options.targets);
+        delete options.targets;
+
+        const isPartial = targetSelectors.length > 0;
+        if (isPartial) {
+            options.panelSelectors = targetSelectors;
+            if (options.scroll === undefined) {
+                options.scroll = false;
+            }
+        }
+
         const loadingTarget = trigger ? startButtonLoading(trigger) : null;
+        const panelLoadTargets = [];
+        if (isPartial) {
+            const seen = new Set();
+            targetSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(element => {
+                    if (!(element instanceof HTMLElement) || seen.has(element)) {
+                        return;
+                    }
+                    seen.add(element);
+                    if (element.hasAttribute('data-soft-panel')) {
+                        const started = startPanelLoading(element);
+                        if (started) {
+                            panelLoadTargets.push(started);
+                        }
+                    }
+                });
+            });
+        }
+
         if (!sameOrigin(url)) {
             if (loadingTarget) {
                 stopButtonLoading(loadingTarget);
             }
-            hideApp();
+            panelLoadTargets.forEach(stopPanelLoading);
+            if (!isPartial) {
+                hideApp();
+            }
             window.location.href = url;
             return;
         }
-        const hidePromise = hideApp();
+
+        const hidePromise = isPartial ? null : hideApp();
         let success;
         try {
             success = await fetchAndSwap(url, options, hidePromise);
             return success;
         } finally {
-            showApp();
+            if (!isPartial) {
+                showApp();
+            }
             if (loadingTarget) {
                 stopButtonLoading(loadingTarget);
             }
+            panelLoadTargets.forEach(stopPanelLoading);
         }
     }
 
@@ -471,10 +593,16 @@
         }
         event.preventDefault();
         const submitter = resolveSubmitter(event);
+        const submitterTargets = submitter && submitter.dataset ? submitter.dataset.softTargets : null;
+        const targets = parseTargetList(submitterTargets || form.dataset.softTargets);
         const method = (form.method || 'GET').toUpperCase();
         if (method === 'GET') {
             const url = buildGetUrl(form, submitter);
-            handleNavigation(url, { method: 'GET', pushState: true, trigger: submitter });
+            const options = { method: 'GET', pushState: true, trigger: submitter };
+            if (targets.length > 0) {
+                options.targets = targets;
+            }
+            handleNavigation(url, options);
             return;
         }
         const formData = new FormData(form);
@@ -483,7 +611,11 @@
             formData.append(submitter.name, submitValue);
         }
         const action = form.getAttribute('action') || window.location.href;
-        handleNavigation(action, { method, body: formData, pushState: true, trigger: submitter });
+        const options = { method, body: formData, pushState: true, trigger: submitter };
+        if (targets.length > 0) {
+            options.targets = targets;
+        }
+        handleNavigation(action, options);
     }
 
     function onPopState(event) {
