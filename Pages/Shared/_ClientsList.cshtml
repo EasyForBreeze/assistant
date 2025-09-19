@@ -2,6 +2,9 @@
 
 @{
     var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? string.Empty;
+    var returnUrl = string.IsNullOrEmpty(currentPage)
+        ? null
+        : Url.Page(currentPage, new { q = Model.Q, pageNumber = Model.PageNumber });
 }
 
 @if (!Model.Clients.Any() && Model.ShowEmptyMessage)
@@ -21,6 +24,7 @@ else if (Model.Clients.Any())
             var envList = Model.Envs(c.Realm).ToList();
 
             <a asp-page="/Clients/Details" asp-route-realm="@c.Realm" asp-route-clientId="@c.ClientId"
+               asp-route-returnUrl="@returnUrl"
                class="block group client-card"
                 data-search="@($"{c.ClientId} {c.Realm} {Model.DescFor(c.ClientId)}")">
                 <div class="kc-card kc-card--hover p-5 h-44 overflow-hidden transition relative">

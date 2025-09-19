@@ -24,6 +24,11 @@ public class DetailsModel : PageModel
     [BindProperty(SupportsGet = true)] public string? ClientId { get; set; }
 
     public ClientVm Client { get; set; } = default!;
+
+    [BindProperty(SupportsGet = true)]
+    public string? ReturnUrl { get; set; }
+
+    public string BackUrl { get; private set; } = string.Empty;
     [BindProperty] public string? NewClientId { get; set; }
     [BindProperty] public string? Description { get; set; }
     [BindProperty] public bool Enabled { get; set; }
@@ -47,6 +52,9 @@ public class DetailsModel : PageModel
         {
             return NotFound();
         }
+
+        BackUrl = ResolveBackUrl(ReturnUrl);
+        ReturnUrl = BackUrl;
 
         Client = new ClientVm
         {
@@ -106,11 +114,11 @@ public class DetailsModel : PageModel
         catch (Exception ex)
         {
             TempData["FlashError"] = $"Не удалось обновить клиента: {ex.Message}";
-            return RedirectToPage(new { realm = Realm, clientId = ClientId });
+            return RedirectToPage(new { realm = Realm, clientId = ClientId, returnUrl = ReturnUrl });
         }
 
         TempData["FlashOk"] = "Клиент успешно обновлён.";
-        return RedirectToPage(new { realm = Realm, clientId = newId });
+        return RedirectToPage(new { realm = Realm, clientId = newId, returnUrl = ReturnUrl });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct)
@@ -123,7 +131,8 @@ public class DetailsModel : PageModel
         await _clients.DeleteClientAsync(Realm!, ClientId!, ct);
         await _repo.RemoveAsync(ClientId!, Realm!, ct);
         TempData["FlashOk"] = "Client deleted.";
-        return RedirectToPage("/Index");
+        var backUrl = ResolveBackUrl(ReturnUrl);
+        return LocalRedirect(backUrl);
     }
 
     public async Task<IActionResult> OnGetEventsAsync(string realm, string clientId, string? type, DateTime? from, DateTime? to, string? user, string? ip, CancellationToken ct)
@@ -153,5 +162,16 @@ public class DetailsModel : PageModel
         public bool ClientAuth { get; set; }
         public bool StandardFlow { get; set; }
         public bool ServiceAccount { get; set; }
+    }
+
+    private string ResolveBackUrl(string? candidate)
+    {
+        if (!string.IsNullOrWhiteSpace(candidate) && Url.IsLocalUrl(candidate))
+        {
+            return candidate;
+        }
+
+        var fallbackPage = User.IsInRole("assistant-admin") ? "/Clients/Search" : "/Index";
+        return Url.Page(fallbackPage) ?? "/";
     }
 }
