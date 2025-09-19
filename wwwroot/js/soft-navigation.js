@@ -5,26 +5,17 @@
     }
 
     function showApp() {
-        requestAnimationFrame(() => {
-            body.classList.remove('page-transitioning');
-            body.classList.add('page-loaded');
-        });
+        // Global page transition disabled; kept for API compatibility.
     }
 
     function hideApp() {
-        body.classList.add('page-transitioning');
-        body.classList.remove('page-loaded');
-        if (!app) {
-            return Promise.resolve();
-        }
-        return waitForTransition(app, 'opacity');
+        return Promise.resolve();
     }
 
     showApp();
 
     const root = document.querySelector('[data-soft-root]');
     let app = document.getElementById('app');
-    const spinner = document.getElementById('globalSpinner');
     const toastsHost = document.getElementById('toastsHost');
     const scriptHost = document.getElementById('pageScripts');
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
@@ -34,6 +25,37 @@
     }
 
     let pending = 0;
+    const loadingStates = new WeakMap();
+
+    function setElementLoading(element, loading) {
+        if (!(element instanceof HTMLButtonElement || element instanceof HTMLInputElement)) {
+            return;
+        }
+
+        if (loading) {
+            if (!loadingStates.has(element)) {
+                loadingStates.set(element, {
+                    disabled: element.disabled
+                });
+            }
+            element.classList.add('btn-loading');
+            element.setAttribute('aria-busy', 'true');
+            element.disabled = true;
+            return;
+        }
+
+        const state = loadingStates.get(element);
+        element.classList.remove('btn-loading');
+        element.removeAttribute('aria-busy');
+        if (state) {
+            element.disabled = state.disabled;
+        } else {
+            element.disabled = false;
+        }
+        if (state) {
+            loadingStates.delete(element);
+        }
+    }
 
     function updateAdminNavActive(url) {
         const nav = document.querySelector('[data-admin-nav]');
@@ -126,26 +148,12 @@
         });
     }
 
-    function updateSpinner() {
-        return;
-        if (!spinner) {
-            return;
-        }
-        if (pending > 0) {
-            spinner.classList.remove('hidden');
-        } else {
-            spinner.classList.add('hidden');
-        }
-    }
-
     function beginPending() {
         pending += 1;
-        updateSpinner();
     }
 
     function endPending() {
         pending = Math.max(0, pending - 1);
-        updateSpinner();
     }
 
     function executeSoftScripts(container) {
@@ -342,15 +350,28 @@
 
     async function handleNavigation(url, opts) {
         const options = Object.assign({ method: 'GET', pushState: true }, opts || {});
-        if (!sameOrigin(url)) {
-            hideApp();
-            window.location.href = url;
-            return;
+        const sourceElement = options.sourceElement;
+        delete options.sourceElement;
+
+        if (sourceElement) {
+            setElementLoading(sourceElement, true);
         }
-        const hidePromise = hideApp();
-        const success = await fetchAndSwap(url, options, hidePromise);
-        showApp();
-        return success;
+
+        try {
+            if (!sameOrigin(url)) {
+                hideApp();
+                window.location.href = url;
+                return;
+            }
+            const hidePromise = hideApp();
+            const success = await fetchAndSwap(url, options, hidePromise);
+            showApp();
+            return success;
+        } finally {
+            if (sourceElement) {
+                setElementLoading(sourceElement, false);
+            }
+        }
     }
 
     function onLinkClick(event) {
@@ -362,7 +383,7 @@
             return;
         }
         event.preventDefault();
-        handleNavigation(anchor.href, { method: 'GET', pushState: true });
+        handleNavigation(anchor.href, { method: 'GET', pushState: true, sourceElement: anchor });
     }
 
     function onFormSubmit(event) {
@@ -371,15 +392,19 @@
             return;
         }
         event.preventDefault();
+        let submitter = event.submitter instanceof HTMLElement ? event.submitter : null;
+        if (!submitter) {
+            submitter = form.querySelector('button[type="submit"], input[type="submit"]');
+        }
         const method = (form.method || 'GET').toUpperCase();
         if (method === 'GET') {
             const url = buildGetUrl(form);
-            handleNavigation(url, { method: 'GET', pushState: true });
+            handleNavigation(url, { method: 'GET', pushState: true, sourceElement: submitter });
             return;
         }
         const formData = new FormData(form);
         const action = form.getAttribute('action') || window.location.href;
-        handleNavigation(action, { method, body: formData, pushState: true });
+        handleNavigation(action, { method, body: formData, pushState: true, sourceElement: submitter });
     }
 
     function onPopState(event) {
