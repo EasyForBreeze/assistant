@@ -172,7 +172,7 @@
                             <div class="text-slate-100 font-medium">@user.Username</div>
                             <div class="text-xs text-slate-400">@user.DisplayName</div>
                         </div>
-                        <form method="get" class="flex items-center gap-2" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel">
+                        <form method="get" class="flex items-center gap-2" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel" data-soft-scroll="false">
                             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
                             <input type="hidden" name="clientPage" value="@Model.ClientPage" />

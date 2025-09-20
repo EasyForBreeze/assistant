@@ -140,6 +140,36 @@
         return null;
     }
 
+    function resolveScrollPreference(form, submitter) {
+        function parse(value) {
+            if (typeof value !== 'string') {
+                return null;
+            }
+            const normalized = value.trim().toLowerCase();
+            if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+                return true;
+            }
+            if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+                return false;
+            }
+            return null;
+        }
+
+        const submitterPreference = submitter && submitter.dataset ? parse(submitter.dataset.softScroll) : null;
+        if (submitterPreference !== null) {
+            return submitterPreference;
+        }
+
+        if (form && form.dataset) {
+            const formPreference = parse(form.dataset.softScroll);
+            if (formPreference !== null) {
+                return formPreference;
+            }
+        }
+
+        return null;
+    }
+
     function resolveLoadableElement(element) {
         if (!element || !(element instanceof HTMLElement)) {
             return null;
@@ -495,6 +525,11 @@
             return false;
         }
 
+        const shouldPreserveScroll = options.scroll === false;
+        const previousScroll = shouldPreserveScroll
+            ? { x: window.scrollX || window.pageXOffset || 0, y: window.scrollY || window.pageYOffset || 0 }
+            : null;
+
         const importedMain = document.importNode(newMain, true);
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
@@ -526,8 +561,12 @@
             document.title = newTitle.textContent || document.title;
         }
 
-        if (options.scroll !== false) {
-            window.scrollTo({ top: 0, behavior: 'auto' });
+        if (options.scroll === false) {
+            const targetX = previousScroll ? previousScroll.x : window.scrollX;
+            const targetY = previousScroll ? previousScroll.y : window.scrollY;
+            window.scrollTo({ top: targetY, left: targetX, behavior: 'auto' });
+        } else {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         }
 
         const finalUrl = response.url || requestUrl;
@@ -591,10 +630,15 @@
         event.preventDefault();
         const submitter = resolveSubmitter(event);
         const method = (form.method || 'GET').toUpperCase();
+        const transitionTarget = resolveTransitionTarget(form, submitter);
+        const scrollPreference = resolveScrollPreference(form, submitter);
+        const baseOptions = { pushState: true, trigger: submitter, transition: transitionTarget };
+        if (scrollPreference !== null) {
+            baseOptions.scroll = scrollPreference;
+        }
         if (method === 'GET') {
             const url = buildGetUrl(form, submitter);
-            const transitionTarget = resolveTransitionTarget(form, submitter);
-            handleNavigation(url, { method: 'GET', pushState: true, trigger: submitter, transition: transitionTarget });
+            handleNavigation(url, Object.assign({ method: 'GET' }, baseOptions));
             return;
         }
         const formData = new FormData(form);
@@ -603,8 +647,7 @@
             formData.append(submitter.name, submitValue);
         }
         const action = form.getAttribute('action') || window.location.href;
-        const transitionTarget = resolveTransitionTarget(form, submitter);
-        handleNavigation(action, { method, body: formData, pushState: true, trigger: submitter, transition: transitionTarget });
+        handleNavigation(action, Object.assign({ method, body: formData }, baseOptions));
     }
 
     function onPopState(event) {
