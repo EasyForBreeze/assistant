@@ -605,6 +605,16 @@
             return;
         }
         const globalHidePromise = hideApp();
+        let hidePromise = globalHidePromise;
+        if (transition) {
+            let scopedHidePromise;
+            try {
+                scopedHidePromise = Promise.resolve(transition.hide());
+            } catch (_) {
+                scopedHidePromise = Promise.resolve();
+            }
+            hidePromise = Promise.all([globalHidePromise, scopedHidePromise]);
+        }
         let success;
         try {
             success = await fetchAndSwap(url, options, globalHidePromise, transition);
