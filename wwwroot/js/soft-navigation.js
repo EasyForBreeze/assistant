@@ -35,7 +35,7 @@
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
     const buttonLoadingCounts = new WeakMap();
 
-    function createScopedTransition(selector) {
+    function createTransitionForSelector(selector) {
         if (!selector || !app) {
             return null;
         }
@@ -43,9 +43,6 @@
         try {
             currentElement = app.querySelector(selector);
         } catch (_) {
-            return null;
-        }
-        if (!currentElement) {
             return null;
         }
         let nextElement = null;
@@ -91,6 +88,34 @@
                     nextElement.classList.remove('fade-enter', 'fade-enter-active');
                     nextElement = null;
                 }
+            }
+        };
+    }
+
+    function createScopedTransition(selector) {
+        if (!selector || !app) {
+            return null;
+        }
+        const selectors = selector.split(',').map(part => part.trim()).filter(Boolean);
+        if (selectors.length === 0) {
+            return null;
+        }
+        const transitions = selectors.map(part => createTransitionForSelector(part)).filter(Boolean);
+        if (transitions.length === 0) {
+            return null;
+        }
+        if (transitions.length === 1) {
+            return transitions[0];
+        }
+        return {
+            hide() {
+                return Promise.all(transitions.map(transition => Promise.resolve(transition.hide()))).then(() => undefined);
+            },
+            prepare(incomingRoot) {
+                transitions.forEach(transition => transition.prepare(incomingRoot));
+            },
+            show() {
+                return Promise.all(transitions.map(transition => Promise.resolve(transition.show()))).then(() => undefined);
             }
         };
     }
