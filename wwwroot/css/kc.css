@@ -489,10 +489,6 @@
     .fade-enter-active, .fade-leave-active {
         transition: none !important;
     }
-
-    [data-soft-panel]::before {
-        transition: none !important;
-    }
 }
 
 
@@ -605,30 +601,6 @@ body.page-transitioning #app {
 body.page-loaded #app {
     opacity: 1;
     transform: translateY(0);
-}
-
-[data-soft-panel] {
-    position: relative;
-}
-
-[data-soft-panel]::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.55);
-    border-radius: inherit;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .18s ease;
-    z-index: 10;
-}
-
-[data-soft-panel][data-soft-loading="true"] {
-    pointer-events: none;
-}
-
-[data-soft-panel][data-soft-loading="true"]::before {
-    opacity: 1;
 }
 
 /* ===== Events filters ===== */
