@@ -26,7 +26,6 @@
     let app = document.getElementById('app');
     const toastsHost = document.getElementById('toastsHost');
     const scriptHost = document.getElementById('pageScripts');
-    const spinner = document.getElementById('globalSpinner');
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
     const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
     if (!root || !app) {
@@ -35,18 +34,6 @@
 
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
     const buttonLoadingCounts = new WeakMap();
-    let pending = 0;
-
-    function updateSpinner() {
-        if (!spinner) {
-            return;
-        }
-        if (pending > 0) {
-            spinner.classList.remove('hidden');
-        } else {
-            spinner.classList.add('hidden');
-        }
-    }
 
     function createTransitionForSelector(selector) {
         if (!selector || !app) {
@@ -59,11 +46,9 @@
             return null;
         }
         let nextElement = null;
-        let shouldHide = !!currentElement;
-        let shouldShow = false;
         return {
             hide() {
-                if (!currentElement || !shouldHide) {
+                if (!currentElement) {
                     return Promise.resolve();
                 }
                 currentElement.classList.remove('fade-enter', 'fade-enter-active');
@@ -74,8 +59,6 @@
             },
             prepare(incomingRoot) {
                 nextElement = null;
-                shouldHide = Boolean(currentElement);
-                shouldShow = false;
                 if (!incomingRoot) {
                     return;
                 }
@@ -87,22 +70,11 @@
                 if (!nextElement) {
                     return;
                 }
-                if (currentElement && currentElement.isEqualNode(nextElement)) {
-                    nextElement = null;
-                    shouldHide = false;
-                    shouldShow = false;
-                    return;
-                }
-                if (!currentElement) {
-                    shouldHide = false;
-                }
-                shouldShow = true;
                 nextElement.classList.remove('fade-leave', 'fade-leave-active');
                 nextElement.classList.add('fade-enter');
             },
             async show() {
-                if (!nextElement || !shouldShow) {
-                    nextElement = null;
+                if (!nextElement) {
                     return;
                 }
                 nextElement.classList.remove('fade-leave', 'fade-leave-active');
@@ -115,7 +87,6 @@
                 } finally {
                     nextElement.classList.remove('fade-enter', 'fade-enter-active');
                     nextElement = null;
-                    shouldShow = false;
                 }
             }
         };
@@ -345,15 +316,9 @@
         });
     }
 
-    function beginPending() {
-        pending += 1;
-        updateSpinner();
-    }
+    function beginPending() { }
 
-    function endPending() {
-        pending = Math.max(0, pending - 1);
-        updateSpinner();
-    }
+    function endPending() { }
 
     function executeSoftScripts(container) {
         if (!container) {
@@ -480,7 +445,7 @@
         return url.toString();
     }
 
-    async function fetchAndSwap(url, options, globalHidePromise, transition) {
+    async function fetchAndSwap(url, options, hidePromise, transition) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const fetchInit = {
@@ -534,16 +499,6 @@
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
         }
-        let hidePromise = globalHidePromise;
-        if (transition && typeof transition.hide === 'function') {
-            let scopedHidePromise;
-            try {
-                scopedHidePromise = Promise.resolve(transition.hide());
-            } catch (_) {
-                scopedHidePromise = Promise.resolve();
-            }
-            hidePromise = hidePromise ? Promise.all([hidePromise, scopedHidePromise]) : scopedHidePromise;
-        }
         if (hidePromise) {
             try {
                 await hidePromise;
@@ -556,7 +511,6 @@
         executeSoftScripts(app);
 
         if (transition && typeof transition.show === 'function') {
-            showApp();
             try {
                 await transition.show();
             } catch (_) {
@@ -572,9 +526,9 @@
             document.title = newTitle.textContent || document.title;
         }
 
-        if (options.scroll !== false) {
-            window.scrollTo({ top: 0, behavior: 'auto' });
-        }
+        //if (options.scroll !== false) {
+        //    window.scrollTo({ top: 0, behavior: 'auto' });
+        //}
 
         const finalUrl = response.url || requestUrl;
         if (options.pushState) {
@@ -604,20 +558,10 @@
             window.location.href = url;
             return;
         }
-        const globalHidePromise = hideApp();
-        let hidePromise = globalHidePromise;
-        if (transition) {
-            let scopedHidePromise;
-            try {
-                scopedHidePromise = Promise.resolve(transition.hide());
-            } catch (_) {
-                scopedHidePromise = Promise.resolve();
-            }
-            hidePromise = Promise.all([globalHidePromise, scopedHidePromise]);
-        }
+        const hidePromise = transition ? transition.hide() : hideApp();
         let success;
         try {
-            success = await fetchAndSwap(url, options, globalHidePromise, transition);
+            success = await fetchAndSwap(url, options, hidePromise, transition);
             return success;
         } finally {
             showApp();
