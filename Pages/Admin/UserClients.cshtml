@@ -25,7 +25,7 @@
 </div>
 
 <div class="grid gap-6 lg:grid-cols-2 items-start">
-    <section class="kc-card p-5">
+    <section id="clientSearchPanel" class="kc-card p-5">
         <div class="flex items-center justify-between mb-4">
             <h4 class="text-lg font-semibold text-slate-200">Поиск клиента</h4>
             @if (!string.IsNullOrWhiteSpace(Model.SelectedClientId))
@@ -34,7 +34,7 @@
             }
         </div>
 
-        <form method="get" class="flex flex-col gap-3">
+        <form method="get" class="flex flex-col gap-3" data-soft-transition="#clientSearchPanel">
             <div class="kc-input rounded-xl px-3 py-2 text-sm focus-within:border-white/20 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8" />

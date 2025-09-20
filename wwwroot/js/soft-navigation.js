@@ -35,6 +35,86 @@
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
     const buttonLoadingCounts = new WeakMap();
 
+    function createScopedTransition(selector) {
+        if (!selector || !app) {
+            return null;
+        }
+        let currentElement;
+        try {
+            currentElement = app.querySelector(selector);
+        } catch (_) {
+            return null;
+        }
+        if (!currentElement) {
+            return null;
+        }
+        let nextElement = null;
+        return {
+            hide() {
+                if (!currentElement) {
+                    return Promise.resolve();
+                }
+                currentElement.classList.remove('fade-enter', 'fade-enter-active');
+                currentElement.classList.add('fade-leave');
+                void currentElement.offsetWidth;
+                currentElement.classList.add('fade-leave-active');
+                return waitForTransition(currentElement, 'opacity');
+            },
+            prepare(incomingRoot) {
+                nextElement = null;
+                if (!incomingRoot) {
+                    return;
+                }
+                try {
+                    nextElement = incomingRoot.querySelector(selector);
+                } catch (_) {
+                    nextElement = null;
+                }
+                if (!nextElement) {
+                    return;
+                }
+                nextElement.classList.remove('fade-leave', 'fade-leave-active');
+                nextElement.classList.add('fade-enter');
+            },
+            async show() {
+                if (!nextElement) {
+                    return;
+                }
+                nextElement.classList.remove('fade-leave', 'fade-leave-active');
+                void nextElement.offsetWidth;
+                requestAnimationFrame(() => {
+                    nextElement.classList.add('fade-enter-active');
+                });
+                try {
+                    await waitForTransition(nextElement, 'opacity');
+                } finally {
+                    nextElement.classList.remove('fade-enter', 'fade-enter-active');
+                    nextElement = null;
+                }
+            }
+        };
+    }
+
+    function resolveTransitionTarget(form, submitter) {
+        if (form && form.dataset && form.dataset.softTransition) {
+            return form.dataset.softTransition || null;
+        }
+        if (submitter && submitter.dataset && submitter.dataset.softTransition) {
+            return submitter.dataset.softTransition || null;
+        }
+        if (form instanceof HTMLElement) {
+            const formContainer = form.closest('[data-soft-transition]');
+            if (formContainer && formContainer.dataset && formContainer.dataset.softTransition) {
+                return formContainer.dataset.softTransition || null;
+            }
+        }
+        const container = submitter instanceof HTMLElement ? submitter.closest('[data-soft-transition]') : null;
+        if (container && container.dataset && container.dataset.softTransition) {
+            return container.dataset.softTransition || null;
+        }
+        return null;
+    }
+
     function resolveLoadableElement(element) {
         if (!element || !(element instanceof HTMLElement)) {
             return null;
@@ -340,7 +420,7 @@
         return url.toString();
     }
 
-    async function fetchAndSwap(url, options, hidePromise) {
+    async function fetchAndSwap(url, options, hidePromise, transition) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const fetchInit = {
@@ -391,6 +471,9 @@
         }
 
         const importedMain = document.importNode(newMain, true);
+        if (transition && typeof transition.prepare === 'function') {
+            transition.prepare(importedMain);
+        }
         if (hidePromise) {
             try {
                 await hidePromise;
@@ -401,6 +484,14 @@
         app.replaceWith(importedMain);
         app = importedMain;
         executeSoftScripts(app);
+
+        if (transition && typeof transition.show === 'function') {
+            try {
+                await transition.show();
+            } catch (_) {
+                // Ignore scoped transition failures and continue.
+            }
+        }
 
         refreshToasts(doc);
         refreshScriptHost(doc);
@@ -428,6 +519,9 @@
 
     async function handleNavigation(url, opts) {
         const options = Object.assign({ method: 'GET', pushState: true }, opts || {});
+        const transitionSelector = options.transition;
+        delete options.transition;
+        const transition = transitionSelector ? createScopedTransition(transitionSelector) : null;
         const trigger = options.trigger;
         delete options.trigger;
         const loadingTarget = trigger ? startButtonLoading(trigger) : null;
@@ -439,10 +533,10 @@
             window.location.href = url;
             return;
         }
-        const hidePromise = hideApp();
+        const hidePromise = transition ? transition.hide() : hideApp();
         let success;
         try {
-            success = await fetchAndSwap(url, options, hidePromise);
+            success = await fetchAndSwap(url, options, hidePromise, transition);
             return success;
         } finally {
             showApp();
@@ -474,7 +568,8 @@
         const method = (form.method || 'GET').toUpperCase();
         if (method === 'GET') {
             const url = buildGetUrl(form, submitter);
-            handleNavigation(url, { method: 'GET', pushState: true, trigger: submitter });
+            const transitionTarget = resolveTransitionTarget(form, submitter);
+            handleNavigation(url, { method: 'GET', pushState: true, trigger: submitter, transition: transitionTarget });
             return;
         }
         const formData = new FormData(form);
@@ -483,7 +578,8 @@
             formData.append(submitter.name, submitValue);
         }
         const action = form.getAttribute('action') || window.location.href;
-        handleNavigation(action, { method, body: formData, pushState: true, trigger: submitter });
+        const transitionTarget = resolveTransitionTarget(form, submitter);
+        handleNavigation(action, { method, body: formData, pushState: true, trigger: submitter, transition: transitionTarget });
     }
 
     function onPopState(event) {
