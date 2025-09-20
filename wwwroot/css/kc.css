@@ -465,20 +465,24 @@
 
 .fade-enter {
     opacity: 0;
+    transform: translateY(12px);
 }
 
 .fade-enter-active {
     opacity: 1;
-    transition: opacity .18s ease-in;
+    transform: translateY(0);
+    transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .fade-leave {
     opacity: 1;
+    transform: translateY(0);
 }
 
 .fade-leave-active {
     opacity: 0;
-    transition: opacity .16s ease-out;
+    transform: translateY(12px);
+    transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
