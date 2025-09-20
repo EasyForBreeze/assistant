@@ -26,6 +26,7 @@
     let app = document.getElementById('app');
     const toastsHost = document.getElementById('toastsHost');
     const scriptHost = document.getElementById('pageScripts');
+    const spinner = document.getElementById('globalSpinner');
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
     const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
     if (!root || !app) {
@@ -34,6 +35,18 @@
 
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
     const buttonLoadingCounts = new WeakMap();
+    let pending = 0;
+
+    function updateSpinner() {
+        if (!spinner) {
+            return;
+        }
+        if (pending > 0) {
+            spinner.classList.remove('hidden');
+        } else {
+            spinner.classList.add('hidden');
+        }
+    }
 
     function createTransitionForSelector(selector) {
         if (!selector || !app) {
@@ -316,9 +329,15 @@
         });
     }
 
-    function beginPending() { }
+    function beginPending() {
+        pending += 1;
+        updateSpinner();
+    }
 
-    function endPending() { }
+    function endPending() {
+        pending = Math.max(0, pending - 1);
+        updateSpinner();
+    }
 
     function executeSoftScripts(container) {
         if (!container) {
@@ -511,6 +530,7 @@
         executeSoftScripts(app);
 
         if (transition && typeof transition.show === 'function') {
+            showApp();
             try {
                 await transition.show();
             } catch (_) {
@@ -558,7 +578,17 @@
             window.location.href = url;
             return;
         }
-        const hidePromise = transition ? transition.hide() : hideApp();
+        const globalHidePromise = hideApp();
+        let hidePromise = globalHidePromise;
+        if (transition) {
+            let scopedHidePromise;
+            try {
+                scopedHidePromise = Promise.resolve(transition.hide());
+            } catch (_) {
+                scopedHidePromise = Promise.resolve();
+            }
+            hidePromise = Promise.all([globalHidePromise, scopedHidePromise]);
+        }
         let success;
         try {
             success = await fetchAndSwap(url, options, hidePromise, transition);
