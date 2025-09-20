@@ -7,6 +7,7 @@
     const APP_FADE_DURATION_MS = 350;
     const APP_FADE_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)';
     let appFadeAnimation = null;
+    let lastAppFadeTarget = 1;
 
     function showApp() {
         requestAnimationFrame(() => {
@@ -366,11 +367,19 @@
             return Promise.resolve();
         }
         const element = app;
+        const previousTarget = lastAppFadeTarget;
         cancelAppFade();
         const computed = window.getComputedStyle(element);
         const current = parseFloat(computed.opacity);
-        const fromOpacity = isNaN(current) ? (targetOpacity === 1 ? 0 : 1) : current;
+        let fromOpacity = isNaN(current) ? (targetOpacity === 1 ? 0 : 1) : current;
+        const inlineOpacity = element.style.opacity;
+        const parsedInlineOpacity = parseFloat(inlineOpacity);
+        const hasInlineOpacity = inlineOpacity !== '' && !isNaN(parsedInlineOpacity);
+        if (targetOpacity === 1 && previousTarget === 0 && Math.abs(fromOpacity - targetOpacity) < 0.001) {
+            fromOpacity = hasInlineOpacity ? parsedInlineOpacity : 0;
+        }
         if (Math.abs(fromOpacity - targetOpacity) < 0.001) {
+            lastAppFadeTarget = targetOpacity;
             if (targetOpacity === 1) {
                 element.style.removeProperty('opacity');
             } else {
@@ -401,6 +410,7 @@
                     } else {
                         element.style.opacity = String(targetOpacity);
                     }
+                    lastAppFadeTarget = targetOpacity;
                     resolve();
                 };
                 animation.addEventListener('finish', finalize, { once: true });
@@ -417,6 +427,7 @@
             if (targetOpacity === 1) {
                 element.style.removeProperty('opacity');
             }
+            lastAppFadeTarget = targetOpacity;
             element.style.removeProperty('transition-property');
             element.style.removeProperty('transition-duration');
             element.style.removeProperty('transition-timing-function');
