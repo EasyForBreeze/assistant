@@ -25,7 +25,7 @@
 </div>
 
 <div class="grid gap-6 lg:grid-cols-2 items-start">
-    <section id="clientSearchPanel" class="kc-card p-5">
+    <section id="clientSearchPanel" class="kc-card p-5" data-soft-transition="#clientSearchPanel,#selectedClientCard,#grantAccessPanel">
         <div class="flex items-center justify-between mb-4">
             <h4 class="text-lg font-semibold text-slate-200">Поиск клиента</h4>
             @if (!string.IsNullOrWhiteSpace(Model.SelectedClientId))
@@ -34,7 +34,7 @@
             }
         </div>
 
-        <form method="get" class="flex flex-col gap-3" data-soft-transition="#clientSearchPanel">
+        <form method="get" class="flex flex-col gap-3" data-soft-transition="#clientSearchPanel,#selectedClientCard,#grantAccessPanel">
             <div class="kc-input rounded-xl px-3 py-2 text-sm focus-within:border-white/20 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8" />
@@ -65,7 +65,7 @@
                             <div class="text-slate-100 font-medium">@client.ClientId</div>
                             <div class="text-xs text-slate-400 uppercase tracking-wide">Realm: @client.Realm</div>
                         </div>
-                        <form method="get" class="flex items-center gap-2">
+                        <form method="get" class="flex items-center gap-2" data-soft-transition="#clientSearchPanel,#selectedClientCard,#grantAccessPanel">
                             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
                             <input type="hidden" name="clientPage" value="@Model.ClientPage" />
@@ -87,7 +87,7 @@
                         <div class="flex items-center gap-2">
                             @if (Model.ClientHasPreviousPage)
                             {
-                                <form method="get" class="inline-flex">
+                                <form method="get" class="inline-flex" data-soft-transition="#clientSearchPanel,#selectedClientCard,#grantAccessPanel">
                                     <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                                     <input type="hidden" name="userQuery" value="@Model.UserQuery" />
                                     <input type="hidden" name="clientPage" value="@(Model.ClientPage - 1)" />
@@ -103,7 +103,7 @@
 
                             @if (Model.ClientHasNextPage)
                             {
-                                <form method="get" class="inline-flex">
+                                <form method="get" class="inline-flex" data-soft-transition="#clientSearchPanel,#selectedClientCard,#grantAccessPanel">
                                     <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                                     <input type="hidden" name="userQuery" value="@Model.UserQuery" />
                                     <input type="hidden" name="clientPage" value="@(Model.ClientPage + 1)" />
@@ -135,13 +135,13 @@
         </div>
     </section>
 
-    <section class="kc-card p-5">
+    <section id="userSearchPanel" class="kc-card p-5" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel">
         <div class="flex items-center justify-between mb-4">
             <h4 class="text-lg font-semibold text-slate-200">Поиск пользователя</h4>
             <span class="text-xs text-slate-400">Realm: @Model.PrimaryRealm</span>
         </div>
 
-        <form method="get" class="flex flex-col gap-3">
+        <form method="get" class="flex flex-col gap-3" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel">
             <div class="kc-input rounded-xl px-3 py-2 text-sm focus-within:border-white/20 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8" />
@@ -172,7 +172,7 @@
                             <div class="text-slate-100 font-medium">@user.Username</div>
                             <div class="text-xs text-slate-400">@user.DisplayName</div>
                         </div>
-                        <form method="get" class="flex items-center gap-2">
+                        <form method="get" class="flex items-center gap-2" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel">
                             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                             <input type="hidden" name="userQuery" value="@Model.UserQuery" />
                             <input type="hidden" name="clientPage" value="@Model.ClientPage" />
@@ -194,7 +194,7 @@
                         <div class="flex items-center gap-2">
                             @if (Model.UserHasPreviousPage)
                             {
-                                <form method="get" class="inline-flex">
+                                <form method="get" class="inline-flex" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel">
                                     <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                                     <input type="hidden" name="userQuery" value="@Model.UserQuery" />
                                     <input type="hidden" name="clientPage" value="@Model.ClientPage" />
@@ -210,7 +210,7 @@
 
                             @if (Model.UserHasNextPage)
                             {
-                                <form method="get" class="inline-flex">
+                                <form method="get" class="inline-flex" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel">
                                     <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
                                     <input type="hidden" name="userQuery" value="@Model.UserQuery" />
                                     <input type="hidden" name="clientPage" value="@Model.ClientPage" />
@@ -245,10 +245,10 @@
 
 @if (Model.HasClientSelection || Model.HasUserSelection)
 {
-    <div class="grid gap-6 mt-6 lg:grid-cols-2">
+    <div class="grid gap-6 mt-6 lg:grid-cols-2" id="selectionSummary">
         @if (Model.HasClientSelection)
         {
-            <div class="kc-card p-5">
+            <div class="kc-card p-5" id="selectedClientCard">
                 <h4 class="text-lg font-semibold text-slate-200 mb-3">Выбранный клиент</h4>
                 <div class="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
                     <div class="text-slate-100 font-medium text-lg">@Model.SelectedClientId</div>
@@ -259,7 +259,7 @@
 
         @if (Model.HasUserSelection)
         {
-            <div class="kc-card p-5">
+            <div class="kc-card p-5" id="selectedUserCard">
                 <h4 class="text-lg font-semibold text-slate-200 mb-3">Выбранный пользователь</h4>
                 <div class="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
                     <div class="text-slate-100 font-medium text-lg">@Model.SelectedUsername</div>
@@ -272,7 +272,7 @@
 
 @if (Model.CanGrant)
 {
-    <div class="kc-card p-5 mt-6">
+    <div id="grantAccessPanel" class="kc-card p-5 mt-6" data-soft-transition="#grantAccessPanel,#userAssignmentsPanel">
         <h4 class="text-lg font-semibold text-slate-200">Предоставить доступ</h4>
         <p class="text-sm text-slate-400 mt-2">
             Клиент <span class="text-slate-200 font-medium">@Model.SelectedClientId</span> из realm
@@ -280,7 +280,7 @@
             <span class="text-slate-200 font-medium">@Model.SelectedUsername</span>.
         </p>
 
-        <form method="post" asp-page-handler="Grant" class="mt-4 flex flex-wrap items-center gap-3">
+        <form method="post" asp-page-handler="Grant" class="mt-4 flex flex-wrap items-center gap-3" data-soft-transition="#grantAccessPanel,#userAssignmentsPanel">
             <input type="hidden" name="realm" value="@Model.SelectedClientRealm" />
             <input type="hidden" name="clientId" value="@Model.SelectedClientId" />
             <input type="hidden" name="clientName" value="@Model.SelectedClientName" />
@@ -297,7 +297,7 @@
 
 @if (Model.HasUserSelection)
 {
-    <div class="kc-card p-5 mt-6">
+    <div id="userAssignmentsPanel" class="kc-card p-5 mt-6" data-soft-transition="#userAssignmentsPanel">
         <div class="flex items-center justify-between mb-4">
             <h4 class="text-lg font-semibold text-slate-200">Клиенты пользователя @Model.SelectedUsername</h4>
             <span class="text-xs text-slate-400">Всего: @Model.Assignments.Count</span>
@@ -313,7 +313,7 @@
                             <div class="text-slate-100 font-medium">@client.ClientId</div>
                             <div class="text-xs text-slate-400 uppercase tracking-wide">Realm: @client.Realm</div>
                         </div>
-                        <form method="post" asp-page-handler="Revoke" class="flex items-center gap-2">
+                        <form method="post" asp-page-handler="Revoke" class="flex items-center gap-2" data-soft-transition="#userAssignmentsPanel">
                             <input type="hidden" name="realm" value="@client.Realm" />
                             <input type="hidden" name="clientId" value="@client.ClientId" />
                             <input type="hidden" name="username" value="@Model.SelectedUsername" />
