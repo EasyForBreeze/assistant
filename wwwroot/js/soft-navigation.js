@@ -59,9 +59,11 @@
             return null;
         }
         let nextElement = null;
+        let shouldHide = !!currentElement;
+        let shouldShow = false;
         return {
             hide() {
-                if (!currentElement) {
+                if (!currentElement || !shouldHide) {
                     return Promise.resolve();
                 }
                 currentElement.classList.remove('fade-enter', 'fade-enter-active');
@@ -72,6 +74,8 @@
             },
             prepare(incomingRoot) {
                 nextElement = null;
+                shouldHide = Boolean(currentElement);
+                shouldShow = false;
                 if (!incomingRoot) {
                     return;
                 }
@@ -83,11 +87,22 @@
                 if (!nextElement) {
                     return;
                 }
+                if (currentElement && currentElement.isEqualNode(nextElement)) {
+                    nextElement = null;
+                    shouldHide = false;
+                    shouldShow = false;
+                    return;
+                }
+                if (!currentElement) {
+                    shouldHide = false;
+                }
+                shouldShow = true;
                 nextElement.classList.remove('fade-leave', 'fade-leave-active');
                 nextElement.classList.add('fade-enter');
             },
             async show() {
-                if (!nextElement) {
+                if (!nextElement || !shouldShow) {
+                    nextElement = null;
                     return;
                 }
                 nextElement.classList.remove('fade-leave', 'fade-leave-active');
@@ -100,6 +115,7 @@
                 } finally {
                     nextElement.classList.remove('fade-enter', 'fade-enter-active');
                     nextElement = null;
+                    shouldShow = false;
                 }
             }
         };
@@ -464,7 +480,7 @@
         return url.toString();
     }
 
-    async function fetchAndSwap(url, options, hidePromise, transition) {
+    async function fetchAndSwap(url, options, globalHidePromise, transition) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const fetchInit = {
@@ -517,6 +533,16 @@
         const importedMain = document.importNode(newMain, true);
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
+        }
+        let hidePromise = globalHidePromise;
+        if (transition && typeof transition.hide === 'function') {
+            let scopedHidePromise;
+            try {
+                scopedHidePromise = Promise.resolve(transition.hide());
+            } catch (_) {
+                scopedHidePromise = Promise.resolve();
+            }
+            hidePromise = hidePromise ? Promise.all([hidePromise, scopedHidePromise]) : scopedHidePromise;
         }
         if (hidePromise) {
             try {
@@ -591,7 +617,7 @@
         }
         let success;
         try {
-            success = await fetchAndSwap(url, options, hidePromise, transition);
+            success = await fetchAndSwap(url, options, globalHidePromise, transition);
             return success;
         } finally {
             showApp();
