@@ -525,6 +525,11 @@
             return false;
         }
 
+        const shouldPreserveScroll = options.scroll === false;
+        const previousScroll = shouldPreserveScroll
+            ? { x: window.scrollX || window.pageXOffset || 0, y: window.scrollY || window.pageYOffset || 0 }
+            : null;
+
         const importedMain = document.importNode(newMain, true);
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
@@ -556,8 +561,12 @@
             document.title = newTitle.textContent || document.title;
         }
 
-        if (options.scroll !== false) {
-            window.scrollTo({ top: 0, behavior: 'auto' });
+        if (options.scroll === false) {
+            const targetX = previousScroll ? previousScroll.x : window.scrollX;
+            const targetY = previousScroll ? previousScroll.y : window.scrollY;
+            window.scrollTo({ top: targetY, left: targetX, behavior: 'auto' });
+        } else {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         }
 
         const finalUrl = response.url || requestUrl;
