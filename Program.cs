@@ -181,14 +181,19 @@ app.MapPost("/api/access-request", async (
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
-    if (string.IsNullOrWhiteSpace(payload?.FullName))
+    if (payload is null || string.IsNullOrWhiteSpace(payload.FullName))
     {
         return Results.BadRequest(new { error = "Укажите ФИО." });
     }
 
+    if (string.IsNullOrWhiteSpace(payload.Email))
+    {
+        return Results.BadRequest(new { error = "Укажите email." });
+    }
+
     try
     {
-        await emailSender.SendAsync(payload.FullName.Trim(), ct);
+        await emailSender.SendAsync(payload.FullName.Trim(), payload.Email.Trim(), ct);
         return Results.Ok();
     }
     catch (InvalidOperationException ex)

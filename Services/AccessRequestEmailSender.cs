@@ -8,7 +8,7 @@ namespace Assistant.Services;
 
 public interface IAccessRequestEmailSender
 {
-    Task SendAsync(string fullName, CancellationToken cancellationToken = default);
+    Task SendAsync(string fullName, string email, CancellationToken cancellationToken = default);
 }
 
 public sealed class AccessRequestEmailSender : IAccessRequestEmailSender
@@ -22,9 +22,10 @@ public sealed class AccessRequestEmailSender : IAccessRequestEmailSender
         _logger = logger;
     }
 
-    public async Task SendAsync(string fullName, CancellationToken cancellationToken = default)
+    public async Task SendAsync(string fullName, string email, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fullName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
 
         var host = _options.Host;
         if (string.IsNullOrWhiteSpace(host))
@@ -48,11 +49,14 @@ public sealed class AccessRequestEmailSender : IAccessRequestEmailSender
             }
         }
 
+        var trimmedFullName = fullName.Trim();
+        var trimmedEmail = email.Trim();
+
         using var message = new MailMessage
         {
             From = new MailAddress(fromAddress),
             Subject = "Заявка на доступ к Assistant",
-            Body = $"Прошу дать доступ к Assistant{Environment.NewLine}{fullName.Trim()}.",
+            Body = $"Прошу дать доступ к Assistant{Environment.NewLine}{trimmedFullName}.{Environment.NewLine}{Environment.NewLine}Email: {trimmedEmail}",
             SubjectEncoding = Encoding.UTF8,
             BodyEncoding = Encoding.UTF8
         };
@@ -72,11 +76,11 @@ public sealed class AccessRequestEmailSender : IAccessRequestEmailSender
         try
         {
             await client.SendMailAsync(message, cancellationToken);
-            _logger.LogInformation("Sent access request email for {FullName}.", fullName);
+            _logger.LogInformation("Sent access request email for {FullName} ({Email}).", trimmedFullName, trimmedEmail);
         }
         catch (Exception ex) when (ex is SmtpException or InvalidOperationException or FormatException)
         {
-            _logger.LogError(ex, "Failed to send access request email for {FullName}.", fullName);
+            _logger.LogError(ex, "Failed to send access request email for {FullName} ({Email}).", trimmedFullName, trimmedEmail);
             throw;
         }
     }
