@@ -3,7 +3,60 @@
 @{
     ViewData["Title"] = "Недостаточно прав";
 }
+<section class="max-w-2xl mx-auto py-10 space-y-8 text-slate-100">
+    <header class="space-y-3">
+        <h1 class="text-3xl font-semibold">Недостаточно прав</h1>
+        <p class="text-sm text-slate-300">
+            У вашей учётной записи нет необходимого доступа для работы с сервисом. Получите одну из требуемых ролей или
+            войдите под другой учётной записью.
+        </p>
+    </header>
 
+    <section class="rounded-xl border border-slate-800 bg-slate-950/60 p-6 space-y-4">
+        <p class="text-sm text-slate-200">
+            Для продолжения требуется хотя бы одна из следующих ролей:
+        </p>
+        <ul class="list-disc list-inside space-y-1 text-sm text-slate-300">
+            @foreach (var role in Model.RequiredRoles)
+            {
+                <li>@role</li>
+            }
+        </ul>
+        <p class="text-sm text-slate-300">
+            Если у вас есть учётная запись с необходимыми правами, выполните вход под ней или запросите доступ ниже.
+        </p>
+    </section>
+
+    <section class="rounded-xl border border-slate-800 bg-slate-950/60 p-6 space-y-4">
+        <h2 class="text-lg font-medium text-slate-100">Запросить доступ</h2>
+        <p class="text-sm text-slate-300">
+            Заполните форму, и мы подготовим письмо с просьбой о предоставлении доступа.
+        </p>
+        <form id="access-request-form" class="space-y-4">
+            <div class="space-y-2">
+                <label for="access-request-fullname" class="block text-sm text-slate-200">ФИО</label>
+                <input id="access-request-fullname" name="fullName" type="text" required
+                       class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                       placeholder="Иванов Иван Иванович">
+            </div>
+            <div class="text-xs text-slate-400">
+                Нажатие на кнопку откроет ваш почтовый клиент с готовым письмом на адрес
+                <a href="mailto:breams@mail.ru" class="text-sky-300 hover:text-sky-200">breams@mail.ru</a>.
+            </div>
+            <button type="submit" class="btn-primary">Отправить заявку</button>
+        </form>
+    </section>
+
+    <section class="rounded-xl border border-slate-800 bg-slate-950/60 p-6 space-y-4">
+        <h2 class="text-lg font-medium text-slate-100">Войти под другой учётной записью</h2>
+        <p class="text-sm text-slate-300">
+            Если у вас есть другой аккаунт с нужными правами, выйдите и войдите под ним.
+        </p>
+        <form method="post" asp-page="/Account/Logout">
+            <button type="submit" class="btn-secondary">Выйти и сменить аккаунт</button>
+        </form>
+    </section>
+=======
 <div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
     <div class="absolute inset-0 pointer-events-none">
         <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
@@ -54,3 +107,34 @@
         </form>
     </div>
 </section>
+
+<script>
+    (() => {
+        const form = document.getElementById('access-request-form');
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const fullNameInput = document.getElementById('access-request-fullname');
+            if (!(fullNameInput instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const fullName = fullNameInput.value.trim();
+            if (!fullName) {
+                fullNameInput.focus();
+                fullNameInput.reportValidity();
+                return;
+            }
+
+            const recipient = 'breams@mail.ru';
+            const subject = encodeURIComponent('Заявка на доступ к Assistant');
+            const body = encodeURIComponent(`Прошу дать доступ к Assistant\n${fullName}`);
+
+            window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
+        });
+    })();
+</script>
