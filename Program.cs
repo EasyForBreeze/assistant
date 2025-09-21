@@ -1,7 +1,6 @@
 using Assistant.Interfaces;
 using Assistant.Services;
 using Assistant.KeyCloak;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -49,13 +48,7 @@ builder.Services.AddHttpClient("confluence-wiki", client =>
     client.Timeout = TimeSpan.FromSeconds(100);
 });
 builder.Services.AddSingleton<ConfluenceWikiService>();
-builder.Services.AddAuthorization(options =>
-{
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .RequireRole("assistant-admin", "assistant-user")
-        .Build();
-});
+builder.Services.AddAuthorization();
 
 builder.Services.Configure<ForwardedHeadersOptions>(opt =>
 {
@@ -71,7 +64,6 @@ builder.Services.AddAuthentication(options =>
 {
     options.Cookie.Name = ".KeycloakShell.Auth";
     options.SlidingExpiration = true;
-    options.AccessDeniedPath = "/NoAccess";
 })
 .AddOpenIdConnect(options =>
 {
