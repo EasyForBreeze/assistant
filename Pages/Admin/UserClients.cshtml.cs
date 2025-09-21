@@ -1,3 +1,4 @@
+using System;
 using Assistant.Interfaces;
 using Assistant.KeyCloak;
 using Assistant.Services;
@@ -294,6 +295,30 @@ public sealed class UserClientsModel : PageModel
         }
 
         var summary = ClientSummary.ForLookup(realm, clientId, string.IsNullOrWhiteSpace(clientName) ? null : clientName);
+
+        var existingAssignments = await _repo.GetForUserAsync(username, isAdmin: false, ct);
+        var alreadyAssigned = existingAssignments.Any(a =>
+            string.Equals(a.ClientId, clientId, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(a.Realm, realm, StringComparison.OrdinalIgnoreCase));
+
+        if (alreadyAssigned)
+        {
+            TempData["FlashError"] = $"Клиент '{clientId}' ({realm}) уже назначен пользователю {username}.";
+
+            return RedirectToPage(new
+            {
+                clientQuery,
+                userQuery,
+                clientPage,
+                userPage,
+                assignmentPage = normalizedAssignmentPage,
+                selectedUsername = username,
+                selectedUserDisplay = string.IsNullOrWhiteSpace(userDisplay) ? username : userDisplay,
+                selectedClientId = clientId,
+                selectedClientRealm = realm,
+                selectedClientName = summary.Name
+            });
+        }
 
         await _repo.AddAsync(username, summary, ct);
 
