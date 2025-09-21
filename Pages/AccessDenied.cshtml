@@ -3,108 +3,91 @@
 @{
     ViewData["Title"] = "Недостаточно прав";
 }
-<section class="max-w-2xl mx-auto py-10 space-y-8 text-slate-100">
-    <header class="space-y-3">
-        <h1 class="text-3xl font-semibold">Недостаточно прав</h1>
-        <p class="text-sm text-slate-300">
-            У вашей учётной записи нет необходимого доступа для работы с сервисом. Получите одну из требуемых ролей или
-            войдите под другой учётной записью.
-        </p>
-    </header>
+<section class="relative mx-auto max-w-4xl px-4 py-12 text-slate-100">
+    <div class="absolute inset-x-0 -top-10 -z-10 mx-auto h-72 w-full max-w-3xl rounded-full bg-gradient-to-r from-sky-500/20 via-emerald-400/10 to-indigo-500/20 blur-3xl"></div>
 
-    <section class="rounded-xl border border-slate-800 bg-slate-950/60 p-6 space-y-4">
-        <p class="text-sm text-slate-200">
-            Для продолжения требуется хотя бы одна из следующих ролей:
-        </p>
-        <ul class="list-disc list-inside space-y-1 text-sm text-slate-300">
-            @foreach (var role in Model.RequiredRoles)
-            {
-                <li>@role</li>
-            }
-        </ul>
-        <p class="text-sm text-slate-300">
-            Если у вас есть учётная запись с необходимыми правами, выполните вход под ней или запросите доступ ниже.
-        </p>
-    </section>
+    <div class="overflow-hidden rounded-3xl border border-slate-800/70 bg-slate-950/70 shadow-[0_30px_120px_rgba(7,11,25,0.65)]">
+        <div class="relative">
+            <div class="pointer-events-none absolute -top-24 right-8 h-64 w-64 rounded-full bg-sky-500/25 blur-3xl" aria-hidden="true"></div>
+            <div class="pointer-events-none absolute -bottom-28 left-12 h-64 w-64 rounded-full bg-emerald-500/15 blur-3xl" aria-hidden="true"></div>
 
-    <section class="rounded-xl border border-slate-800 bg-slate-950/60 p-6 space-y-4">
-        <h2 class="text-lg font-medium text-slate-100">Запросить доступ</h2>
-        <p class="text-sm text-slate-300">
-            Заполните форму, и мы подготовим письмо с просьбой о предоставлении доступа.
-        </p>
-        <form id="access-request-form" class="space-y-4">
-            <div class="space-y-2">
-                <label for="access-request-fullname" class="block text-sm text-slate-200">ФИО</label>
-                <input id="access-request-fullname" name="fullName" type="text" required
-                       class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-                       placeholder="Иванов Иван Иванович">
+            <div class="relative z-10 flex flex-col gap-10 p-8 md:p-12">
+                <header class="space-y-4">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-800/70 bg-slate-900/60 px-4 py-1 text-xs uppercase tracking-widest text-slate-300/80">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M12 9v4m0 4h.01" />
+                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9Z" />
+                        </svg>
+                        доступ ограничен
+                    </span>
+                    <div class="space-y-2">
+                        <h1 class="text-3xl font-semibold tracking-tight text-white md:text-4xl">Недостаточно прав</h1>
+                        <p class="text-sm leading-relaxed text-slate-300">
+                            У вашей учётной записи нет необходимого доступа для работы с Assistant. Получите одну из требуемых ролей
+                            или войдите под другой учётной записью.
+                        </p>
+                    </div>
+                </header>
+
+                <div class="grid gap-6 lg:grid-cols-[1.05fr_1fr]">
+                    <article class="rounded-2xl border border-slate-800/70 bg-slate-900/50 p-6 shadow-inner shadow-slate-950/40">
+                        <h2 class="text-base font-medium text-slate-100">Необходимые роли</h2>
+                        <p class="mt-2 text-sm text-slate-300">
+                            Для продолжения работы требуется как минимум одна из ролей из списка ниже.
+                        </p>
+                        <ul class="mt-4 flex flex-wrap gap-2">
+                            @foreach (var role in Model.RequiredRoles)
+                            {
+                                <li class="inline-flex items-center rounded-full border border-slate-700/70 bg-slate-950/60 px-3 py-1 text-xs font-medium text-slate-200">
+                                    @role
+                                </li>
+                            }
+                        </ul>
+                        <p class="mt-4 text-sm text-slate-400">
+                            Если нужная роль отсутствует, отправьте запрос на предоставление доступа — мы подскажем, что делать дальше.
+                        </p>
+                    </article>
+
+                    <article class="rounded-2xl border border-slate-800/70 bg-gradient-to-br from-slate-900/70 via-slate-950/80 to-slate-950/50 p-6 shadow-inner shadow-slate-950/40">
+                        <h2 class="text-base font-medium text-slate-100">Запросить доступ</h2>
+                        <p class="mt-2 text-sm text-slate-300">
+                            Заполните ваши данные — мы сформируем письмо в отдел поддержки.
+                        </p>
+                        <form id="access-request-form" class="mt-5 space-y-4">
+                            <div class="space-y-2">
+                                <label for="access-request-fullname" class="block text-xs font-semibold uppercase tracking-wide text-slate-400">ФИО</label>
+                                <input id="access-request-fullname" name="fullName" type="text" required
+                                       class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                                       placeholder="Иванов Иван Иванович">
+                            </div>
+                            <p class="text-xs text-slate-400">
+                                После отправки откроется ваш почтовый клиент с готовым письмом на адрес
+                                <a href="mailto:breams@mail.ru" class="font-medium text-sky-300 hover:text-sky-200">breams@mail.ru</a>.
+                            </p>
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/20 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-400/60 hover:bg-sky-500/30">
+                                Отправить заявку
+                            </button>
+                        </form>
+                    </article>
+                </div>
+
+                <div class="rounded-2xl border border-slate-800/70 bg-slate-900/40 p-6 text-sm text-slate-300 md:flex md:items-center md:justify-between md:gap-6">
+                    <div class="space-y-1">
+                        <h2 class="text-base font-medium text-slate-100">Войти под другой учётной записью</h2>
+                        <p class="text-sm text-slate-300">
+                            Если у вас есть другой аккаунт с подходящими правами, выйдите из текущей сессии и авторизуйтесь снова.
+                        </p>
+                    </div>
+                    <form method="post" asp-page="/Account/Logout" class="mt-4 md:mt-0">
+                        <button type="submit"
+                                class="inline-flex items-center justify-center rounded-xl border border-slate-700/70 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-900/60">
+                            Выйти и сменить аккаунт
+                        </button>
+                    </form>
+                </div>
             </div>
-            <div class="text-xs text-slate-400">
-                Нажатие на кнопку откроет ваш почтовый клиент с готовым письмом на адрес
-                <a href="mailto:breams@mail.ru" class="text-sky-300 hover:text-sky-200">breams@mail.ru</a>.
-            </div>
-            <button type="submit" class="btn-primary">Отправить заявку</button>
-        </form>
-    </section>
-
-    <section class="rounded-xl border border-slate-800 bg-slate-950/60 p-6 space-y-4">
-        <h2 class="text-lg font-medium text-slate-100">Войти под другой учётной записью</h2>
-        <p class="text-sm text-slate-300">
-            Если у вас есть другой аккаунт с нужными правами, выйдите и войдите под ним.
-        </p>
-        <form method="post" asp-page="/Account/Logout">
-            <button type="submit" class="btn-secondary">Выйти и сменить аккаунт</button>
-        </form>
-    </section>
-=======
-<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
-    <div class="absolute inset-0 pointer-events-none">
-        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(16,185,129,.6), rgba(59,130,246,.4))"></div>
-        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35))"></div>
-    </div>
-
-    <div class="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(99,102,241,0.25)]">
-                Недостаточно прав
-            </h1>
-            <p class="text-slate-200/80 mt-2 text-sm max-w-2xl">
-                У вашей учётной записи нет необходимого доступа для работы с сервисом. Получите одну из требуемых ролей или войдите под другой учётной записью.
-            </p>
         </div>
-    </div>
-</div>
-
-<section class="max-w-3xl mx-auto space-y-5">
-    <div class="kc-card p-6 space-y-4 text-slate-200/90">
-        <p class="leading-relaxed">
-            Для продолжения требуется хотя бы одна из следующих ролей:
-        </p>
-        <ul class="list-disc list-inside space-y-1 text-sm text-slate-300/90">
-            @foreach (var role in Model.RequiredRoles)
-            {
-                <li><code class="px-2 py-0.5 rounded bg-slate-900/50 text-slate-100">@role</code></li>
-            }
-        </ul>
-        <p class="text-sm text-slate-300/90">
-            Для получения доступа обратитесь по почте
-            <a href="mailto:breams@mail.ru" class="text-sky-300 hover:text-sky-200 underline decoration-dotted">
-                breams@mail.ru
-            </a>.
-        </p>
-    </div>
-
-    <div class="kc-card p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-slate-200/90">
-        <div class="text-sm text-slate-300/90">
-            Если у вас есть учётная запись с необходимыми правами, выполните вход под ней.
-        </div>
-        <form method="post" asp-page="/Account/Logout">
-            <button type="submit" class="btn-primary whitespace-nowrap">
-                Выйти и войти под другой учётной записью
-            </button>
-        </form>
     </div>
 </section>
 
