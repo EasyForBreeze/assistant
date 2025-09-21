@@ -40,16 +40,20 @@ public sealed class UserClientsModel : PageModel
     [BindProperty(SupportsGet = true)] public string? SelectedUserDisplay { get; set; }
     [BindProperty(SupportsGet = true)] public int ClientPage { get; set; } = 1;
     [BindProperty(SupportsGet = true)] public int UserPage { get; set; } = 1;
+    [BindProperty(SupportsGet = true)] public int AssignmentPage { get; set; } = 1;
 
     public List<ClientSummary> ClientResults { get; private set; } = [];
     public List<UserSearchResult> UserResults { get; private set; } = [];
     public List<ClientSummary> Assignments { get; private set; } = [];
+    public List<ClientSummary> AssignmentPageItems { get; private set; } = [];
 
     public int ClientTotalPages { get; private set; }
     public int UserTotalPages { get; private set; }
+    public int AssignmentTotalPages { get; private set; }
 
     public bool ClientHasNextPage { get; private set; }
     public bool UserHasNextPage { get; private set; }
+    public bool AssignmentHasNextPage { get; private set; }
 
     public string PrimaryRealm => _users.PrimaryRealm;
 
@@ -62,6 +66,7 @@ public sealed class UserClientsModel : PageModel
 
     public bool ClientHasPreviousPage => ClientPage > 1;
     public bool UserHasPreviousPage => UserPage > 1;
+    public bool AssignmentHasPreviousPage => AssignmentPage > 1;
 
     public int MinimumQueryLength => MinimumQueryLengthValue;
 
@@ -72,6 +77,7 @@ public sealed class UserClientsModel : PageModel
     {
         ClientPage = NormalizePage(ClientPage);
         UserPage = NormalizePage(UserPage);
+        AssignmentPage = NormalizePage(AssignmentPage);
         await LoadClientResultsAsync(ct);
         await LoadUserResultsAsync(ct);
         await LoadAssignmentsAsync(ct);
@@ -215,10 +221,43 @@ public sealed class UserClientsModel : PageModel
         if (!HasUserSelection)
         {
             Assignments = [];
+            AssignmentPageItems = [];
+            AssignmentTotalPages = 0;
+            AssignmentHasNextPage = false;
             return;
         }
 
-        Assignments = await _repo.GetForUserAsync(SelectedUsername!, isAdmin: false, ct);
+        var assignments = await _repo.GetForUserAsync(SelectedUsername!, isAdmin: false, ct);
+        if (assignments.Count == 0)
+        {
+            Assignments = [];
+            AssignmentPageItems = [];
+            AssignmentTotalPages = 0;
+            AssignmentHasNextPage = false;
+            return;
+        }
+
+        var ordered = assignments
+            .OrderBy(c => c.Realm, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => c.ClientId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var pageSize = PageSize;
+        var totalPages = (int)Math.Ceiling(ordered.Count / (double)pageSize);
+        if (totalPages > 0 && AssignmentPage > totalPages)
+        {
+            AssignmentPage = totalPages;
+        }
+
+        var skip = (AssignmentPage - 1) * pageSize;
+
+        Assignments = ordered;
+        AssignmentTotalPages = totalPages;
+        AssignmentHasNextPage = ordered.Count > skip + pageSize;
+        AssignmentPageItems = ordered
+            .Skip(skip)
+            .Take(pageSize)
+            .ToList();
     }
 
     public async Task<IActionResult> OnPostGrantAsync(
@@ -231,8 +270,11 @@ public sealed class UserClientsModel : PageModel
         string? userQuery,
         int? clientPage,
         int? userPage,
+        int? assignmentPage,
         CancellationToken ct)
     {
+        var normalizedAssignmentPage = NormalizePage(assignmentPage ?? 1);
+
         if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(username))
         {
             TempData["FlashError"] = "Выберите клиента и пользователя, прежде чем назначать доступ.";
@@ -242,6 +284,7 @@ public sealed class UserClientsModel : PageModel
                 userQuery,
                 clientPage,
                 userPage,
+                assignmentPage = normalizedAssignmentPage,
                 selectedUsername = username,
                 selectedUserDisplay = userDisplay,
                 selectedClientId = clientId,
@@ -262,6 +305,7 @@ public sealed class UserClientsModel : PageModel
             userQuery,
             clientPage,
             userPage,
+            assignmentPage = normalizedAssignmentPage,
             selectedUsername = username,
             selectedUserDisplay = string.IsNullOrWhiteSpace(userDisplay) ? username : userDisplay,
             selectedClientId = clientId,
@@ -279,8 +323,11 @@ public sealed class UserClientsModel : PageModel
         string? userQuery,
         int? clientPage,
         int? userPage,
+        int? assignmentPage,
         CancellationToken ct)
     {
+        var normalizedAssignmentPage = NormalizePage(assignmentPage ?? 1);
+
         if (!string.IsNullOrWhiteSpace(realm)
             && !string.IsNullOrWhiteSpace(clientId)
             && !string.IsNullOrWhiteSpace(username))
@@ -299,6 +346,7 @@ public sealed class UserClientsModel : PageModel
             userQuery,
             clientPage,
             userPage,
+            assignmentPage = normalizedAssignmentPage,
             selectedUsername = username,
             selectedUserDisplay = string.IsNullOrWhiteSpace(userDisplay) ? username : userDisplay
         });
