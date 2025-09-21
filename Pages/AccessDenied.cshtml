@@ -77,7 +77,7 @@
                                 </p>
                             </article>
 
-                            <article class="rounded-2xl border border-slate-800/70 bg-gradient-to-br from-slate-900/70 via-slate-950/80 to-slate-950/50 p-6 shadow-inner shadow-slate-950/40">
+                            <article class="rounded-2xl border border-slate-800/70 bg-gradient-to-br from-slate-950/80 via-slate-950/90 to-black/70 p-6 shadow-inner shadow-slate-950/40">
                                 <h2 class="text-base font-medium text-slate-100">Запросить доступ</h2>
                                 <p class="mt-2 text-sm text-slate-300">
                                     Заполните ваши данные — мы отправим заявку в отдел поддержки.
@@ -88,6 +88,12 @@
                                         <input id="access-request-fullname" name="fullName" type="text" required
                                                class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
                                                placeholder="Иванов Иван Иванович">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="access-request-email" class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Ваш email</label>
+                                        <input id="access-request-email" name="email" type="email" required autocomplete="email"
+                                               class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                                               placeholder="you@example.com">
                                     </div>
                                     @if (!string.IsNullOrWhiteSpace(Model.SupportEmail))
                                     {
@@ -164,7 +170,8 @@
                 event.preventDefault();
 
                 const fullNameInput = document.getElementById('access-request-fullname');
-                if (!(fullNameInput instanceof HTMLInputElement)) {
+                const emailInput = document.getElementById('access-request-email');
+                if (!(fullNameInput instanceof HTMLInputElement) || !(emailInput instanceof HTMLInputElement)) {
                     return;
                 }
 
@@ -172,6 +179,19 @@
                 if (!fullName) {
                     fullNameInput.focus();
                     fullNameInput.reportValidity();
+                    return;
+                }
+
+                const email = emailInput.value.trim();
+                if (!email) {
+                    emailInput.focus();
+                    emailInput.reportValidity();
+                    return;
+                }
+
+                if (!emailInput.checkValidity()) {
+                    emailInput.focus();
+                    emailInput.reportValidity();
                     return;
                 }
 
@@ -189,11 +209,11 @@
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ fullName })
+                        body: JSON.stringify({ fullName, email })
                     });
 
                     if (!response.ok) {
-                        let message = 'Не удалось отправить заявку. Попробуйте позже.';
+                        let message = 'Произошла ошибка, заявка не отправлена, попробуйте позже.';
                         try {
                             const data = await response.json();
                             if (typeof data?.error === 'string' && data.error.trim()) {
@@ -212,7 +232,7 @@
                     setStatus('Заявка отправлена. Мы свяжемся с вами после обработки.', 'success');
                 } catch (error) {
                     console.error('Failed to send access request', error);
-                    const message = error instanceof Error ? error.message : 'Не удалось отправить заявку. Попробуйте позже.';
+                    const message = error instanceof Error ? error.message : 'Произошла ошибка, заявка не отправлена, попробуйте позже.';
                     setStatus(message, 'error');
                 } finally {
                     if (submitButton) {
