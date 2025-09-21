@@ -1,5 +1,7 @@
+using Assistant.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Options;
 
 namespace Assistant.Pages;
 
@@ -11,4 +13,11 @@ public class AccessDeniedModel : PageModel
         "assistant-user",
         "assistant-admin"
     };
+
+    public string? SupportEmail { get; }
+
+    public AccessDeniedModel(IOptions<EmailOptions> options)
+    {
+        SupportEmail = options.Value.SupportRecipient;
+    }
 }

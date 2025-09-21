@@ -1,4 +1,5 @@
 using Assistant.Interfaces;
+using Assistant.Models;
 using Assistant.Services;
 using Assistant.KeyCloak;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -40,6 +41,8 @@ builder.Services.AddSingleton<UserClientsRepository>();
 builder.Services.AddSingleton<ServiceRoleExclusionsRepository>();
 builder.Services.AddSingleton<ApiLogRepository>();
 builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddScoped<IAccessRequestEmailSender, AccessRequestEmailSender>();
 var confluenceOptions = ConfluenceOptions.FromConnectionString(builder.Configuration.GetConnectionString("ConnectionWiki"));
 builder.Services.AddSingleton(confluenceOptions);
 builder.Services.AddSingleton<ConfluenceTemplateProvider>();
@@ -172,6 +175,33 @@ app.MapPost("/api/client-secret", async (
     var secret = await clients.RegenerateClientSecretAsync(realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
+app.MapPost("/api/access-request", async (
+    AccessRequestPayload payload,
+    IAccessRequestEmailSender emailSender,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(payload?.FullName))
+    {
+        return Results.BadRequest(new { error = "Укажите ФИО." });
+    }
+
+    try
+    {
+        await emailSender.SendAsync(payload.FullName.Trim(), ct);
+        return Results.Ok();
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogError(ex, "Access request email failed due to configuration error.");
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Access request email failed.");
+        return Results.Problem("Не удалось отправить заявку. Попробуйте позже.", statusCode: StatusCodes.Status500InternalServerError);
+    }
+}).AllowAnonymous();
 var razorPages = app.MapRazorPages();
 razorPages.WithStaticAssets();
 razorPages.RequireAuthorization();

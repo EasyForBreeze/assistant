@@ -80,23 +80,33 @@
                             <article class="rounded-2xl border border-slate-800/70 bg-gradient-to-br from-slate-900/70 via-slate-950/80 to-slate-950/50 p-6 shadow-inner shadow-slate-950/40">
                                 <h2 class="text-base font-medium text-slate-100">Запросить доступ</h2>
                                 <p class="mt-2 text-sm text-slate-300">
-                                    Заполните ваши данные — мы сформируем письмо в отдел поддержки.
+                                    Заполните ваши данные — мы отправим заявку в отдел поддержки.
                                 </p>
-                                <form id="access-request-form" class="mt-5 space-y-4">
+                                <form id="access-request-form" class="mt-5 space-y-4" data-support-email="@Model.SupportEmail">
                                     <div class="space-y-2">
                                         <label for="access-request-fullname" class="block text-xs font-semibold uppercase tracking-wide text-slate-400">ФИО</label>
                                         <input id="access-request-fullname" name="fullName" type="text" required
                                                class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
                                                placeholder="Иванов Иван Иванович">
                                     </div>
-                                    <p class="text-xs text-slate-400">
-                                        После отправки откроется ваш почтовый клиент с готовым письмом на адрес
-                                        <a href="mailto:breams@mail.ru" class="font-medium text-sky-300 hover:text-sky-200">breams@mail.ru</a>.
-                                    </p>
+                                    @if (!string.IsNullOrWhiteSpace(Model.SupportEmail))
+                                    {
+                                        <p class="text-xs text-slate-400">
+                                            Письмо будет отправлено на адрес
+                                            <span class="font-medium text-sky-300">@Model.SupportEmail</span>.
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-xs text-slate-400">
+                                            Письмо будет отправлено в службу поддержки.
+                                        </p>
+                                    }
                                     <button type="submit"
                                             class="inline-flex items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/20 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-400/60 hover:bg-sky-500/30">
                                         Отправить заявку
                                     </button>
+                                    <p id="access-request-status" class="text-xs text-slate-400" aria-live="polite"></p>
                                 </form>
                             </article>
                         </div>
@@ -128,7 +138,29 @@
                 return;
             }
 
-            form.addEventListener('submit', (event) => {
+            const statusNode = document.getElementById('access-request-status');
+            const submitButton = form.querySelector('button[type="submit"]');
+            const defaultButtonText = submitButton?.textContent ?? '';
+
+            const setStatus = (message, type = 'info') => {
+                if (!statusNode) {
+                    return;
+                }
+
+                const baseClasses = ['text-xs'];
+                if (type === 'success') {
+                    baseClasses.push('text-emerald-400');
+                } else if (type === 'error') {
+                    baseClasses.push('text-rose-400');
+                } else {
+                    baseClasses.push('text-slate-400');
+                }
+
+                statusNode.className = baseClasses.join(' ');
+                statusNode.textContent = message;
+            };
+
+            form.addEventListener('submit', async (event) => {
                 event.preventDefault();
 
                 const fullNameInput = document.getElementById('access-request-fullname');
@@ -143,11 +175,52 @@
                     return;
                 }
 
-                const recipient = 'breams@mail.ru';
-                const subject = encodeURIComponent('Заявка на доступ к Assistant');
-                const body = encodeURIComponent(`Прошу дать доступ к Assistant\n${fullName}`);
+                setStatus('Отправляем заявку...', 'info');
 
-                window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Отправляем...';
+                    submitButton.classList.add('opacity-70', 'cursor-not-allowed');
+                }
+
+                try {
+                    const response = await fetch('/api/access-request', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ fullName })
+                    });
+
+                    if (!response.ok) {
+                        let message = 'Не удалось отправить заявку. Попробуйте позже.';
+                        try {
+                            const data = await response.json();
+                            if (typeof data?.error === 'string' && data.error.trim()) {
+                                message = data.error.trim();
+                            } else if (typeof data?.title === 'string' && data.title.trim()) {
+                                message = data.title.trim();
+                            }
+                        } catch (error) {
+                            console.error('Failed to parse error response', error);
+                        }
+
+                        throw new Error(message);
+                    }
+
+                    form.reset();
+                    setStatus('Заявка отправлена. Мы свяжемся с вами после обработки.', 'success');
+                } catch (error) {
+                    console.error('Failed to send access request', error);
+                    const message = error instanceof Error ? error.message : 'Не удалось отправить заявку. Попробуйте позже.';
+                    setStatus(message, 'error');
+                } finally {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = defaultButtonText || 'Отправить заявку';
+                        submitButton.classList.remove('opacity-70', 'cursor-not-allowed');
+                    }
+                }
             });
         })();
     </script>
