@@ -10,19 +10,6 @@ public abstract class ClientsPageModel : PageModel
 {
     private const int PageSize = 20;
 
-    private static readonly Dictionary<string, string> Descriptions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["admin-console"] = "Keycloak administration console.",
-        ["employee-portal"] = "Internal portal for employees.",
-        ["svc-api"] = "Technical service client (machine to machine).",
-        ["mobile-app"] = "Mobile application OIDC client.",
-        ["my-app"] = "Sample web application.",
-        ["web-client"] = "Public web client.",
-        ["payments"] = "Payments subsystem client.",
-        ["cicd"] = "CI/CD integration client.",
-        ["client-app"] = "Generic application client."
-    };
-
     public List<ClientSummary> Clients { get; protected set; } = [];
 
     public string? Q { get; protected set; }
@@ -60,9 +47,6 @@ public abstract class ClientsPageModel : PageModel
         "TEST" => "from-emerald-400/80 to-teal-500/70",
         _ => "from-slate-500/60 to-slate-400/60"
     };
-
-    public string DescFor(string? clientId)
-        => Descriptions.TryGetValue(clientId ?? string.Empty, out var d) ? d : "Description from Keycloak (stub)";
 
     protected void ApplyPaging(List<ClientSummary> list, int pageNumber)
     {
