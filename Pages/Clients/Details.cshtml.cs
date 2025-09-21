@@ -1,12 +1,14 @@
 using Assistant.KeyCloak;
 using Assistant.KeyCloak.Models;
 using Assistant.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
 
 namespace Assistant.Pages.Clients;
 
+[Authorize(Roles = "assistant-user")]
 public class DetailsModel : PageModel
 {
     private readonly ClientsService _clients;
