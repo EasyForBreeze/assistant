@@ -3,18 +3,12 @@
     if (!body) {
         return;
     }
-    let app = null;
-    const APP_FADE_DURATION_MS = 350;
-    const APP_FADE_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)';
-    let appFadeAnimation = null;
-    let lastAppFadeTarget = 1;
 
     function showApp() {
         requestAnimationFrame(() => {
             body.classList.remove('page-transitioning');
             body.classList.add('page-loaded');
         });
-        return fadeAppTo(1);
     }
 
     function hideApp() {
@@ -23,16 +17,15 @@
         if (!app) {
             return Promise.resolve();
         }
-        return fadeAppTo(0);
+        return waitForTransition(app, 'opacity');
     }
 
     showApp();
 
     const root = document.querySelector('[data-soft-root]');
-    app = document.getElementById('app');
+    let app = document.getElementById('app');
     const toastsHost = document.getElementById('toastsHost');
     const scriptHost = document.getElementById('pageScripts');
-    const spinner = document.getElementById('globalSpinner');
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
     const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
     if (!root || !app) {
@@ -41,18 +34,6 @@
 
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
     const buttonLoadingCounts = new WeakMap();
-    let pending = 0;
-
-    function updateSpinner() {
-        if (!spinner) {
-            return;
-        }
-        if (pending > 0) {
-            spinner.classList.remove('hidden');
-        } else {
-            spinner.classList.add('hidden');
-        }
-    }
 
     function createTransitionForSelector(selector) {
         if (!selector || !app) {
@@ -65,11 +46,9 @@
             return null;
         }
         let nextElement = null;
-        let shouldHide = !!currentElement;
-        let shouldShow = false;
         return {
             hide() {
-                if (!currentElement || !shouldHide) {
+                if (!currentElement) {
                     return Promise.resolve();
                 }
                 currentElement.classList.remove('fade-enter', 'fade-enter-active');
@@ -80,8 +59,6 @@
             },
             prepare(incomingRoot) {
                 nextElement = null;
-                shouldHide = Boolean(currentElement);
-                shouldShow = false;
                 if (!incomingRoot) {
                     return;
                 }
@@ -93,22 +70,11 @@
                 if (!nextElement) {
                     return;
                 }
-                if (currentElement && currentElement.isEqualNode(nextElement)) {
-                    nextElement = null;
-                    shouldHide = false;
-                    shouldShow = false;
-                    return;
-                }
-                if (!currentElement) {
-                    shouldHide = false;
-                }
-                shouldShow = true;
                 nextElement.classList.remove('fade-leave', 'fade-leave-active');
                 nextElement.classList.add('fade-enter');
             },
             async show() {
-                if (!nextElement || !shouldShow) {
-                    nextElement = null;
+                if (!nextElement) {
                     return;
                 }
                 nextElement.classList.remove('fade-leave', 'fade-leave-active');
@@ -121,7 +87,6 @@
                 } finally {
                     nextElement.classList.remove('fade-enter', 'fade-enter-active');
                     nextElement = null;
-                    shouldShow = false;
                 }
             }
         };
@@ -322,17 +287,6 @@
         return max;
     }
 
-    function cancelAppFade() {
-        if (appFadeAnimation) {
-            try {
-                appFadeAnimation.cancel();
-            } catch (_) {
-                // Ignore animation cancellation failures.
-            }
-            appFadeAnimation = null;
-        }
-    }
-
     function waitForTransition(element, property) {
         const timeout = getTransitionTimeout(element);
         if (timeout <= 0) {
@@ -362,87 +316,9 @@
         });
     }
 
-    function fadeAppTo(targetOpacity) {
-        if (!app) {
-            return Promise.resolve();
-        }
-        const element = app;
-        const previousTarget = lastAppFadeTarget;
-        cancelAppFade();
-        const computed = window.getComputedStyle(element);
-        const current = parseFloat(computed.opacity);
-        let fromOpacity = isNaN(current) ? (targetOpacity === 1 ? 0 : 1) : current;
-        const inlineOpacity = element.style.opacity;
-        const parsedInlineOpacity = parseFloat(inlineOpacity);
-        const hasInlineOpacity = inlineOpacity !== '' && !isNaN(parsedInlineOpacity);
-        if (targetOpacity === 1 && previousTarget === 0 && Math.abs(fromOpacity - targetOpacity) < 0.001) {
-            fromOpacity = hasInlineOpacity ? parsedInlineOpacity : 0;
-        }
-        if (Math.abs(fromOpacity - targetOpacity) < 0.001) {
-            lastAppFadeTarget = targetOpacity;
-            if (targetOpacity === 1) {
-                element.style.removeProperty('opacity');
-            } else {
-                element.style.opacity = String(targetOpacity);
-            }
-            return Promise.resolve();
-        }
-        if (typeof element.animate === 'function') {
-            const animation = element.animate(
-                [
-                    { opacity: fromOpacity },
-                    { opacity: targetOpacity }
-                ],
-                {
-                    duration: APP_FADE_DURATION_MS,
-                    easing: APP_FADE_EASING,
-                    fill: 'forwards'
-                }
-            );
-            appFadeAnimation = animation;
-            return new Promise(resolve => {
-                const finalize = () => {
-                    if (appFadeAnimation === animation) {
-                        appFadeAnimation = null;
-                    }
-                    if (targetOpacity === 1) {
-                        element.style.removeProperty('opacity');
-                    } else {
-                        element.style.opacity = String(targetOpacity);
-                    }
-                    lastAppFadeTarget = targetOpacity;
-                    resolve();
-                };
-                animation.addEventListener('finish', finalize, { once: true });
-                animation.addEventListener('cancel', finalize, { once: true });
-            });
-        }
-        element.style.transitionProperty = 'opacity';
-        element.style.transitionDuration = `${APP_FADE_DURATION_MS}ms`;
-        element.style.transitionTimingFunction = APP_FADE_EASING;
-        element.style.opacity = String(fromOpacity);
-        void element.offsetWidth;
-        element.style.opacity = String(targetOpacity);
-        return waitForTransition(element, 'opacity').finally(() => {
-            if (targetOpacity === 1) {
-                element.style.removeProperty('opacity');
-            }
-            lastAppFadeTarget = targetOpacity;
-            element.style.removeProperty('transition-property');
-            element.style.removeProperty('transition-duration');
-            element.style.removeProperty('transition-timing-function');
-        });
-    }
+    function beginPending() { }
 
-    function beginPending() {
-        pending += 1;
-        updateSpinner();
-    }
-
-    function endPending() {
-        pending = Math.max(0, pending - 1);
-        updateSpinner();
-    }
+    function endPending() { }
 
     function executeSoftScripts(container) {
         if (!container) {
@@ -569,7 +445,7 @@
         return url.toString();
     }
 
-    async function fetchAndSwap(url, options, globalHidePromise, transition) {
+    async function fetchAndSwap(url, options, hidePromise, transition) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const fetchInit = {
@@ -623,16 +499,6 @@
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
         }
-        let hidePromise = globalHidePromise;
-        if (transition && typeof transition.hide === 'function') {
-            let scopedHidePromise;
-            try {
-                scopedHidePromise = Promise.resolve(transition.hide());
-            } catch (_) {
-                scopedHidePromise = Promise.resolve();
-            }
-            hidePromise = hidePromise ? Promise.all([hidePromise, scopedHidePromise]) : scopedHidePromise;
-        }
         if (hidePromise) {
             try {
                 await hidePromise;
@@ -640,14 +506,11 @@
                 // Ignore transition wait failures and continue swapping.
             }
         }
-        cancelAppFade();
-        importedMain.style.opacity = '0';
         app.replaceWith(importedMain);
         app = importedMain;
         executeSoftScripts(app);
 
         if (transition && typeof transition.show === 'function') {
-            showApp();
             try {
                 await transition.show();
             } catch (_) {
@@ -695,10 +558,10 @@
             window.location.href = url;
             return;
         }
-        const globalHidePromise = hideApp();
+        const hidePromise = transition ? transition.hide() : hideApp();
         let success;
         try {
-            success = await fetchAndSwap(url, options, globalHidePromise, transition);
+            success = await fetchAndSwap(url, options, hidePromise, transition);
             return success;
         } finally {
             showApp();
