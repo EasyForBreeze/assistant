@@ -37,16 +37,7 @@ public class SearchModel : ClientsPageModel
                 }
 
                 var hits = await _clients.SearchClientsAsync(realm.Realm!, Q);
-                foreach (var c in hits)
-                {
-                    list.Add(new ClientSummary(
-                        Name: c.ClientId,
-                        ClientId: c.ClientId,
-                        Realm: realm.Realm!,
-                        Enabled: true,
-                        FlowStandard: false,
-                        FlowService: false));
-                }
+                list.AddRange(hits.Select(c => ClientSummary.ForLookup(realm.Realm!, c.ClientId)));
             }
         }
 

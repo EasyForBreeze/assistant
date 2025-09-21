@@ -129,16 +129,7 @@ public sealed class UserClientsModel : PageModel
             }
 
             var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, fetchLimit, ct);
-            foreach (var hit in hits)
-            {
-                list.Add(new ClientSummary(
-                    Name: hit.ClientId,
-                    ClientId: hit.ClientId,
-                    Realm: realm.Realm!,
-                    Enabled: true,
-                    FlowStandard: false,
-                    FlowService: false));
-            }
+            list.AddRange(hits.Select(hit => ClientSummary.ForLookup(realm.Realm!, hit.ClientId)));
         }
 
         var ordered = list
@@ -259,13 +250,7 @@ public sealed class UserClientsModel : PageModel
             });
         }
 
-        var summary = new ClientSummary(
-            Name: string.IsNullOrWhiteSpace(clientName) ? clientId : clientName!,
-            ClientId: clientId,
-            Realm: realm,
-            Enabled: true,
-            FlowStandard: false,
-            FlowService: false);
+        var summary = ClientSummary.ForLookup(realm, clientId, string.IsNullOrWhiteSpace(clientName) ? null : clientName);
 
         await _repo.AddAsync(username, summary, ct);
 

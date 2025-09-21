@@ -22,11 +22,15 @@ else if (Model.Clients.Any())
         {
             // один раз материализуем, чтобы не итерировать несколько раз
             var envList = Model.Envs(c.Realm).ToList();
+            var displayName = c.DisplayName;
+            var subtitle = string.Equals(displayName, c.ClientId, StringComparison.OrdinalIgnoreCase)
+                ? $"Realm: {c.Realm}"
+                : displayName;
 
             <a asp-page="/Clients/Details" asp-route-realm="@c.Realm" asp-route-clientId="@c.ClientId"
                asp-route-returnUrl="@returnUrl"
                class="block group client-card"
-                data-search="@($"{c.ClientId} {c.Realm} {Model.DescFor(c.ClientId)}")">
+                data-search="@($"{c.ClientId} {c.Realm} {displayName}")">
                 <div class="kc-card kc-card--hover p-5 h-44 overflow-hidden transition relative">
                     <!-- лёгкая подсветка по ховеру -->
                     <div class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500"
@@ -56,7 +60,7 @@ else if (Model.Clients.Any())
 
                         <!-- Описание -->
                         <div class="text-slate-300/90 text-[15px] mt-1 line-clamp-2">
-                            @Model.DescFor(c.ClientId)
+                            @subtitle
                         </div>
 
                         <!-- Окружения (чипы) -->
