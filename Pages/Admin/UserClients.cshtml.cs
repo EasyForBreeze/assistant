@@ -12,6 +12,7 @@ public sealed class UserClientsModel : PageModel
 {
     private const int PageSize = 5;
     private const int MinimumQueryLengthValue = 3;
+    private const int SearchFetchLimit = 200;
 
     private readonly RealmsService _realms;
     private readonly ClientsService _clients;
@@ -118,7 +119,7 @@ public sealed class UserClientsModel : PageModel
 
         var pageSize = PageSize;
         var skip = (ClientPage - 1) * pageSize;
-        var maxToFetch = skip + pageSize + 1;
+        var fetchLimit = SearchFetchLimit;
 
         foreach (var realm in realms)
         {
@@ -127,7 +128,7 @@ public sealed class UserClientsModel : PageModel
                 continue;
             }
 
-            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, maxToFetch, ct);
+            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, fetchLimit, ct);
             foreach (var hit in hits)
             {
                 list.Add(new ClientSummary(
@@ -191,9 +192,9 @@ public sealed class UserClientsModel : PageModel
 
         var pageSize = PageSize;
         var skip = (UserPage - 1) * pageSize;
-        var maxToFetch = skip + pageSize + 1;
+        var fetchLimit = SearchFetchLimit;
 
-        var results = await _users.SearchUsersAsync(query, 0, maxToFetch, ct);
+        var results = await _users.SearchUsersAsync(query, 0, fetchLimit, ct);
 
         if (results.Count == 0)
         {
