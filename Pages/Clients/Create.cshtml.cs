@@ -2,6 +2,7 @@ using Assistant.KeyCloak;
 using Assistant.KeyCloak.Models;
 using Assistant.Interfaces;
 using Assistant.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -12,6 +13,7 @@ using System.Text.RegularExpressions;
 
 namespace Assistant.Pages.Clients;
 
+[Authorize(Roles = "assistant-user")]
 public class CreateModel : PageModel
 {
     private readonly RealmsService _realms;

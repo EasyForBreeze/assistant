@@ -1,0 +1,33 @@
+@page
+@model Assistant.Pages.AccessDeniedModel
+@{
+    ViewData["Title"] = "Недостаточно прав";
+}
+
+<section class="max-w-2xl mx-auto mt-16 bg-white/70 backdrop-blur rounded-xl shadow p-10 text-slate-800">
+    <h1 class="text-3xl font-semibold text-slate-900 mb-4">Недостаточно прав</h1>
+    <p class="mb-4 leading-relaxed">
+        К сожалению, у вашей учётной записи нет необходимого доступа для работы с сервисом.
+        Для продолжения требуется хотя бы одна из ролей:
+    </p>
+    <ul class="list-disc list-inside space-y-1 mb-6 text-sm text-slate-700">
+        @foreach (var role in Model.RequiredRoles)
+        {
+            <li><code class="px-2 py-0.5 rounded bg-slate-100 text-slate-900">@role</code></li>
+        }
+    </ul>
+    <p class="mb-6 text-sm text-slate-600">
+        Обратитесь к администратору, чтобы запросить доступ. После назначения роли обновите страницу или выполните повторный вход.
+    </p>
+    <div class="flex flex-wrap gap-3">
+        <form method="post" asp-page="/Account/Logout">
+            <button type="submit" class="px-5 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-700 transition">
+                Выйти и войти под другой учётной записью
+            </button>
+        </form>
+        <a class="px-5 py-2 rounded-md border border-slate-300 text-slate-700 hover:border-slate-400 transition"
+           href="/Account/GoToKeycloak?returnUrl=/">
+            Перейти к форме входа
+        </a>
+    </div>
+</section>

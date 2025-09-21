@@ -64,6 +64,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.Cookie.Name = ".KeycloakShell.Auth";
     options.SlidingExpiration = true;
+    options.AccessDeniedPath = "/AccessDenied";
 })
 .AddOpenIdConnect(options =>
 {
@@ -129,6 +130,28 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (context.User?.Identity?.IsAuthenticated == true)
+    {
+        var path = context.Request.Path;
+        if (!path.StartsWithSegments("/AccessDenied", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWithSegments("/signin-oidc", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWithSegments("/signout-callback-oidc", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWithSegments("/Account/Logout", StringComparison.OrdinalIgnoreCase))
+        {
+            var hasAssistantRole = context.User.IsInRole("assistant-user")
+                                   || context.User.IsInRole("assistant-admin");
+            if (!hasAssistantRole)
+            {
+                context.Response.Redirect("/AccessDenied");
+                return;
+            }
+        }
+    }
+
+    await next();
+});
 app.UseAuthorization();
 app.MapStaticAssets();
 app.MapGet("/api/client-secret", async (
@@ -149,6 +172,7 @@ app.MapPost("/api/client-secret", async (
     var secret = await clients.RegenerateClientSecretAsync(realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
-app.MapRazorPages().WithStaticAssets();
-app.MapRazorPages().RequireAuthorization();
+var razorPages = app.MapRazorPages();
+razorPages.WithStaticAssets();
+razorPages.RequireAuthorization();
 app.Run();
