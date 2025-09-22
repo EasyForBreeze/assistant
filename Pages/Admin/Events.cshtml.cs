@@ -135,12 +135,6 @@ public sealed class EventsModel : PageModel
             return string.Empty;
         }
 
-        var colonIndex = value.IndexOf(':');
-        if (colonIndex < 0 || colonIndex + 1 >= value.Length)
-        {
-            return value;
-        }
-
-        return value[(colonIndex + 1)..].Trim();
+        return ApiLogRepository.NormalizeOperationType(value);
     }
 }
