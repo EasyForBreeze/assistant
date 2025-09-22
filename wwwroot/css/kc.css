@@ -22,8 +22,27 @@
 /* Background */
 .bg-dark-pattern {
     background-color: #06080f;
-    background-image: linear-gradient(140deg, rgba(15,23,42,0.65), rgba(2,6,23,0.9));
+    background-image:
+        radial-gradient(circle at 25px 25px, rgba(148, 163, 184, 0.12) 0, rgba(148, 163, 184, 0.12) 2px, transparent 2px),
+        radial-gradient(circle at 75px 75px, rgba(99, 102, 241, 0.22) 0, rgba(99, 102, 241, 0.22) 2px, transparent 2px),
+        linear-gradient(140deg, rgba(15, 23, 42, 0.7), rgba(2, 6, 23, 0.92));
+    background-size: 140px 140px, 140px 140px, auto;
     background-attachment: fixed;
+    background-blend-mode: screen, lighten, normal;
+    position: relative;
+    isolation: isolate;
+}
+
+.bg-dark-pattern::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.18), transparent 55%),
+        radial-gradient(circle at 80% 30%, rgba(14, 165, 233, 0.12), transparent 60%),
+        radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.1), transparent 65%);
+    opacity: 0.5;
+    z-index: -1;
 }
 
 /* ===== Glass Header ===== */
