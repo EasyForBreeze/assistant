@@ -13,11 +13,9 @@
     <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
     <link rel="preload" href="~/favicon.ico" as="image" />
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link rel="stylesheet" href="~/css/kc.css" asp-append-version="true" />
     <style>
         body {
-            background: radial-gradient(circle at top, rgba(14, 165, 233, 0.12), transparent 55%),
-                radial-gradient(circle at 30% 80%, rgba(16, 185, 129, 0.08), transparent 60%),
-                #030712;
             color-scheme: dark;
         }
 
@@ -31,7 +29,7 @@
         }
     </style>
 </head>
-<body class="h-full text-slate-100">
+<body class="min-h-screen bg-dark-pattern text-slate-100">
     <main class="relative flex min-h-screen items-center justify-center px-4 py-12">
         <section class="noise-overlay relative mx-auto w-full max-w-4xl">
             <div class="absolute inset-x-0 -top-10 -z-10 mx-auto h-72 w-full max-w-3xl rounded-full bg-gradient-to-r from-sky-500/20 via-emerald-400/10 to-indigo-500/20 blur-3xl"></div>
