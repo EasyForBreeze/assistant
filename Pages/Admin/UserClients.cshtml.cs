@@ -442,7 +442,6 @@ public sealed class UserClientsModel : PageModel
         var clientDisplay = string.IsNullOrWhiteSpace(clientName)
             ? $"{normalizedClientId} ({normalizedRealm})"
             : $"{clientName} ({normalizedClientId}, {normalizedRealm})";
-
         var normalizedOperation = ApiLogRepository.NormalizeOperationType(operationType);
         string details = normalizedOperation switch
         {
