@@ -4,44 +4,40 @@
     ViewData["Title"] = "Clients";
 }
 
-<!-- Шапка как на Details/Index — стеклянная, с аурами -->
-<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-5">
-    <div class="absolute inset-0 pointer-events-none">
-        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(16,185,129,.6), rgba(59,130,246,.4))"></div>
-        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35))"></div>
-    </div>
-
-    <div class="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h3 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(99,102,241,0.25)]">
-            Мои клиенты
-        </h3>
-
-        <div class="flex items-center gap-3 w-full md:w-auto">
-            <div class="flex items-center gap-2 kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[260px] focus-within:border-white/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.3-4.3" />
-                </svg>
-                <input id="clientFilter" placeholder="Search clients..."
-                       class="bg-transparent outline-none placeholder:text-slate-400 w-full" />
+<div class="clients-stage">
+    <div class="clients-surface">
+        <div class="clients-toolbar">
+            <div class="clients-heading">
+                <h3 class="clients-title">Мои клиенты</h3>
+                <p class="clients-subtitle">Локальный список клиентов, к которым у вас есть доступ.</p>
             </div>
 
-            <a asp-page="/Clients/Create" class="btn-primary">
-                Создать клиента
-            </a>
+            <div class="clients-actions">
+                <label class="clients-search" aria-label="Фильтр по клиентам">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="clients-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.3-4.3" />
+                    </svg>
+                    <input id="clientFilter" placeholder="Search clients..." class="clients-search__input" />
+                </label>
+
+                <a asp-page="/Clients/Create" class="btn-primary clients-create">
+                    Создать клиента
+                </a>
+            </div>
+        </div>
+
+        @if (User.IsInRole("assistant-admin"))
+        {
+            <div class="clients-info clients-info--muted">
+                Используйте пункт «Поиск клиентов» в панели слева, чтобы найти клиентов во всех реалмах.
+            </div>
+        }
+
+        <div id="clientsContainer">
+            @await Html.PartialAsync("_ClientsList", Model)
         </div>
     </div>
-</div>
-@if (User.IsInRole("assistant-admin"))
-{
-    <div class="kc-card mb-5 p-5 text-sm text-slate-300/90">
-        Используйте пункт «Поиск клиентов» в панели слева, чтобы найти клиентов во всех реалмах.
-    </div>
-}
-<div id="clientsContainer">
-    @await Html.PartialAsync("_ClientsList", Model)
 </div>
 
 <script data-soft-nav>
