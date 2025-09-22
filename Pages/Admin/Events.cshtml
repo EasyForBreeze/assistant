@@ -120,7 +120,7 @@
 
                     <nav class="flex flex-wrap items-center gap-1 text-sm">
                         <a asp-page="/Admin/Events"
-                           asp-route-page="@(Model.HasPreviousPage ? Model.PageNumber - 1 : Model.PageNumber)"
+                           asp-route-pageNumber="@(Model.HasPreviousPage ? Model.PageNumber - 1 : Model.PageNumber)"
                            asp-route-Username="@routeUsername"
                            asp-route-OperationType="@routeOperation"
                            asp-route-From="@routeFrom"
@@ -136,7 +136,7 @@
                                 : "border border-white/10 hover:bg-white/10";
 
                             <a asp-page="/Admin/Events"
-                               asp-route-page="@pageNumber"
+                               asp-route-pageNumber="@pageNumber"
                                asp-route-Username="@routeUsername"
                                asp-route-OperationType="@routeOperation"
                                asp-route-From="@routeFrom"
@@ -147,7 +147,7 @@
                         }
 
                         <a asp-page="/Admin/Events"
-                           asp-route-page="@(Model.HasNextPage ? Model.PageNumber + 1 : Model.PageNumber)"
+                           asp-route-pageNumber="@(Model.HasNextPage ? Model.PageNumber + 1 : Model.PageNumber)"
                            asp-route-Username="@routeUsername"
                            asp-route-OperationType="@routeOperation"
                            asp-route-From="@routeFrom"
