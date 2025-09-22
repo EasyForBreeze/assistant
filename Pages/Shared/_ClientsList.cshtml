@@ -9,18 +9,16 @@
 
 @if (!Model.Clients.Any() && Model.ShowEmptyMessage)
 {
-    <div class="kc-card p-10 text-center">
-        <div class="text-slate-200 text-lg font-semibold mb-1">Нет клиентов</div>
-        <div class="text-slate-400 text-sm">Попробуйте другой поиск или создайте нового клиента.</div>
+    <div class="clients-info clients-info--empty">
+        <div class="clients-info__title">Нет клиентов</div>
+        <div class="clients-info__subtitle">Попробуйте другой поиск или создайте нового клиента.</div>
     </div>
 }
 else if (Model.Clients.Any())
 {
-    <!-- Сетка карточек клиентов -->
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div class="clients-grid">
         @foreach (var c in Model.Clients)
         {
-            // один раз материализуем, чтобы не итерировать несколько раз
             var envList = Model.Envs(c.Realm).ToList();
             var displayName = c.DisplayName;
             var subtitle = string.Equals(displayName, c.ClientId, StringComparison.OrdinalIgnoreCase)
@@ -29,45 +27,39 @@ else if (Model.Clients.Any())
 
             <a asp-page="/Clients/Details" asp-route-realm="@c.Realm" asp-route-clientId="@c.ClientId"
                asp-route-returnUrl="@returnUrl"
-               class="block group client-card"
-                data-search="@($"{c.ClientId} {c.Realm} {displayName}")">
-                <div class="kc-card kc-card--hover p-5 h-44 overflow-hidden transition relative">
-                    <!-- лёгкая подсветка по ховеру -->
-                    <div class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500"
-                         style="background:
-                                         radial-gradient(480px 140px at 60% 18%, rgba(45,212,191,.12), transparent 70%),
-                                         radial-gradient(520px 180px at 10% 100%, rgba(99,102,241,.10), transparent 75%)"></div>
-
-                    <!-- Контур-линия окружений (внизу карточки) -->
+               class="client-card group"
+               data-search="@($"{c.ClientId} {c.Realm} {displayName}")">
+                <div class="client-card__surface">
                     @if (envList.Any())
                     {
-                        <div class="absolute inset-x-0 top-0 h-[4px] flex overflow-hidden">
+                        <div class="client-card__stripe">
                             @foreach (var e in envList)
                             {
-                                <span class="flex-1 h-full bg-gradient-to-r @Model.EnvBarGradient(e)"></span>
+                                <span class="client-card__stripe-segment bg-gradient-to-r @Model.EnvBarGradient(e)"></span>
                             }
                         </div>
                     }
 
-                    <div class="relative h-full flex flex-col">
-                        <!-- Заголовок + статус -->
-                        <div class="flex items-start justify-between">
-                            <div class="text-slate-100 font-semibold text-lg truncate">@c.ClientId</div>
-                            <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] border border-white/10 @(c.Enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")">
+                    <div class="client-card__body">
+                        <div class="client-card__header">
+                            <div class="client-card__title">@c.ClientId</div>
+                            <span class="client-card__status @(c.Enabled ? "client-card__status--enabled" : "client-card__status--disabled")">
                                 @(c.Enabled ? "Enabled" : "Disabled")
                             </span>
                         </div>
 
-                        <!-- Описание -->
-                        <div class="text-slate-300/90 text-[15px] mt-1 line-clamp-2">
-                            @subtitle
-                        </div>
+                        <div class="client-card__subtitle">@subtitle</div>
 
-                        <!-- Окружения (чипы) -->
-                        <div class="mt-auto pt-3 flex items-center gap-2 flex-wrap">
-                            @foreach (var e in envList)
+                        <div class="client-card__footer">
+                            <div class="client-card__realm">@c.Realm?.ToUpperInvariant()</div>
+                            @if (envList.Any())
                             {
-                                <span class="kc-chip">@e</span>
+                                <div class="client-card__envs">
+                                    @foreach (var e in envList)
+                                    {
+                                        <span class="client-chip">@e</span>
+                                    }
+                                </div>
                             }
                         </div>
                     </div>
@@ -78,13 +70,13 @@ else if (Model.Clients.Any())
 
     @if (Model.TotalPages > 1)
     {
-        <div class="flex justify-center mt-6">
-            <nav class="flex items-center gap-2">
+        <div class="clients-pagination">
+            <nav class="clients-pagination__inner">
                 @if (Model.HasPreviousPage)
                 {
                     <a asp-page="@currentPage" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber - 1)" class="btn-subtle">Previous</a>
                 }
-                <span class="text-sm text-slate-400">Page @Model.PageNumber of @Model.TotalPages</span>
+                <span class="clients-pagination__meta">Page @Model.PageNumber of @Model.TotalPages</span>
                 @if (Model.HasNextPage)
                 {
                     <a asp-page="@currentPage" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber + 1)" class="btn-subtle">Next</a>
