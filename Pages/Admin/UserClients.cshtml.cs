@@ -5,6 +5,8 @@ using Assistant.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 
 namespace Assistant.Pages.Admin;
 
@@ -19,17 +21,20 @@ public sealed class UserClientsModel : PageModel
     private readonly ClientsService _clients;
     private readonly UsersService _users;
     private readonly UserClientsRepository _repo;
+    private readonly ILogger<UserClientsModel> _logger;
 
     public UserClientsModel(
         RealmsService realms,
         ClientsService clients,
         UsersService users,
-        UserClientsRepository repo)
+        UserClientsRepository repo,
+        ILogger<UserClientsModel> logger)
     {
         _realms = realms;
         _clients = clients;
         _users = users;
         _repo = repo;
+        _logger = logger;
     }
 
     [BindProperty(SupportsGet = true)] public string? ClientQuery { get; set; }
@@ -322,6 +327,9 @@ public sealed class UserClientsModel : PageModel
 
         await _repo.AddAsync(username, summary, ct);
 
+        var actor = GetCurrentActorLogin();
+        _logger.LogInformation("{Actor} granted client {ClientId} ({Realm}) to {TargetUser}.", actor, clientId, realm, username);
+
         TempData["FlashOk"] = $"Клиент '{clientId}' ({realm}) назначен пользователю {username}.";
 
         return RedirectToPage(new
@@ -358,6 +366,8 @@ public sealed class UserClientsModel : PageModel
             && !string.IsNullOrWhiteSpace(username))
         {
             await _repo.RemoveForUserAsync(username, clientId, realm, ct);
+            var actor = GetCurrentActorLogin();
+            _logger.LogInformation("{Actor} revoked client {ClientId} ({Realm}) from {TargetUser}.", actor, clientId, realm, username);
             TempData["FlashOk"] = $"Доступ к клиенту '{clientId}' ({realm}) для пользователя {username} удалён.";
         }
         else
@@ -381,5 +391,16 @@ public sealed class UserClientsModel : PageModel
     {
         var trimmed = query?.Trim();
         return !string.IsNullOrEmpty(trimmed) && trimmed.Length < MinimumQueryLengthValue;
+    }
+
+    private string GetCurrentActorLogin()
+    {
+        var user = User ?? HttpContext.User;
+
+        return user?.Identity?.Name
+            ?? user?.FindFirst("preferred_username")?.Value
+            ?? user?.FindFirst(ClaimTypes.Name)?.Value
+            ?? user?.FindFirst(ClaimTypes.Email)?.Value
+            ?? "unknown";
     }
 }
