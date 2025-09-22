@@ -24,6 +24,14 @@ public sealed class ClientsService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private static readonly IReadOnlyDictionary<TokenExampleKind, string[]> TokenExampleRoutes =
+        new Dictionary<TokenExampleKind, string[]>
+        {
+            [TokenExampleKind.AccessToken] = new[] { "generate-example-access-token" },
+            [TokenExampleKind.IdToken] = new[] { "generate-example-id-token" },
+            [TokenExampleKind.UserInfo] = new[] { "generate-example-userinfo", "generate-example-user-info" }
+        };
+
     internal sealed class ClientRep
     {
         public string? Id { get; set; }
@@ -319,6 +327,79 @@ public sealed class ClientsService
             defaultScopes
         );
         return details;
+    }
+
+    public async Task<string?> FindUserIdByUsernameAsync(string realm, string username, CancellationToken ct = default)
+    {
+        username = (username ?? string.Empty).Trim();
+        if (username.Length == 0)
+        {
+            return null;
+        }
+
+        var http = CreateAdminClient();
+
+        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users?username={UR(username)}";
+        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users?username={UR(username)}";
+
+        using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
+        resp.EnsureAdminSuccess();
+        var users = await ReadJsonAsync<List<KcUserRep>>(resp, ct) ?? new();
+
+        var match = users
+            .Where(u => !string.IsNullOrWhiteSpace(u.Username) && !string.IsNullOrWhiteSpace(u.Id))
+            .FirstOrDefault(u => string.Equals(u.Username!.Trim(), username, StringComparison.OrdinalIgnoreCase));
+
+        return match?.Id?.Trim();
+    }
+
+    public async Task<string> GenerateExampleTokenAsync(
+        string realm,
+        string clientUuid,
+        string userId,
+        TokenExampleKind kind,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(realm))
+        {
+            throw new ArgumentException("Realm is required.", nameof(realm));
+        }
+
+        if (string.IsNullOrWhiteSpace(clientUuid))
+        {
+            throw new ArgumentException("Client UUID is required.", nameof(clientUuid));
+        }
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            throw new ArgumentException("User id is required.", nameof(userId));
+        }
+
+        if (!TokenExampleRoutes.TryGetValue(kind, out var segments) || segments.Length == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+
+        var http = CreateAdminClient();
+        var userIdEncoded = UR(userId);
+        foreach (var segment in segments)
+        {
+            var urlNew =
+                $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/evaluate-scopes/{segment}?userId={userIdEncoded}";
+            var urlLegacy =
+                $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/evaluate-scopes/{segment}?userId={userIdEncoded}";
+
+            using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+            {
+                continue;
+            }
+
+            resp.EnsureAdminSuccess();
+            return await resp.Content.ReadAsStringAsync();
+        }
+
+        throw new InvalidOperationException("Endpoint для генерации примера токена не найден.");
     }
 
     public async Task<string?> GetClientSecretAsync(string realm, string clientId, CancellationToken ct = default)

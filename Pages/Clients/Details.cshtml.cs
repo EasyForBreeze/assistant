@@ -4,6 +4,8 @@ using Assistant.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Http;
+using System.Net.Http;
 using System.Text.Json;
 
 namespace Assistant.Pages.Clients;
@@ -60,6 +62,7 @@ public class DetailsModel : PageModel
 
         Client = new ClientVm
         {
+            ClientUuid = details.Id,
             ClientId = details.ClientId,
             Realm = Realm!,
             Enabled = details.Enabled,
@@ -155,8 +158,106 @@ public class DetailsModel : PageModel
     public async Task<IActionResult> OnGetClientRolesAsync(string realm, string id, int first = 0, int max = 50, string? q = null, CancellationToken ct = default)
         => new JsonResult(await _clients.GetClientRolesAsync(realm, id, first, max, q, ct));
 
+    public async Task<IActionResult> OnGetGenerateTokenAsync(
+        string realm,
+        string clientId,
+        string? clientUuid,
+        string username,
+        string type,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(clientId))
+        {
+            return BadRequest(new { error = "Параметры realm и clientId обязательны." });
+        }
+
+        username = (username ?? string.Empty).Trim();
+        if (username.Length == 0)
+        {
+            return BadRequest(new { error = "Введите username пользователя." });
+        }
+
+        if (!Enum.TryParse<TokenExampleKind>(type, ignoreCase: true, out var tokenKind))
+        {
+            return BadRequest(new { error = "Неизвестный тип токена." });
+        }
+
+        var resolvedClientUuid = string.IsNullOrWhiteSpace(clientUuid) ? null : clientUuid;
+        if (resolvedClientUuid == null)
+        {
+            var clientDetails = await _clients.GetClientDetailsAsync(realm, clientId, ct);
+            if (clientDetails == null)
+            {
+                return NotFound(new { error = "Клиент не найден." });
+            }
+
+            resolvedClientUuid = clientDetails.Id;
+        }
+
+        var userId = await _clients.FindUserIdByUsernameAsync(realm, username, ct);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return NotFound(new { error = $"Пользователь '{username}' не найден." });
+        }
+
+        string rawPayload;
+        try
+        {
+            rawPayload = await _clients.GenerateExampleTokenAsync(realm, resolvedClientUuid!, userId!, tokenKind, ct);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { error = $"Ошибка запроса к Keycloak: {ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = $"Неожиданная ошибка: {ex.Message}" });
+        }
+
+        object payload;
+        bool isJson;
+
+        if (string.IsNullOrWhiteSpace(rawPayload))
+        {
+            payload = string.Empty;
+            isJson = false;
+        }
+        else
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(rawPayload);
+                payload = doc.RootElement.Clone();
+                isJson = true;
+            }
+            catch (JsonException)
+            {
+                payload = rawPayload;
+                isJson = false;
+            }
+        }
+
+        return new JsonResult(new
+        {
+            tokenType = tokenKind.ToString(),
+            username,
+            userId,
+            payload,
+            isJson
+        });
+    }
+
     public class ClientVm
     {
+        public string ClientUuid { get; set; } = default!;
         public string ClientId { get; set; } = default!;
         public string Realm { get; set; } = default!;
         public bool Enabled { get; set; }
