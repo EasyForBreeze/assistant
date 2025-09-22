@@ -1,5 +1,4 @@
 using Assistant.Interfaces;
-using Assistant.Models;
 using Assistant.Services;
 using Assistant.KeyCloak;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -177,24 +176,33 @@ app.MapPost("/api/client-secret", async (
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
 app.MapPost("/api/access-request", async (
-    AccessRequestPayload payload,
+    HttpContext context,
     IAccessRequestEmailSender emailSender,
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
-    if (payload is null || string.IsNullOrWhiteSpace(payload.FullName))
+    if (context.User?.Identity?.IsAuthenticated != true)
     {
-        return Results.BadRequest(new { error = "Укажите ФИО." });
+        return Results.Unauthorized();
     }
 
-    if (string.IsNullOrWhiteSpace(payload.Email))
+    var login = context.User.Identity?.Name;
+    if (string.IsNullOrWhiteSpace(login))
     {
-        return Results.BadRequest(new { error = "Укажите email." });
+        login = context.User.FindFirst("preferred_username")?.Value
+                 ?? context.User.FindFirst(ClaimTypes.Name)?.Value
+                 ?? context.User.FindFirst(ClaimTypes.Email)?.Value;
+    }
+
+    if (string.IsNullOrWhiteSpace(login))
+    {
+        logger.LogWarning("Unable to determine user login for access request email.");
+        return Results.Problem("Не удалось определить логин пользователя.", statusCode: StatusCodes.Status500InternalServerError);
     }
 
     try
     {
-        await emailSender.SendAsync(payload.FullName.Trim(), payload.Email.Trim(), ct);
+        await emailSender.SendAsync(login.Trim(), ct);
         return Results.Ok();
     }
     catch (InvalidOperationException ex)

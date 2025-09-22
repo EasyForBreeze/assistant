@@ -81,34 +81,29 @@
                             <article class="rounded-2xl border border-slate-700/60 bg-gradient-to-br from-slate-900/70 via-slate-900/55 to-slate-950/80 p-6 shadow-inner shadow-slate-950/30">
                                 <h2 class="text-base font-medium text-slate-100">Запросить доступ</h2>
                                 <p class="mt-2 text-sm text-slate-300">
-                                    Заполните ваши данные — мы отправим заявку в отдел поддержки.
+                                    Нажмите кнопку — мы отправим заявку в отдел поддержки с вашим логином.
                                 </p>
-                                <form id="access-request-form" class="mt-5 space-y-4" data-support-email="@Model.SupportEmail">
-                                    <div class="space-y-2">
-                                        <label for="access-request-fullname" class="block text-xs font-semibold uppercase tracking-wide text-slate-400">ФИО</label>
-                                        <input id="access-request-fullname" name="fullName" type="text" required
-                                               class="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-                                               placeholder="Иванов Иван Иванович">
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="access-request-email" class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Ваш email</label>
-                                        <input id="access-request-email" name="email" type="email" required autocomplete="email"
-                                               class="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-                                               placeholder="you@example.com">
-                                    </div>
-                                    @if (!string.IsNullOrWhiteSpace(Model.SupportEmail))
-                                    {
-                                        <p class="text-xs text-slate-400">
-                                            Письмо будет отправлено на адрес
-                                            <span class="font-medium text-sky-300">@Model.SupportEmail</span>.
-                                        </p>
-                                    }
-                                    else
-                                    {
-                                        <p class="text-xs text-slate-400">
-                                            Письмо будет отправлено в службу поддержки.
-                                        </p>
-                                    }
+                                @if (!string.IsNullOrWhiteSpace(Model.UserLogin))
+                                {
+                                    <p class="mt-3 text-sm text-slate-300">
+                                        Заявка будет отправлена для пользователя
+                                        <span class="font-medium text-sky-300">@Model.UserLogin</span>.
+                                    </p>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.SupportEmail))
+                                {
+                                    <p class="mt-3 text-xs text-slate-400">
+                                        Письмо будет отправлено на адрес
+                                        <span class="font-medium text-sky-300">@Model.SupportEmail</span>.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <p class="mt-3 text-xs text-slate-400">
+                                        Письмо будет отправлено в службу поддержки.
+                                    </p>
+                                }
+                                <form id="access-request-form" class="mt-5 space-y-4">
                                     <button type="submit"
                                             class="inline-flex items-center justify-center rounded-xl border border-sky-400/60 bg-sky-500/25 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-300/70 hover:bg-sky-500/35">
                                         Отправить заявку
@@ -170,32 +165,6 @@
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
 
-                const fullNameInput = document.getElementById('access-request-fullname');
-                const emailInput = document.getElementById('access-request-email');
-                if (!(fullNameInput instanceof HTMLInputElement) || !(emailInput instanceof HTMLInputElement)) {
-                    return;
-                }
-
-                const fullName = fullNameInput.value.trim();
-                if (!fullName) {
-                    fullNameInput.focus();
-                    fullNameInput.reportValidity();
-                    return;
-                }
-
-                const email = emailInput.value.trim();
-                if (!email) {
-                    emailInput.focus();
-                    emailInput.reportValidity();
-                    return;
-                }
-
-                if (!emailInput.checkValidity()) {
-                    emailInput.focus();
-                    emailInput.reportValidity();
-                    return;
-                }
-
                 setStatus('Отправляем заявку...', 'info');
 
                 if (submitButton) {
@@ -206,11 +175,7 @@
 
                 try {
                     const response = await fetch('/api/access-request', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ fullName, email })
+                        method: 'POST'
                     });
 
                     if (!response.ok) {
@@ -229,7 +194,6 @@
                         throw new Error(message);
                     }
 
-                    form.reset();
                     setStatus('Заявка отправлена. Мы свяжемся с вами после обработки.', 'success');
                 } catch (error) {
                     console.error('Failed to send access request', error);
