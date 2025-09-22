@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace Assistant.Pages.Clients;
 
-[Authorize(Roles = "assistant-user")]
+[Authorize(Roles = "assistant-user,assistant-admin")]
 public class DetailsModel : PageModel
 {
     private readonly ClientsService _clients;

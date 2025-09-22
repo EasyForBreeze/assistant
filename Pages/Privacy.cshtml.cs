@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Assistant.Pages
 {
-    [Authorize(Roles = "assistant-user")]
+    [Authorize(Roles = "assistant-user,assistant-admin")]
     public class PrivacyModel : PageModel
     {
         private readonly ILogger<PrivacyModel> _logger;

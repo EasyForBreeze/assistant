@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Assistant.Pages
 {
-    [Authorize(Roles = "assistant-user")]
+    [Authorize(Roles = "assistant-user,assistant-admin")]
     public class IndexModel : ClientsPageModel
     {
         private readonly IClientsProvider _provider;

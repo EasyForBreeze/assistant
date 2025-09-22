@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 
 namespace Assistant.Pages.Clients;
 
-[Authorize(Roles = "assistant-user")]
+[Authorize(Roles = "assistant-user,assistant-admin")]
 public class CreateModel : PageModel
 {
     private readonly RealmsService _realms;
