@@ -58,6 +58,7 @@ public sealed class ApiLogRepository
         string? details = null,
         CancellationToken ct = default)
     {
+        var normalizedOperationType = NormalizeOperationType(operationType);
         await EnsureCreatedAsync(ct);
 
         await using var conn = new NpgsqlConnection(_connString);
@@ -67,7 +68,7 @@ public sealed class ApiLogRepository
                               values (@op, @user, @realm, @target, @details);";
 
         await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("op", operationType);
+        cmd.Parameters.AddWithValue("op", normalizedOperationType);
         cmd.Parameters.AddWithValue("user", username);
         cmd.Parameters.AddWithValue("realm", realm);
         cmd.Parameters.AddWithValue("target", targetId);
@@ -108,8 +109,12 @@ public sealed class ApiLogRepository
 
         if (!string.IsNullOrWhiteSpace(operationType))
         {
-            cmd.Parameters.AddWithValue("op", operationType.Trim());
-            conditions.Add("operation_type = @op");
+            var normalizedOperationType = NormalizeOperationType(operationType);
+            if (!string.IsNullOrEmpty(normalizedOperationType))
+            {
+                cmd.Parameters.AddWithValue("op", normalizedOperationType);
+                conditions.Add("upper(coalesce(nullif(split_part(operation_type, ':', 2), ''), operation_type)) = @op");
+            }
         }
 
         if (fromUtc is not null)
@@ -147,10 +152,12 @@ public sealed class ApiLogRepository
                 createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
             }
 
+            var normalizedOperationType = NormalizeOperationType(reader.GetString(2));
+
             list.Add(new ApiAuditLogEntry(
                 reader.GetInt64(0),
                 createdAt,
-                reader.GetString(2),
+                normalizedOperationType,
                 reader.GetString(3),
                 reader.GetString(4),
                 reader.GetString(5),
@@ -167,18 +174,47 @@ public sealed class ApiLogRepository
         await using var conn = new NpgsqlConnection(_connString);
         await conn.OpenAsync(ct);
 
-        const string sql = "select distinct operation_type from api_audit_logs order by operation_type asc";
+        const string sql = "select distinct operation_type from api_audit_logs";
 
         await using var cmd = new NpgsqlCommand(sql, conn);
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var list = new List<string>();
 
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            list.Add(reader.GetString(0));
+            var normalized = NormalizeOperationType(reader.GetString(0));
+            if (string.IsNullOrEmpty(normalized) || !set.Add(normalized))
+            {
+                continue;
+            }
+
+            list.Add(normalized);
         }
 
+        list.Sort(StringComparer.Ordinal);
         return list;
+    }
+
+    internal static string NormalizeOperationType(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        var colonIndex = trimmed.IndexOf(':');
+        if (colonIndex >= 0 && colonIndex + 1 < trimmed.Length)
+        {
+            var candidate = trimmed[(colonIndex + 1)..].Trim();
+            if (candidate.Length > 0)
+            {
+                trimmed = candidate;
+            }
+        }
+
+        return trimmed.Length == 0 ? string.Empty : trimmed.ToUpperInvariant();
     }
 }
 
