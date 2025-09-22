@@ -33,7 +33,7 @@ public sealed class EventsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DateTime? To { get; set; }
 
-    [BindProperty(SupportsGet = true, Name = "page")]
+    [BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
 
     public IReadOnlyList<ApiAuditLogEntry> Logs { get; private set; } = Array.Empty<ApiAuditLogEntry>();
