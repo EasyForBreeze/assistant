@@ -14,54 +14,52 @@
 
     @RenderSection("Head", required: false)
 </head>
-<body class="min-h-screen bg-dark-pattern text-slate-100 relative">
-    <!-- ЧИСТАЯ шапка без блюра-фона -->
-    <header class="mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
-        <a asp-page="/Index" class="font-semibold tracking-wider text-slate-200">ASSISTANT</a>
+<body class="bg-dark-pattern text-surface-ink">
+    <div class="app-shell">
+        <header class="site-header">
+            <a asp-page="/Index" class="site-logo">ASSISTANT</a>
 
-        <div class="flex items-center gap-2">
-            <span class="text-lg text-slate-300">Hello, @User.Identity!.Name</span>
-            <form method="post" asp-page="/Account/Logout" data-soft-ignore>
-                <button class="rounded-xl px-3 py-1.5 text-sm bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10">
-                    Sign out
-                </button>
-            </form>
-        </div>
-    </header>
+            <div class="site-user">
+                <span class="site-user__name">Hello, @User.Identity!.Name</span>
+                <form method="post" asp-page="/Account/Logout" data-soft-ignore>
+                    <button class="ghost-button" type="submit">Sign out</button>
+                </form>
+            </div>
+        </header>
 
-    @{
-        var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? string.Empty;
-        var isAdmin = User.IsInRole("assistant-admin");
-        var linkBase = "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition";
-        string LinkClass(string target)
-            => string.Equals(currentPage, target, System.StringComparison.OrdinalIgnoreCase)
-                ? $"{linkBase} bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
-                : $"{linkBase} text-slate-300 hover:bg-white/5";
-    }
-    <div class="container mx-auto px-4 md:px-6 py-6" data-soft-root>
-        <div class="flex flex-col md:flex-row gap-6">
+        @{
+            var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? string.Empty;
+            var isAdmin = User.IsInRole("assistant-admin");
+            var linkBase = "admin-link";
+            string LinkClass(string target)
+                => string.Equals(currentPage, target, System.StringComparison.OrdinalIgnoreCase)
+                    ? $"{linkBase} admin-link--active"
+                    : linkBase;
+        }
+
+        <div class="app-layout" data-soft-root>
             @if (isAdmin)
             {
-                <aside class="md:w-64 md:flex-shrink-0">
-                    <div class="kc-card p-4 mb-4 md:mb-0 md:sticky md:top-6">
-                        <div class="text-xs uppercase tracking-wide text-slate-400 mb-3">Администрирование</div>
-                        <nav class="flex flex-col gap-1" data-admin-nav>
+                <aside class="admin-rail">
+                    <div class="admin-rail__card">
+                        <div class="admin-rail__title">Администрирование</div>
+                        <nav class="admin-rail__nav" data-admin-nav>
                             <a asp-page="/Clients/Search" class='@LinkClass("/Clients/Search")'>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <circle cx="11" cy="11" r="8" />
                                     <path d="m21 21-4.3-4.3" />
                                 </svg>
                                 <span>Поиск клиентов</span>
                             </a>
                             <a asp-page="/Admin/UserClients" class='@LinkClass("/Admin/UserClients")'>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
                                     <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
                                 </svg>
                                 <span>Доступ пользователей</span>
                             </a>
                             <a asp-page="/Admin/Events" class='@LinkClass("/Admin/Events")'>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path d="M21 7H3" />
                                     <path d="M21 11H3" />
                                     <path d="M15 15H3" />
@@ -76,7 +74,8 @@
                     </div>
                 </aside>
             }
-            <main id="app" class="flex-1">
+
+            <main id="app" class="app-content">
                 @RenderBody()
             </main>
         </div>
