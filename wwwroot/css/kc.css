@@ -21,28 +21,10 @@
 
 /* Background */
 .bg-dark-pattern {
-    background-color: #06080f;
-    background-image:
-        radial-gradient(circle at 25px 25px, rgba(148, 163, 184, 0.12) 0, rgba(148, 163, 184, 0.12) 2px, transparent 2px),
-        radial-gradient(circle at 75px 75px, rgba(99, 102, 241, 0.22) 0, rgba(99, 102, 241, 0.22) 2px, transparent 2px),
-        linear-gradient(140deg, rgba(15, 23, 42, 0.7), rgba(2, 6, 23, 0.92));
-    background-size: 140px 140px, 140px 140px, auto;
-    background-attachment: fixed;
-    background-blend-mode: screen, lighten, normal;
-    position: relative;
-    isolation: isolate;
-}
-
-.bg-dark-pattern::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.18), transparent 55%),
-        radial-gradient(circle at 80% 30%, rgba(14, 165, 233, 0.12), transparent 60%),
-        radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.1), transparent 65%);
-    opacity: 0.5;
-    z-index: -1;
+    background-color: var(--kc-bg);
+    background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), radial-gradient(700px 420px at 12% -10%, rgba(99,102,241,0.08), transparent 60%), radial-gradient(900px 520px at 100% 110%, rgba(45,212,191,0.06), transparent 65%);
+    background-size: 18px 18px, 32px 32px, auto, auto;
+    background-position: 0 0, 8px 10px, center, center;
 }
 
 /* ===== Glass Header ===== */
