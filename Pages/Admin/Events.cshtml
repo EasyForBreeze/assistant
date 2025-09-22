@@ -1,0 +1,114 @@
+@page
+@model Assistant.Pages.Admin.EventsModel
+@{
+    ViewData["Title"] = "События";
+}
+
+<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(14,165,233,.55), rgba(59,130,246,.35))"></div>
+        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(45,212,191,.6), rgba(99,102,241,.35))"></div>
+    </div>
+
+    <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h3 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(59,130,246,0.25)]">
+                События
+            </h3>
+            <p class="text-slate-200/80 mt-2 text-sm max-w-2xl">
+                Просматривайте журнал действий Assistant и фильтруйте события по типу, пользователю и диапазону дат.
+            </p>
+        </div>
+    </div>
+</div>
+
+<section class="kc-card p-5 mb-6">
+    <form method="get" class="grid gap-4 md:grid-cols-5" data-soft-transition="#eventsTable">
+        <div class="flex flex-col gap-1">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Пользователь</label>
+            <input name="Username" value="@Model.Username" placeholder="username"
+                   class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Тип события</label>
+            <select name="OperationType" class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-white/20">
+                <option value="">Все типы</option>
+                @foreach (var type in Model.OperationTypes)
+                {
+                    var selected = string.Equals(Model.OperationType, type, StringComparison.OrdinalIgnoreCase)
+                        ? "selected"
+                        : null;
+                    <option value="@type" selected="@selected">@type</option>
+                }
+            </select>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Дата и время (от)</label>
+            <input type="datetime-local" name="From" value="@Model.FromInput"
+                   class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Дата и время (до)</label>
+            <input type="datetime-local" name="To" value="@Model.ToInput"
+                   class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Макс. записей</label>
+            <input type="number" name="Limit" value="@Model.Limit" min="1" max="1000"
+                   class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-white/20" />
+        </div>
+        <div class="md:col-span-5 flex flex-wrap gap-2 pt-2">
+            <button type="submit" class="btn-subtle">Применить фильтры</button>
+            <a asp-page="/Admin/Events" class="btn-subtle">Сбросить</a>
+            <span class="text-xs text-slate-400 md:ml-auto self-center">Показано @Model.ResultCount событий</span>
+        </div>
+    </form>
+</section>
+
+<div id="eventsTable" data-soft-root>
+    @if (Model.ResultCount == 0)
+    {
+        <div class="kc-card p-5 text-sm text-slate-400">
+            @(Model.HasFilters ? "По заданным параметрам событий не найдено." : "В журнале ещё нет событий.")
+        </div>
+    }
+    else
+    {
+        <div class="kc-card p-0 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-white/10 text-sm">
+                    <thead class="bg-white/5 uppercase tracking-wide text-xs text-slate-300">
+                        <tr>
+                            <th class="px-4 py-3 text-left">ID</th>
+                            <th class="px-4 py-3 text-left">Дата и время</th>
+                            <th class="px-4 py-3 text-left">Тип</th>
+                            <th class="px-4 py-3 text-left">Пользователь</th>
+                            <th class="px-4 py-3 text-left">Realm</th>
+                            <th class="px-4 py-3 text-left">Target ID</th>
+                            <th class="px-4 py-3 text-left">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/10">
+                        @foreach (var log in Model.Logs)
+                        {
+                            <tr class="hover:bg-white/5 transition">
+                                <td class="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-300">@log.Id</td>
+                                <td class="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-200">@Model.FormatTimestamp(log.CreatedAtUtc)</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.OperationType</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.Username</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.Realm</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.TargetId</td>
+                                <td class="px-4 py-3 text-xs text-slate-100 whitespace-pre-wrap font-mono">@(string.IsNullOrWhiteSpace(log.Details) ? "-" : log.Details)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="border-t border-white/10 px-4 py-2 text-xs text-slate-400">
+                Показаны последние @Model.ResultCount событий (ограничение @Model.Limit).
+            </div>
+        </div>
+    }
+</div>
