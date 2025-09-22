@@ -62,19 +62,18 @@
     </form>
 </section>
 
-<div id="eventsTable" data-soft-root class="flex justify-center">
-    <div class="w-full max-w-6xl">
-        @if (Model.ResultCount == 0)
-        {
-            <div class="kc-card p-5 text-sm text-slate-400 text-center">
-                @(Model.HasFilters ? "По заданным параметрам событий не найдено." : "В журнале ещё нет событий.")
-            </div>
-        }
-        else
-        {
-            <div class="kc-card p-0 overflow-hidden mx-auto">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-white/10 text-sm text-center">
+<div id="eventsTable" data-soft-root>
+    @if (Model.ResultCount == 0)
+    {
+        <div class="kc-card p-5 text-sm text-slate-400">
+            @(Model.HasFilters ? "По заданным параметрам событий не найдено." : "В журнале ещё нет событий.")
+        </div>
+    }
+    else
+    {
+        <div class="kc-card p-0 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-white/10 text-sm text-center">
                     <thead class="bg-white/5 uppercase tracking-wide text-xs text-slate-300">
                         <tr>
                             <th class="px-4 py-3 text-center">ID</th>
@@ -107,5 +106,4 @@
             </div>
         </div>
     }
-    </div>
 </div>
