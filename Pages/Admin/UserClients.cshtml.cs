@@ -439,27 +439,17 @@ public sealed class UserClientsModel : PageModel
         var normalizedClientId = string.IsNullOrWhiteSpace(clientId) ? "-" : clientId;
         var normalizedTargetUser = string.IsNullOrWhiteSpace(targetUser) ? "-" : targetUser;
 
-        var detailsParts = new List<string>();
+        var clientDisplay = string.IsNullOrWhiteSpace(clientName)
+            ? $"{normalizedClientId} ({normalizedRealm})"
+            : $"{clientName} ({normalizedClientId}, {normalizedRealm})";
 
-        if (!string.IsNullOrWhiteSpace(clientName)
-            && !string.Equals(clientName, normalizedClientId, StringComparison.Ordinal))
-        {
-            detailsParts.Add($"clientName={clientName}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(targetDisplay)
-            && !string.Equals(targetDisplay, normalizedTargetUser, StringComparison.OrdinalIgnoreCase))
-        {
-            detailsParts.Add($"targetDisplay={targetDisplay}");
-        }
-
-        var details = detailsParts.Count == 0 ? null : string.Join("; ", detailsParts);
+        var details = $"Пользователю {normalizedTargetUser} присвоены клиенты: {clientDisplay}";
 
         return _logs.LogAsync(
             operationType,
             actor,
             normalizedRealm,
-            $"{normalizedClientId}:{normalizedTargetUser}",
+            normalizedTargetUser,
             details,
             ct);
     }
