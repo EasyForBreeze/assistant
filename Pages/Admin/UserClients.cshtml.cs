@@ -442,8 +442,13 @@ public sealed class UserClientsModel : PageModel
         var clientDisplay = string.IsNullOrWhiteSpace(clientName)
             ? $"{normalizedClientId} ({normalizedRealm})"
             : $"{clientName} ({normalizedClientId}, {normalizedRealm})";
-
-        var details = $"Пользователю {normalizedTargetUser} присвоены клиенты: {clientDisplay}";
+        var normalizedOperation = ApiLogRepository.NormalizeOperationType(operationType);
+        string details = normalizedOperation switch
+        {
+            "GRANT" => $"Пользователю {normalizedTargetUser} присвоено: {clientDisplay}",
+            "REVOKE" => $"Пользователю {normalizedTargetUser} удалены клиенты: {clientDisplay}",
+            _ => $"Пользователю {normalizedTargetUser} обновлены клиенты: {clientDisplay}"
+        };
 
         return _logs.LogAsync(
             operationType,
