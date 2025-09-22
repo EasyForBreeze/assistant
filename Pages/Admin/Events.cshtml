@@ -25,7 +25,7 @@
 </div>
 
 <section class="kc-card p-5 mb-6">
-    <form method="get" class="grid gap-4 md:grid-cols-5" data-soft-transition="#eventsTable">
+    <form method="get" class="grid gap-4 md:grid-cols-4" data-soft-transition="#eventsTable">
         <div class="flex flex-col gap-1">
             <label class="text-xs uppercase tracking-wide text-slate-400">Пользователь</label>
             <input name="Username" value="@Model.Username" placeholder="username"
@@ -40,7 +40,7 @@
                     var selected = string.Equals(Model.OperationType, type, StringComparison.OrdinalIgnoreCase)
                         ? "selected"
                         : null;
-                    <option value="@type" selected="@selected">@type</option>
+                    <option value="@type" selected="@selected">@Model.FormatOperationType(type)</option>
                 }
             </select>
         </div>
@@ -54,12 +54,7 @@
             <input type="datetime-local" name="To" value="@Model.ToInput"
                    class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
         </div>
-        <div class="flex flex-col gap-1">
-            <label class="text-xs uppercase tracking-wide text-slate-400">Макс. записей</label>
-            <input type="number" name="Limit" value="@Model.Limit" min="1" max="1000"
-                   class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-white/20" />
-        </div>
-        <div class="md:col-span-5 flex flex-wrap gap-2 pt-2">
+        <div class="md:col-span-4 flex flex-wrap gap-2 pt-2">
             <button type="submit" class="btn-subtle">Применить фильтры</button>
             <a asp-page="/Admin/Events" class="btn-subtle">Сбросить</a>
             <span class="text-xs text-slate-400 md:ml-auto self-center">Показано @Model.ResultCount событий</span>
@@ -78,36 +73,36 @@
     {
         <div class="kc-card p-0 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-white/10 text-sm">
+                <table class="min-w-full divide-y divide-white/10 text-sm text-center">
                     <thead class="bg-white/5 uppercase tracking-wide text-xs text-slate-300">
                         <tr>
-                            <th class="px-4 py-3 text-left">ID</th>
-                            <th class="px-4 py-3 text-left">Дата и время</th>
-                            <th class="px-4 py-3 text-left">Тип</th>
-                            <th class="px-4 py-3 text-left">Пользователь</th>
-                            <th class="px-4 py-3 text-left">Realm</th>
-                            <th class="px-4 py-3 text-left">Target ID</th>
-                            <th class="px-4 py-3 text-left">Details</th>
+                            <th class="px-4 py-3 text-center">ID</th>
+                            <th class="px-4 py-3 text-center">Дата и время</th>
+                            <th class="px-4 py-3 text-center">Тип</th>
+                            <th class="px-4 py-3 text-center">Пользователь</th>
+                            <th class="px-4 py-3 text-center">Realm</th>
+                            <th class="px-4 py-3 text-center">Target ID</th>
+                            <th class="px-4 py-3 text-center">Details</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/10">
                         @foreach (var log in Model.Logs)
                         {
                             <tr class="hover:bg-white/5 transition">
-                                <td class="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-300">@log.Id</td>
-                                <td class="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-200">@Model.FormatTimestamp(log.CreatedAtUtc)</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.OperationType</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.Username</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.Realm</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-slate-100">@log.TargetId</td>
-                                <td class="px-4 py-3 text-xs text-slate-100 whitespace-pre-wrap font-mono">@(string.IsNullOrWhiteSpace(log.Details) ? "-" : log.Details)</td>
+                                <td class="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-300 text-center">@log.Id</td>
+                                <td class="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-200 text-center">@Model.FormatTimestamp(log.CreatedAtUtc)</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100 text-center">@Model.FormatOperationType(log.OperationType)</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100 text-center">@log.Username</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100 text-center">@log.Realm</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-100 text-center">@log.TargetId</td>
+                                <td class="px-4 py-3 text-xs text-slate-100 whitespace-pre-wrap font-mono text-center">@(string.IsNullOrWhiteSpace(log.Details) ? "-" : log.Details)</td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
             <div class="border-t border-white/10 px-4 py-2 text-xs text-slate-400">
-                Показаны последние @Model.ResultCount событий (ограничение @Model.Limit).
+                Показаны последние @Model.ResultCount событий (максимум @Model.Limit).
             </div>
         </div>
     }

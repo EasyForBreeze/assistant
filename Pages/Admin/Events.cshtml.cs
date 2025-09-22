@@ -12,8 +12,7 @@ namespace Assistant.Pages.Admin;
 [Authorize(Roles = "assistant-admin")]
 public sealed class EventsModel : PageModel
 {
-    private const int DefaultLimitValue = 200;
-    private const int MaxLimitValue = 1000;
+    private const int PageLimit = 10;
 
     private readonly ApiLogRepository _repository;
 
@@ -34,12 +33,11 @@ public sealed class EventsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DateTime? To { get; set; }
 
-    [BindProperty(SupportsGet = true)]
-    public int Limit { get; set; } = DefaultLimitValue;
-
     public IReadOnlyList<ApiAuditLogEntry> Logs { get; private set; } = Array.Empty<ApiAuditLogEntry>();
 
     public IReadOnlyList<string> OperationTypes { get; private set; } = Array.Empty<string>();
+
+    public int Limit => PageLimit;
 
     public bool HasFilters =>
         !string.IsNullOrWhiteSpace(Username)
@@ -57,8 +55,6 @@ public sealed class EventsModel : PageModel
     {
         Username = Normalize(Username);
         OperationType = Normalize(OperationType);
-        Limit = NormalizeLimit(Limit);
-
         OperationTypes = await _repository.GetOperationTypesAsync(ct);
 
         var fromUtc = ToUtc(From);
@@ -132,18 +128,19 @@ public sealed class EventsModel : PageModel
         return local.ToString("yyyy-MM-ddTHH:mm");
     }
 
-    private static int NormalizeLimit(int value)
+    public string FormatOperationType(string? value)
     {
-        if (value <= 0)
+        if (string.IsNullOrWhiteSpace(value))
         {
-            return DefaultLimitValue;
+            return string.Empty;
         }
 
-        if (value > MaxLimitValue)
+        var colonIndex = value.IndexOf(':');
+        if (colonIndex < 0 || colonIndex + 1 >= value.Length)
         {
-            return MaxLimitValue;
+            return value;
         }
 
-        return value;
+        return value[(colonIndex + 1)..].Trim();
     }
 }
