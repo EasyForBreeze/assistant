@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -73,4 +75,118 @@ public sealed class ApiLogRepository
 
         await cmd.ExecuteNonQueryAsync(ct);
     }
+
+    public async Task<IReadOnlyList<ApiAuditLogEntry>> GetLogsAsync(
+        string? username = null,
+        string? operationType = null,
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        int limit = 200,
+        CancellationToken ct = default)
+    {
+        await EnsureCreatedAsync(ct);
+
+        if (limit <= 0)
+        {
+            limit = 200;
+        }
+
+        await using var conn = new NpgsqlConnection(_connString);
+        await conn.OpenAsync(ct);
+
+        var sql = new StringBuilder();
+        sql.Append("select id, created_at, operation_type, username, realm, target_id, details from api_audit_logs");
+
+        var conditions = new List<string>();
+        await using var cmd = new NpgsqlCommand { Connection = conn };
+
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            cmd.Parameters.AddWithValue("user", username.Trim());
+            conditions.Add("username = @user");
+        }
+
+        if (!string.IsNullOrWhiteSpace(operationType))
+        {
+            cmd.Parameters.AddWithValue("op", operationType.Trim());
+            conditions.Add("operation_type = @op");
+        }
+
+        if (fromUtc is not null)
+        {
+            var normalized = DateTime.SpecifyKind(fromUtc.Value, DateTimeKind.Utc);
+            cmd.Parameters.AddWithValue("from", normalized);
+            conditions.Add("created_at >= @from");
+        }
+
+        if (toUtc is not null)
+        {
+            var normalized = DateTime.SpecifyKind(toUtc.Value, DateTimeKind.Utc);
+            cmd.Parameters.AddWithValue("to", normalized);
+            conditions.Add("created_at <= @to");
+        }
+
+        if (conditions.Count > 0)
+        {
+            sql.Append(" where ");
+            sql.Append(string.Join(" and ", conditions));
+        }
+
+        sql.Append(" order by created_at desc, id desc limit @limit");
+        cmd.Parameters.AddWithValue("limit", limit);
+        cmd.CommandText = sql.ToString();
+
+        var list = new List<ApiAuditLogEntry>();
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var createdAt = reader.GetFieldValue<DateTime>(1);
+            if (createdAt.Kind == DateTimeKind.Unspecified)
+            {
+                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+            }
+
+            list.Add(new ApiAuditLogEntry(
+                reader.GetInt64(0),
+                createdAt,
+                reader.GetString(2),
+                reader.GetString(3),
+                reader.GetString(4),
+                reader.GetString(5),
+                reader.IsDBNull(6) ? null : reader.GetString(6)));
+        }
+
+        return list;
+    }
+
+    public async Task<IReadOnlyList<string>> GetOperationTypesAsync(CancellationToken ct = default)
+    {
+        await EnsureCreatedAsync(ct);
+
+        await using var conn = new NpgsqlConnection(_connString);
+        await conn.OpenAsync(ct);
+
+        const string sql = "select distinct operation_type from api_audit_logs order by operation_type asc";
+
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        var list = new List<string>();
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            list.Add(reader.GetString(0));
+        }
+
+        return list;
+    }
 }
+
+public sealed record ApiAuditLogEntry(
+    long Id,
+    DateTime CreatedAtUtc,
+    string OperationType,
+    string Username,
+    string Realm,
+    string TargetId,
+    string? Details);
