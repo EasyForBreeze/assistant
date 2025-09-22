@@ -82,6 +82,7 @@ public sealed class ApiLogRepository
         DateTime? fromUtc = null,
         DateTime? toUtc = null,
         int limit = 200,
+        int offset = 0,
         CancellationToken ct = default)
     {
         await EnsureCreatedAsync(ct);
@@ -89,6 +90,11 @@ public sealed class ApiLogRepository
         if (limit <= 0)
         {
             limit = 200;
+        }
+
+        if (offset < 0)
+        {
+            offset = 0;
         }
 
         await using var conn = new NpgsqlConnection(_connString);
@@ -100,6 +106,84 @@ public sealed class ApiLogRepository
         var conditions = new List<string>();
         await using var cmd = new NpgsqlCommand { Connection = conn };
 
+        ApplyFilters(cmd, conditions, username, operationType, fromUtc, toUtc);
+
+        if (conditions.Count > 0)
+        {
+            sql.Append(" where ");
+            sql.Append(string.Join(" and ", conditions));
+        }
+
+        sql.Append(" order by created_at desc, id desc limit @limit offset @offset");
+        cmd.Parameters.AddWithValue("limit", limit);
+        cmd.Parameters.AddWithValue("offset", offset);
+        cmd.CommandText = sql.ToString();
+
+        var list = new List<ApiAuditLogEntry>();
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var createdAt = reader.GetFieldValue<DateTime>(1);
+            if (createdAt.Kind == DateTimeKind.Unspecified)
+            {
+                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+            }
+
+            var normalizedOperationType = reader.GetString(2);
+
+            list.Add(new ApiAuditLogEntry(
+                reader.GetInt64(0),
+                createdAt,
+                normalizedOperationType,
+                reader.GetString(3),
+                reader.GetString(4),
+                reader.GetString(5),
+                reader.IsDBNull(6) ? null : reader.GetString(6)));
+        }
+
+        return list;
+    }
+
+    public async Task<int> GetLogsCountAsync(
+        string? username = null,
+        string? operationType = null,
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        CancellationToken ct = default)
+    {
+        await EnsureCreatedAsync(ct);
+
+        await using var conn = new NpgsqlConnection(_connString);
+        await conn.OpenAsync(ct);
+
+        const string baseSql = "select count(*) from api_audit_logs";
+        var conditions = new List<string>();
+        await using var cmd = new NpgsqlCommand { Connection = conn };
+
+        ApplyFilters(cmd, conditions, username, operationType, fromUtc, toUtc);
+
+        var sql = new StringBuilder(baseSql);
+        if (conditions.Count > 0)
+        {
+            sql.Append(" where ");
+            sql.Append(string.Join(" and ", conditions));
+        }
+
+        cmd.CommandText = sql.ToString();
+
+        var result = await cmd.ExecuteScalarAsync(ct);
+        return result is null ? 0 : Convert.ToInt32(result);
+    }
+
+    private static void ApplyFilters(
+        NpgsqlCommand cmd,
+        List<string> conditions,
+        string? username,
+        string? operationType,
+        DateTime? fromUtc,
+        DateTime? toUtc)
+    {
         if (!string.IsNullOrWhiteSpace(username))
         {
             cmd.Parameters.AddWithValue("user", username.Trim());
@@ -129,41 +213,6 @@ public sealed class ApiLogRepository
             cmd.Parameters.AddWithValue("to", normalized);
             conditions.Add("created_at <= @to");
         }
-
-        if (conditions.Count > 0)
-        {
-            sql.Append(" where ");
-            sql.Append(string.Join(" and ", conditions));
-        }
-
-        sql.Append(" order by created_at desc, id desc limit @limit");
-        cmd.Parameters.AddWithValue("limit", limit);
-        cmd.CommandText = sql.ToString();
-
-        var list = new List<ApiAuditLogEntry>();
-
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            var createdAt = reader.GetFieldValue<DateTime>(1);
-            if (createdAt.Kind == DateTimeKind.Unspecified)
-            {
-                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
-            }
-
-            var normalizedOperationType = reader.GetString(2);
-
-            list.Add(new ApiAuditLogEntry(
-                reader.GetInt64(0),
-                createdAt,
-                normalizedOperationType,
-                reader.GetString(3),
-                reader.GetString(4),
-                reader.GetString(5),
-                reader.IsDBNull(6) ? null : reader.GetString(6)));
-        }
-
-        return list;
     }
 
     public async Task<IReadOnlyList<string>> GetOperationTypesAsync(CancellationToken ct = default)
