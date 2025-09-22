@@ -128,7 +128,6 @@
                            class="px-3 py-1 rounded-lg border border-white/10 transition @(!Model.HasPreviousPage ? "opacity-40 pointer-events-none" : "hover:bg-white/10")">
                             Назад
                         </a>
-
                         @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++)
                         {
                             var isCurrent = pageNumber == Model.PageNumber;
