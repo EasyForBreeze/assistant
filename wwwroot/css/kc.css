@@ -3,9 +3,9 @@
    ============================= */
 
 :root {
-    --app-bg-1: #161335;
-    --app-bg-2: #341a57;
-    --app-bg-3: #b23d81;
+    --app-bg-1: #171344;
+    --app-bg-2: #3a1f6b;
+    --app-bg-3: #d44d8c;
     --surface-glass: rgba(16, 18, 42, 0.78);
     --surface-glass-strong: rgba(20, 22, 46, 0.88);
     --surface-border-soft: rgba(255, 255, 255, 0.08);
@@ -64,8 +64,9 @@ svg {
 body.bg-dark-pattern {
     min-height: 100vh;
     background:
-        radial-gradient(880px at 18% 8%, rgba(120, 87, 255, 0.32), transparent 65%),
-        radial-gradient(820px at 82% 2%, rgba(255, 109, 172, 0.28), transparent 70%),
+        radial-gradient(960px at 18% 12%, rgba(124, 85, 255, 0.45), transparent 65%),
+        radial-gradient(900px at 82% 6%, rgba(255, 99, 165, 0.42), transparent 68%),
+        radial-gradient(780px at 15% 88%, rgba(56, 189, 248, 0.38), transparent 70%),
         linear-gradient(180deg, var(--app-bg-1) 0%, var(--app-bg-2) 55%, var(--app-bg-3) 100%);
     background-attachment: fixed;
 }

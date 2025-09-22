@@ -448,7 +448,8 @@
 @section Scripts {
     <script data-soft-nav>
         (() => {
-          const svcRoles = JSON.parse('@Html.Raw(Model.ServiceRolesJson)');
+          const svcRolesData = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
+          const svcRoles = Array.isArray(svcRolesData) ? [...svcRolesData] : [];
           (function(svcRoles){
           // ---------- Вкладки ----------
           const btns  = document.querySelectorAll('.tab-btn');
