@@ -43,3 +43,10 @@ public sealed record UpdateClientSpec(
     IReadOnlyList<string> LocalRoles,
     IReadOnlyList<(string ClientId, string Role)> ServiceRoles
 );
+
+public enum TokenExampleKind
+{
+    AccessToken,
+    IdToken,
+    UserInfo
+}

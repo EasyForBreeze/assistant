@@ -54,6 +54,7 @@
     @*<button type="button" class="tab-btn" data-tab="Scopes" role="tab">Scopes</button>*@
     @*<button type="button" class="tab-btn" data-tab="Flows" role="tab">Flows</button>*@
     <button type="button" class="tab-btn" data-tab="Credentials" role="tab">Учетные данные клиента</button>
+    <button type="button" class="tab-btn" data-tab="Token" role="tab">Токен</button>
     <button type="button" class="tab-btn" data-tab="Endpoints" role="tab">URIs для запросов</button>
     <button type="button" class="tab-btn" data-tab="Events" role="tab">События по клиенту</button>
 
@@ -252,6 +253,48 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOKEN -->
+    <div class="tab-pane hidden" data-tab="Token" role="tabpanel">
+        <div class="kc-card p-5 kc-hover space-y-5">
+            <div class="space-y-2 max-w-xl">
+                <label class="text-sm text-slate-400" for="tokenUsername">Username пользователя</label>
+                <input id="tokenUsername" class="kc-input rounded-xl px-3 py-2 text-sm w-full" placeholder="user.name" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                <div id="tokenError" class="err"></div>
+                <div class="kc-mini text-slate-400">Укажите пользователя, от имени которого нужно получить пример токена.</div>
+            </div>
+
+            <div>
+                <div class="text-slate-200 font-semibold mb-2">Тип токена</div>
+                <div class="flex flex-wrap gap-4 text-sm text-slate-200">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="radio" name="tokenType" value="AccessToken" checked>
+                        <span>Access Token</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="radio" name="tokenType" value="IdToken">
+                        <span>ID Token</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="radio" name="tokenType" value="UserInfo">
+                        <span>User Info</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="button" class="btn-primary" id="btnGenerateToken">Сгенерировать payload</button>
+                <div id="tokenStatus" class="kc-mini text-slate-400"></div>
+            </div>
+            <div id="tokenMeta" class="kc-mini text-slate-300"></div>
+
+            <div>
+                <div class="text-sm text-slate-400 mb-1">Payload примера</div>
+                <pre id="tokenPayload" class="rounded-xl bg-slate-900/60 text-slate-100 text-xs p-4 overflow-auto max-h-96 whitespace-pre-wrap break-words">Тут появится payload токена.</pre>
+                <div class="kc-mini text-slate-500 mt-2">Выводится payload примерного токена. Реальный токен не генерируется.</div>
             </div>
         </div>
     </div>
@@ -485,6 +528,8 @@
           // ---------- Состояние формы ----------
           const realm = '@realm';
           const clientId = '@clientId';
+          const clientUuid = '@Model.Client.ClientUuid';
+          const pageUrl = '@Url.Page(null)';
           const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
           @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
@@ -720,6 +765,151 @@
             secretVisible = true;
             btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
           });
+
+          function initTokenTab(){
+            const usernameInput = document.getElementById('tokenUsername');
+            const btnGenerate = document.getElementById('btnGenerateToken');
+            const payloadEl = document.getElementById('tokenPayload');
+            const errorEl = document.getElementById('tokenError');
+            const statusEl = document.getElementById('tokenStatus');
+            const metaEl = document.getElementById('tokenMeta');
+            const typeInputs = Array.from(document.querySelectorAll('input[name="tokenType"]'));
+
+            if (!(usernameInput instanceof HTMLInputElement) || !(btnGenerate instanceof HTMLButtonElement) || !(payloadEl instanceof HTMLElement)){
+              return;
+            }
+
+            const defaultPayloadText = payloadEl.textContent || '';
+            const typeLabels = {
+              AccessToken: 'Access Token',
+              IdToken: 'ID Token',
+              UserInfo: 'User Info'
+            };
+
+            const setError = message => {
+              if (!(errorEl instanceof HTMLElement)) return;
+              if (message){
+                errorEl.textContent = message;
+                errorEl.classList.add('show');
+              } else {
+                errorEl.textContent = '';
+                errorEl.classList.remove('show');
+              }
+            };
+
+            const setStatus = message => {
+              if (statusEl instanceof HTMLElement){
+                statusEl.textContent = message || '';
+              }
+            };
+
+            const setMeta = (kind, userId) => {
+              if (!(metaEl instanceof HTMLElement)) return;
+              const parts = [];
+              if (kind){
+                const label = typeLabels[kind] || kind;
+                parts.push(`Тип: ${label}`);
+              }
+              if (userId){
+                parts.push(`User ID: ${userId}`);
+              }
+              metaEl.textContent = parts.join(' • ');
+            };
+
+            const getSelectedType = () => {
+              const selected = typeInputs.find(input => input instanceof HTMLInputElement && input.checked);
+              return selected ? selected.value : 'AccessToken';
+            };
+
+            const setLoading = on => {
+              if (btnGenerate){
+                btnGenerate.disabled = on;
+                btnGenerate.classList.toggle('kc-disabled', !!on);
+              }
+              if (on){
+                setStatus('Генерация…');
+              } else if (statusEl instanceof HTMLElement && statusEl.textContent === 'Генерация…'){
+                setStatus('');
+              }
+            };
+
+            const renderPayload = data => {
+              if (!payloadEl) return;
+              if (!data || data.payload == null){
+                payloadEl.textContent = defaultPayloadText;
+                return;
+              }
+              if (data.isJson && typeof data.payload === 'object'){
+                try {
+                  payloadEl.textContent = JSON.stringify(data.payload, null, 2);
+                } catch {
+                  payloadEl.textContent = String(data.payload);
+                }
+              } else {
+                payloadEl.textContent = String(data.payload);
+              }
+            };
+
+            const requestToken = async () => {
+              const username = (usernameInput.value || '').trim();
+              if (!username){
+                setError('Введите username пользователя.');
+                usernameInput.focus();
+                return;
+              }
+
+              setError('');
+              setMeta(null, null);
+              setStatus('');
+              payloadEl.textContent = 'Загрузка…';
+              setLoading(true);
+
+              try {
+                const params = new URLSearchParams({ realm, clientId, username, type: getSelectedType() });
+                if (clientUuid){
+                  params.set('clientUuid', clientUuid);
+                }
+                const response = await fetch(`${pageUrl}?handler=GenerateToken&${params.toString()}`, {
+                  headers: { 'Accept': 'application/json' }
+                });
+                let body = null;
+                try {
+                  body = await response.json();
+                } catch {
+                  body = null;
+                }
+
+                if (!response.ok){
+                  const message = body && body.error ? body.error : `Ошибка ${response.status}`;
+                  throw new Error(message);
+                }
+
+                renderPayload(body);
+                setError('');
+                setMeta(body?.tokenType, body?.userId);
+                setStatus('Готово');
+                window.setTimeout(() => { if (statusEl?.textContent === 'Готово') setStatus(''); }, 4000);
+              } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                setError(message);
+                renderPayload(null);
+                setMeta(null, null);
+                setStatus('');
+              } finally {
+                setLoading(false);
+              }
+            };
+
+            btnGenerate.addEventListener('click', requestToken);
+            usernameInput.addEventListener('keydown', ev => {
+              if (ev.key === 'Enter'){
+                ev.preventDefault();
+                requestToken();
+              }
+            });
+          }
+
+          initTokenTab();
 
           // ---------- Events (ленивая инициализация) ----------
           function initEvents(){
