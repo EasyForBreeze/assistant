@@ -254,3 +254,5 @@ razorPages.WithStaticAssets();
 internal sealed record TokenEvaluationRequest(string Realm, string ClientId, string Username);
 razorPages.RequireAuthorization();
 app.Run();
+
+internal sealed record TokenEvaluationRequest(string Realm, string ClientId, string Username);
