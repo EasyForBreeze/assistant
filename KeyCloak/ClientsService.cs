@@ -468,7 +468,7 @@ public sealed class ClientsService
                 $"Клиент '{spec.ClientId}' создан, но при назначении ролей произошла ошибка: {ex.Message}", ex);
         }
 
-        await AuditAsync("client:create", spec.Realm, spec.ClientId, ct);
+        await AuditAsync("CREATE", spec.Realm, spec.ClientId, ct);
         return createdId;
     }
 

@@ -12,7 +12,7 @@ namespace Assistant.Pages.Admin;
 [Authorize(Roles = "assistant-admin")]
 public sealed class EventsModel : PageModel
 {
-    private const int PageLimit = 10;
+    private const int PageLimit = 5;
 
     private readonly ApiLogRepository _repository;
 
@@ -135,6 +135,6 @@ public sealed class EventsModel : PageModel
             return string.Empty;
         }
 
-        return ApiLogRepository.NormalizeOperationType(value);
+        return value;
     }
 }

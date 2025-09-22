@@ -21,7 +21,6 @@ public sealed class ApiLogRepository
         _connString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     }
-
     private async Task EnsureCreatedAsync(CancellationToken ct)
     {
         if (_initialized) return;
@@ -58,7 +57,7 @@ public sealed class ApiLogRepository
         string? details = null,
         CancellationToken ct = default)
     {
-        var normalizedOperationType = NormalizeOperationType(operationType);
+        var normalizedOperationType = operationType;
         await EnsureCreatedAsync(ct);
 
         await using var conn = new NpgsqlConnection(_connString);
@@ -109,7 +108,7 @@ public sealed class ApiLogRepository
 
         if (!string.IsNullOrWhiteSpace(operationType))
         {
-            var normalizedOperationType = NormalizeOperationType(operationType);
+            var normalizedOperationType = operationType;
             if (!string.IsNullOrEmpty(normalizedOperationType))
             {
                 cmd.Parameters.AddWithValue("op", normalizedOperationType);
@@ -152,7 +151,7 @@ public sealed class ApiLogRepository
                 createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
             }
 
-            var normalizedOperationType = NormalizeOperationType(reader.GetString(2));
+            var normalizedOperationType = reader.GetString(2);
 
             list.Add(new ApiAuditLogEntry(
                 reader.GetInt64(0),
@@ -183,7 +182,7 @@ public sealed class ApiLogRepository
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            var normalized = NormalizeOperationType(reader.GetString(0));
+            var normalized = reader.GetString(0);
             if (string.IsNullOrEmpty(normalized) || !set.Add(normalized))
             {
                 continue;
@@ -194,27 +193,6 @@ public sealed class ApiLogRepository
 
         list.Sort(StringComparer.Ordinal);
         return list;
-    }
-
-    internal static string NormalizeOperationType(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        var trimmed = value.Trim();
-        var colonIndex = trimmed.IndexOf(':');
-        if (colonIndex >= 0 && colonIndex + 1 < trimmed.Length)
-        {
-            var candidate = trimmed[(colonIndex + 1)..].Trim();
-            if (candidate.Length > 0)
-            {
-                trimmed = candidate;
-            }
-        }
-
-        return trimmed.Length == 0 ? string.Empty : trimmed.ToUpperInvariant();
     }
 }
 

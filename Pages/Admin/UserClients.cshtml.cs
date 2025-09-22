@@ -440,9 +440,9 @@ public sealed class UserClientsModel : PageModel
         var normalizedTargetUser = string.IsNullOrWhiteSpace(targetUser) ? "-" : targetUser;
 
         var clientDisplay = string.IsNullOrWhiteSpace(clientName)
-            ? $"{normalizedClientId} ({normalizedRealm})"
-            : $"{clientName} ({normalizedClientId}, {normalizedRealm})";
-        var normalizedOperation = ApiLogRepository.NormalizeOperationType(operationType);
+            ? $"{normalizedClientId}"
+            : $"{clientName}";
+        var normalizedOperation = operationType;
         string details = normalizedOperation switch
         {
             "GRANT" => $"Пользователю {normalizedTargetUser} присвоено: {clientDisplay}",
