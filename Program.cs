@@ -175,6 +175,38 @@ app.MapPost("/api/client-secret", async (
     var secret = await clients.RegenerateClientSecretAsync(realm, clientId, ct);
     return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
 }).RequireAuthorization();
+app.MapPost("/api/client-token-evaluate", async (
+    TokenEvaluationRequest request,
+    ClientsService clients,
+    CancellationToken ct) =>
+{
+    if (request is null)
+    {
+        return Results.BadRequest(new { error = "Некорректный запрос." });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Realm) || string.IsNullOrWhiteSpace(request.ClientId))
+    {
+        return Results.BadRequest(new { error = "Не указан realm или клиент." });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Username))
+    {
+        return Results.BadRequest(new { error = "Введите имя пользователя." });
+    }
+
+    try
+    {
+        var result = await clients.EvaluateTokensAsync(request.Realm.Trim(), request.ClientId.Trim(), request.Username.Trim(), ct);
+        return result is not null
+            ? Results.Ok(result)
+            : Results.NotFound(new { error = "Клиент не найден." });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+    }
+}).RequireAuthorization();
 app.MapPost("/api/access-request", async (
     HttpContext context,
     IAccessRequestEmailSender emailSender,
@@ -218,5 +250,7 @@ app.MapPost("/api/access-request", async (
 }).AllowAnonymous();
 var razorPages = app.MapRazorPages();
 razorPages.WithStaticAssets();
+
+internal sealed record TokenEvaluationRequest(string Realm, string ClientId, string Username);
 razorPages.RequireAuthorization();
 app.Run();

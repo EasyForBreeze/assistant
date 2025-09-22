@@ -55,6 +55,7 @@
     @*<button type="button" class="tab-btn" data-tab="Flows" role="tab">Flows</button>*@
     <button type="button" class="tab-btn" data-tab="Credentials" role="tab">Учетные данные клиента</button>
     <button type="button" class="tab-btn" data-tab="Endpoints" role="tab">URIs для запросов</button>
+    <button type="button" class="tab-btn" data-tab="Token" role="tab">Токен</button>
     <button type="button" class="tab-btn" data-tab="Events" role="tab">События по клиенту</button>
 
 
@@ -370,6 +371,50 @@
         </div>
     </div>
 
+    <!-- TOKEN -->
+    <div class="tab-pane hidden" data-tab="Token" role="tabpanel">
+        <div class="kc-card p-5 kc-hover space-y-4">
+            <div class="text-slate-200 font-semibold">Пример токенов</div>
+            <div class="kc-th">Введите имя пользователя, чтобы сгенерировать пример Access Token, UserInfo и ID Token для текущего клиента.</div>
+
+            <div class="form-row_small">
+                <label for="tokenUserInput" class="text-sm text-slate-400">Имя пользователя</label>
+                <div class="flex gap-2">
+                    <input id="tokenUserInput" class="kc-input rounded-xl px-3 py-2 text-sm w-full md:w-[360px]" placeholder="username" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    <button type="button" class="btn-subtle" id="tokenFetchButton">Показать</button>
+                </div>
+            </div>
+
+            <div id="tokenError" class="err hidden" role="alert"></div>
+            <div id="tokenLoading" class="kc-th hidden">Генерируем токены…</div>
+
+            <div id="tokenResult" class="hidden space-y-5">
+                <div id="tokenUserSummary" class="kc-mini text-slate-300"></div>
+
+                <div class="space-y-2">
+                    <div class="text-slate-200 font-semibold">Access Token</div>
+                    <div class="kc-mini text-slate-400">JWT</div>
+                    <pre class="kc-code-block" id="tokenAccessRaw"></pre>
+                    <div class="kc-mini text-slate-400">Payload</div>
+                    <pre class="kc-code-block" id="tokenAccessPretty"></pre>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="text-slate-200 font-semibold">UserInfo</div>
+                    <pre class="kc-code-block" id="tokenUserInfo"></pre>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="text-slate-200 font-semibold">ID Token</div>
+                    <div class="kc-mini text-slate-400">JWT</div>
+                    <pre class="kc-code-block" id="tokenIdRaw"></pre>
+                    <div class="kc-mini text-slate-400">Payload</div>
+                    <pre class="kc-code-block" id="tokenIdPretty"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- EVENTS -->
     <div class="tab-pane hidden" data-tab="Events" role="tabpanel">
         <div class="kc-card p-5 kc-hover">
@@ -453,6 +498,17 @@
           // ---------- Вкладки ----------
           const btns  = document.querySelectorAll('.tab-btn');
           const panes = document.querySelectorAll('.tab-pane');
+          const tokenUserInput = document.getElementById('tokenUserInput');
+          const tokenFetchButton = document.getElementById('tokenFetchButton');
+          const tokenError = document.getElementById('tokenError');
+          const tokenLoading = document.getElementById('tokenLoading');
+          const tokenResult = document.getElementById('tokenResult');
+          const tokenUserSummary = document.getElementById('tokenUserSummary');
+          const tokenAccessRaw = document.getElementById('tokenAccessRaw');
+          const tokenAccessPretty = document.getElementById('tokenAccessPretty');
+          const tokenIdRaw = document.getElementById('tokenIdRaw');
+          const tokenIdPretty = document.getElementById('tokenIdPretty');
+          const tokenUserInfo = document.getElementById('tokenUserInfo');
 
           const prevEventsDocClick = window.__eventsDocClick;
           if (typeof prevEventsDocClick === 'function') {
@@ -476,6 +532,9 @@
             });
             history.replaceState(null, '', '#tab=' + encodeURIComponent(tab));
             if (tab === 'Events') ensureEventsInit();
+            if (tab === 'Token') {
+              window.setTimeout(() => tokenUserInput?.focus(), 50);
+            }
           }
           const m = location.hash.match(/tab=([^&]+)/);
           const start = m ? decodeURIComponent(m[1]) : 'Overview';
@@ -488,6 +547,111 @@
           const redirs   = JSON.parse('@Html.Raw(Model.RedirectUrisJson)');
           const locals   = JSON.parse('@Html.Raw(Model.LocalRolesJson)');
           @* const scopes   = JSON.parse('@Html.Raw(Model.DefaultScopesJson)'); *@
+
+          let tokenAbortController = null;
+
+          function setTokenError(message){
+            if (!tokenError) return;
+            if (message){
+              tokenError.textContent = message;
+              tokenError.classList.remove('hidden');
+            } else {
+              tokenError.textContent = '';
+              tokenError.classList.add('hidden');
+            }
+          }
+
+          function setTokenLoading(isLoading){
+            tokenLoading?.classList.toggle('hidden', !isLoading);
+            if (tokenFetchButton) tokenFetchButton.disabled = !!isLoading;
+          }
+
+          function resetTokenResult(){
+            tokenResult?.classList.add('hidden');
+            if (tokenUserSummary) tokenUserSummary.textContent = '';
+            [tokenAccessRaw, tokenAccessPretty, tokenIdRaw, tokenIdPretty, tokenUserInfo].forEach(el => {
+              if (el) el.textContent = '';
+            });
+          }
+
+          function formatJson(value){
+            if (value == null) return '—';
+            try {
+              return JSON.stringify(value, null, 2);
+            } catch {
+              return String(value);
+            }
+          }
+
+          function renderTokenResult(data){
+            if (!tokenResult) return;
+            if (tokenUserSummary){
+              const display = (data?.displayName || data?.username || '').trim();
+              tokenUserSummary.textContent = display ? `Пользователь: ${display}` : '';
+            }
+            if (tokenAccessRaw) tokenAccessRaw.textContent = data?.accessToken || '—';
+            if (tokenAccessPretty) tokenAccessPretty.textContent = formatJson(data?.accessTokenPayload);
+            if (tokenIdRaw) tokenIdRaw.textContent = data?.idToken || '—';
+            if (tokenIdPretty) tokenIdPretty.textContent = formatJson(data?.idTokenPayload);
+            if (tokenUserInfo) tokenUserInfo.textContent = formatJson(data?.userInfo);
+            tokenResult.classList.remove('hidden');
+          }
+
+          async function evaluateToken(){
+            if (!tokenUserInput) return;
+            const username = (tokenUserInput.value || '').trim();
+            if (!username){
+              setTokenError('Введите имя пользователя.');
+              tokenUserInput.focus();
+              return;
+            }
+
+            setTokenError('');
+            resetTokenResult();
+            setTokenLoading(true);
+
+            try {
+              if (tokenAbortController){
+                tokenAbortController.abort();
+              }
+
+              tokenAbortController = new AbortController();
+              const resp = await fetch('/api/client-token-evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ realm, clientId, username }),
+                signal: tokenAbortController.signal
+              });
+
+              if (!resp.ok){
+                let message = '';
+                try {
+                  const err = await resp.json();
+                  if (err && typeof err.error === 'string') message = err.error;
+                  else if (typeof err.detail === 'string') message = err.detail;
+                } catch { /* ignore */ }
+                if (!message) message = `Ошибка ${resp.status}`;
+                throw new Error(message);
+              }
+
+              const data = await resp.json();
+              renderTokenResult(data);
+            } catch (error){
+              if (error?.name === 'AbortError') return;
+              setTokenError(error instanceof Error ? error.message : 'Не удалось получить токены.');
+            } finally {
+              setTokenLoading(false);
+              tokenAbortController = null;
+            }
+          }
+
+          tokenFetchButton?.addEventListener('click', evaluateToken);
+          tokenUserInput?.addEventListener('keydown', ev => {
+            if (ev.key === 'Enter'){
+              ev.preventDefault();
+              evaluateToken();
+            }
+          });
 
           const swEnabled    = document.getElementById('swEnabled');
           const lblEnabled   = document.getElementById('lblEnabled');

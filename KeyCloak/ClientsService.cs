@@ -65,6 +65,9 @@ public sealed class ClientsService
     {
         public string? Id { get; set; }
         public string? Username { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
     }
 
     internal sealed class RoleMappingsRep
@@ -358,6 +361,276 @@ public sealed class ClientsService
         var secret = rep?.Value;
         await AuditAsync("client-secret:regenerate", realm, details.ClientId, ct);
         return secret;
+    }
+
+    public async Task<TokenEvaluationResult?> EvaluateTokensAsync(string realm, string clientId, string username, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(realm))
+        {
+            throw new ArgumentException("Realm is required.", nameof(realm));
+        }
+
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            throw new ArgumentException("ClientId is required.", nameof(clientId));
+        }
+
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new ArgumentException("Username is required.", nameof(username));
+        }
+
+        var details = await GetClientDetailsAsync(realm, clientId, ct);
+        if (details == null)
+        {
+            return null;
+        }
+
+        var user = await FindUserByUsernameAsync(realm, username, ct);
+        if (user == null || string.IsNullOrWhiteSpace(user.Id))
+        {
+            throw new InvalidOperationException($"Пользователь '{username}' не найден.");
+        }
+
+        var baseNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/evaluate-scopes";
+        var baseLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/evaluate-scopes";
+        var userParam = $"user={UR(user.Id)}";
+
+        var accessToken = await FetchExampleTokenAsync(
+            $"{baseNew}/generate-example-access-token?{userParam}",
+            $"{baseLegacy}/generate-example-access-token?{userParam}",
+            ct);
+        var idToken = await FetchExampleTokenAsync(
+            $"{baseNew}/generate-example-id-token?{userParam}",
+            $"{baseLegacy}/generate-example-id-token?{userParam}",
+            ct);
+        var userInfo = await FetchExampleUserInfoAsync(
+            $"{baseNew}/generate-example-userinfo?{userParam}",
+            $"{baseLegacy}/generate-example-userinfo?{userParam}",
+            ct);
+
+        await AuditAsync("client-token:evaluate", realm, details.ClientId, ct, $"username={user.Username}");
+
+        return new TokenEvaluationResult(
+            user.Id!,
+            user.Username ?? username,
+            FormatUserDisplay(user),
+            accessToken.Raw,
+            accessToken.Payload,
+            idToken.Raw,
+            idToken.Payload,
+            userInfo);
+    }
+
+    private async Task<KcUserRep?> FindUserByUsernameAsync(string realm, string username, CancellationToken ct)
+    {
+        var http = CreateAdminClient();
+        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users?search={UR(username)}&first=0&max=20";
+        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users?search={UR(username)}&first=0&max=20";
+
+        using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
+        if (resp.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        resp.EnsureAdminSuccess();
+        var list = await ReadJsonAsync<List<KcUserRep>>(resp, ct) ?? new List<KcUserRep>();
+
+        foreach (var candidate in list)
+        {
+            if (candidate?.Username is null)
+            {
+                continue;
+            }
+
+            if (string.Equals(candidate.Username, username, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+
+        foreach (var candidate in list)
+        {
+            if (!string.IsNullOrWhiteSpace(candidate?.Username))
+            {
+                return candidate;
+            }
+        }
+
+        return list.Count > 0 ? list[0] : null;
+    }
+
+    private async Task<(string? Raw, JsonElement? Payload)> FetchExampleTokenAsync(string modernUrl, string legacyUrl, CancellationToken ct)
+    {
+        var http = CreateAdminClient();
+        using var resp = await http.PostWithLegacyFallbackAsync(modernUrl, legacyUrl, ct);
+        if (resp.StatusCode == HttpStatusCode.NotFound)
+        {
+            return (null, null);
+        }
+
+        resp.EnsureAdminSuccess();
+
+        var content = await resp.Content.ReadAsStringAsync();
+        var isJson = resp.Content.Headers.ContentType?.MediaType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true;
+        var token = ExtractTokenString(content, isJson);
+        return (token, DecodeJwtPayload(token));
+    }
+
+    private async Task<JsonElement?> FetchExampleUserInfoAsync(string modernUrl, string legacyUrl, CancellationToken ct)
+    {
+        var http = CreateAdminClient();
+        using var resp = await http.PostWithLegacyFallbackAsync(modernUrl, legacyUrl, ct);
+        if (resp.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        resp.EnsureAdminSuccess();
+        var content = await resp.Content.ReadAsStringAsync();
+        return TryParseJsonElement(content);
+    }
+
+    private static string? ExtractTokenString(string? content, bool isJson)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        var trimmed = content.Trim();
+        if (isJson || trimmed.StartsWith("{") || trimmed.StartsWith("\""))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(trimmed);
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.String)
+                {
+                    return root.GetString();
+                }
+
+                foreach (var key in new[] { "access_token", "accessToken", "token", "value", "id_token", "idToken" })
+                {
+                    if (root.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.String)
+                    {
+                        return prop.GetString();
+                    }
+                }
+
+                return root.GetRawText();
+            }
+            catch
+            {
+                // ignore and fallback to raw string
+            }
+        }
+
+        return trimmed.Trim('"');
+    }
+
+    private static JsonElement? DecodeJwtPayload(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        var parts = token.Split('.');
+        if (parts.Length < 2)
+        {
+            return null;
+        }
+
+        var payload = parts[1];
+
+        try
+        {
+            var normalized = payload.Replace('-', '+').Replace('_', '/');
+            var padding = normalized.Length % 4;
+            if (padding > 0)
+            {
+                normalized = normalized.PadRight(normalized.Length + (4 - padding), '=');
+            }
+
+            var bytes = Convert.FromBase64String(normalized);
+            using var doc = JsonDocument.Parse(bytes);
+            return doc.RootElement.Clone();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static JsonElement? TryParseJsonElement(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.Clone();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? FormatUserDisplay(KcUserRep user)
+    {
+        var username = (user.Username ?? string.Empty).Trim();
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(user.LastName))
+        {
+            parts.Add(user.LastName!.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(user.FirstName))
+        {
+            parts.Add(user.FirstName!.Trim());
+        }
+
+        var fullName = string.Join(" ", parts);
+        var email = string.IsNullOrWhiteSpace(user.Email) ? null : user.Email!.Trim();
+
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            if (!string.IsNullOrWhiteSpace(fullName) && !string.IsNullOrWhiteSpace(email))
+            {
+                return $"{username} — {fullName} ({email})";
+            }
+
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                return $"{username} — {fullName}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                return $"{username} — {email}";
+            }
+
+            return username;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fullName) && !string.IsNullOrWhiteSpace(email))
+        {
+            return $"{fullName} ({email})";
+        }
+
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            return fullName;
+        }
+
+        return email;
     }
 
     public async Task<List<string>> GetClientRolesAsync(
