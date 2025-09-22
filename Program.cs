@@ -141,7 +141,8 @@ app.Use(async (context, next) =>
         if (!path.StartsWithSegments("/AccessDenied", StringComparison.OrdinalIgnoreCase)
             && !path.StartsWithSegments("/signin-oidc", StringComparison.OrdinalIgnoreCase)
             && !path.StartsWithSegments("/signout-callback-oidc", StringComparison.OrdinalIgnoreCase)
-            && !path.StartsWithSegments("/Account/Logout", StringComparison.OrdinalIgnoreCase))
+            && !path.StartsWithSegments("/Account/Logout", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWithSegments("/api/access-request", StringComparison.OrdinalIgnoreCase))
         {
             var hasAssistantRole = context.User.IsInRole("assistant-user")
                                    || context.User.IsInRole("assistant-admin");
