@@ -21,6 +21,7 @@ public sealed class UserClientsModel : PageModel
     private readonly ClientsService _clients;
     private readonly UsersService _users;
     private readonly UserClientsRepository _repo;
+    private readonly ApiLogRepository _logs;
     private readonly ILogger<UserClientsModel> _logger;
 
     public UserClientsModel(
@@ -28,12 +29,14 @@ public sealed class UserClientsModel : PageModel
         ClientsService clients,
         UsersService users,
         UserClientsRepository repo,
+        ApiLogRepository logs,
         ILogger<UserClientsModel> logger)
     {
         _realms = realms;
         _clients = clients;
         _users = users;
         _repo = repo;
+        _logs = logs;
         _logger = logger;
     }
 
@@ -328,6 +331,15 @@ public sealed class UserClientsModel : PageModel
         await _repo.AddAsync(username, summary, ct);
 
         var actor = GetCurrentActorLogin();
+        await AuditAssignmentChangeAsync(
+            "user-client:grant",
+            actor,
+            realm,
+            clientId,
+            username,
+            summary.Name,
+            userDisplay,
+            ct);
         _logger.LogInformation("{Actor} granted client {ClientId} ({Realm}) to {TargetUser}.", actor, clientId, realm, username);
 
         TempData["FlashOk"] = $"Клиент '{clientId}' ({realm}) назначен пользователю {username}.";
@@ -367,6 +379,15 @@ public sealed class UserClientsModel : PageModel
         {
             await _repo.RemoveForUserAsync(username, clientId, realm, ct);
             var actor = GetCurrentActorLogin();
+            await AuditAssignmentChangeAsync(
+                "user-client:revoke",
+                actor,
+                realm,
+                clientId,
+                username,
+                clientName: null,
+                userDisplay,
+                ct);
             _logger.LogInformation("{Actor} revoked client {ClientId} ({Realm}) from {TargetUser}.", actor, clientId, realm, username);
             TempData["FlashOk"] = $"Доступ к клиенту '{clientId}' ({realm}) для пользователя {username} удалён.";
         }
@@ -402,5 +423,44 @@ public sealed class UserClientsModel : PageModel
             ?? user?.FindFirst(ClaimTypes.Name)?.Value
             ?? user?.FindFirst(ClaimTypes.Email)?.Value
             ?? "unknown";
+    }
+
+    private Task AuditAssignmentChangeAsync(
+        string operationType,
+        string actor,
+        string realm,
+        string clientId,
+        string targetUser,
+        string? clientName,
+        string? targetDisplay,
+        CancellationToken ct)
+    {
+        var normalizedRealm = string.IsNullOrWhiteSpace(realm) ? "-" : realm;
+        var normalizedClientId = string.IsNullOrWhiteSpace(clientId) ? "-" : clientId;
+        var normalizedTargetUser = string.IsNullOrWhiteSpace(targetUser) ? "-" : targetUser;
+
+        var detailsParts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(clientName)
+            && !string.Equals(clientName, normalizedClientId, StringComparison.Ordinal))
+        {
+            detailsParts.Add($"clientName={clientName}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetDisplay)
+            && !string.Equals(targetDisplay, normalizedTargetUser, StringComparison.OrdinalIgnoreCase))
+        {
+            detailsParts.Add($"targetDisplay={targetDisplay}");
+        }
+
+        var details = detailsParts.Count == 0 ? null : string.Join("; ", detailsParts);
+
+        return _logs.LogAsync(
+            operationType,
+            actor,
+            normalizedRealm,
+            $"{normalizedClientId}:{normalizedTargetUser}",
+            details,
+            ct);
     }
 }
