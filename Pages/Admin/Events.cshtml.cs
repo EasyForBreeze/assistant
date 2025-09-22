@@ -33,6 +33,9 @@ public sealed class EventsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DateTime? To { get; set; }
 
+    [BindProperty(SupportsGet = true, Name = "page")]
+    public int PageNumber { get; set; } = 1;
+
     public IReadOnlyList<ApiAuditLogEntry> Logs { get; private set; } = Array.Empty<ApiAuditLogEntry>();
 
     public IReadOnlyList<string> OperationTypes { get; private set; } = Array.Empty<string>();
@@ -47,6 +50,20 @@ public sealed class EventsModel : PageModel
 
     public int ResultCount => Logs.Count;
 
+    public int TotalCount { get; private set; }
+
+    public int TotalPages { get; private set; }
+
+    public bool HasPreviousPage => TotalPages > 0 && PageNumber > 1;
+
+    public bool HasNextPage => TotalPages > 0 && PageNumber < TotalPages;
+
+    public bool ShowPagination => TotalPages > 1;
+
+    public int DisplayFrom => TotalCount == 0 ? 0 : (PageNumber - 1) * Limit + 1;
+
+    public int DisplayTo => TotalCount == 0 ? 0 : DisplayFrom + ResultCount - 1;
+
     public string? FromInput => FormatForInput(From);
 
     public string? ToInput => FormatForInput(To);
@@ -60,12 +77,35 @@ public sealed class EventsModel : PageModel
         var fromUtc = ToUtc(From);
         var toUtc = ToUtc(To);
 
+        var requestedPage = PageNumber <= 0 ? 1 : PageNumber;
+
+        TotalCount = await _repository.GetLogsCountAsync(
+            username: Username,
+            operationType: OperationType,
+            fromUtc: fromUtc,
+            toUtc: toUtc,
+            ct: ct);
+
+        TotalPages = TotalCount == 0
+            ? 0
+            : (int)Math.Ceiling(TotalCount / (double)Limit);
+
+        if (TotalPages == 0)
+        {
+            PageNumber = 1;
+        }
+        else
+        {
+            PageNumber = Math.Min(requestedPage, TotalPages);
+        }
+
         Logs = await _repository.GetLogsAsync(
             username: Username,
             operationType: OperationType,
             fromUtc: fromUtc,
             toUtc: toUtc,
             limit: Limit,
+            offset: TotalPages == 0 ? 0 : (PageNumber - 1) * Limit,
             ct: ct);
     }
 

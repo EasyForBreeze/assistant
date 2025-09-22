@@ -57,7 +57,7 @@
         <div class="md:col-span-4 flex flex-wrap gap-2 pt-2">
             <button type="submit" class="btn-subtle">Применить фильтры</button>
             <a asp-page="/Admin/Events" class="btn-subtle">Сбросить</a>
-            <span class="text-xs text-slate-400 md:ml-auto self-center">Показано @Model.ResultCount событий</span>
+            <span class="text-xs text-slate-400 md:ml-auto self-center">Показано @Model.TotalCount событий</span>
         </div>
     </form>
 </section>
@@ -99,8 +99,65 @@
                     </tbody>
                 </table>
             </div>
-            <div class="border-t border-white/10 px-4 py-2 text-xs text-slate-400">
-                Показаны последние @Model.ResultCount событий (максимум @Model.Limit).
+            <div class="border-t border-white/10 px-4 py-3 text-xs text-slate-300 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <span>
+                    @if (Model.TotalCount == 0)
+                    {
+                        <text>События отсутствуют.</text>
+                    }
+                    else
+                    {
+                        <text>Показаны события @Model.DisplayFrom–@Model.DisplayTo из @Model.TotalCount.</text>
+                    }
+                </span>
+
+                @if (Model.ShowPagination)
+                {
+                    var routeUsername = Model.Username;
+                    var routeOperation = Model.OperationType;
+                    var routeFrom = Model.FromInput;
+                    var routeTo = Model.ToInput;
+
+                    <nav class="flex flex-wrap items-center gap-1 text-sm">
+                        <a asp-page="/Admin/Events"
+                           asp-route-page="@(Model.HasPreviousPage ? Model.PageNumber - 1 : Model.PageNumber)"
+                           asp-route-Username="@routeUsername"
+                           asp-route-OperationType="@routeOperation"
+                           asp-route-From="@routeFrom"
+                           asp-route-To="@routeTo"
+                           class="px-3 py-1 rounded-lg border border-white/10 transition @(!Model.HasPreviousPage ? "opacity-40 pointer-events-none" : "hover:bg-white/10")">
+                            Назад
+                        </a>
+
+                        @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++)
+                        {
+                            var isCurrent = pageNumber == Model.PageNumber;
+                            var pageClasses = isCurrent
+                                ? "bg-sky-500/20 text-sky-200 border border-sky-500/40"
+                                : "border border-white/10 hover:bg-white/10";
+
+                            <a asp-page="/Admin/Events"
+                               asp-route-page="@pageNumber"
+                               asp-route-Username="@routeUsername"
+                               asp-route-OperationType="@routeOperation"
+                               asp-route-From="@routeFrom"
+                               asp-route-To="@routeTo"
+                               class="@($"px-3 py-1 rounded-lg transition {pageClasses}")">
+                                @pageNumber
+                            </a>
+                        }
+
+                        <a asp-page="/Admin/Events"
+                           asp-route-page="@(Model.HasNextPage ? Model.PageNumber + 1 : Model.PageNumber)"
+                           asp-route-Username="@routeUsername"
+                           asp-route-OperationType="@routeOperation"
+                           asp-route-From="@routeFrom"
+                           asp-route-To="@routeTo"
+                           class="px-3 py-1 rounded-lg border border-white/10 transition @(!Model.HasNextPage ? "opacity-40 pointer-events-none" : "hover:bg-white/10")">
+                            Далее
+                        </a>
+                    </nav>
+                }
             </div>
         </div>
     }
