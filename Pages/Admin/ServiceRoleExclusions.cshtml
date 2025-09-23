@@ -48,7 +48,7 @@
             <input type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="Введите clientId или его часть"
                    minlength="@Model.SearchMinLength"
                    class="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-400 focus:border-white/20 focus:outline-none focus:ring-0" />
-            <input type="hidden" name="Page" value="1" />
+            <input type="hidden" name="SearchPage" value="1" />
         </div>
         <button type="submit" class="btn-primary whitespace-nowrap md:self-stretch">Найти</button>
     </form>
@@ -104,7 +104,7 @@
                                             <form method="post" asp-page-handler="Add" class="inline-flex items-center gap-2" data-soft-transition="#exclusionsList,#searchResults">
                                                 <input type="hidden" name="ClientId" value="@client.ClientId" />
                                                 <input type="hidden" name="SearchTerm" value="@(Model.SearchTerm ?? string.Empty)" />
-                                                <input type="hidden" name="Page" value="@Model.Page" />
+                                                <input type="hidden" name="SearchPage" value="@Model.SearchPage" />
                                                 <button type="submit" class="btn-subtle whitespace-nowrap">Добавить</button>
                                             </form>
                                         </td>
@@ -117,16 +117,16 @@
 
                 @if (Model.TotalSearchPages > 1)
                 {
-                    var prevPage = Model.Page - 1;
-                    var nextPage = Model.Page + 1;
+                    var prevPage = Model.SearchPage - 1;
+                    var nextPage = Model.SearchPage + 1;
                     <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div class="text-xs uppercase tracking-[0.35em] text-slate-500/80">
-                            Страница @Model.Page из @Model.TotalSearchPages
+                            Страница @Model.SearchPage из @Model.TotalSearchPages
                         </div>
                         <div class="flex items-center gap-2">
                             @if (Model.SearchHasPreviousPage)
                             {
-                                <a class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide" href="@Url.Page(null, new { SearchTerm = Model.SearchTerm, Page = prevPage })">Назад</a>
+                                <a class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide" href="@Url.Page(null, new { SearchTerm = Model.SearchTerm, SearchPage = prevPage })">Назад</a>
                             }
                             else
                             {
@@ -135,7 +135,7 @@
 
                             @if (Model.SearchHasNextPage)
                             {
-                                <a class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide" href="@Url.Page(null, new { SearchTerm = Model.SearchTerm, Page = nextPage })">Вперёд</a>
+                                <a class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide" href="@Url.Page(null, new { SearchTerm = Model.SearchTerm, SearchPage = nextPage })">Вперёд</a>
                             }
                             else
                             {
@@ -206,7 +206,7 @@
                                     <form method="post" asp-page-handler="Remove" class="inline-flex items-center gap-2" data-soft-transition="#exclusionsList,#searchResults">
                                         <input type="hidden" name="clientId" value="@clientId" />
                                         <input type="hidden" name="SearchTerm" value="@(Model.SearchTerm ?? string.Empty)" />
-                                        <input type="hidden" name="Page" value="@Model.Page" />
+                                        <input type="hidden" name="SearchPage" value="@Model.SearchPage" />
                                         <button type="submit" class="btn-danger whitespace-nowrap">Удалить</button>
                                     </form>
                                 </td>
