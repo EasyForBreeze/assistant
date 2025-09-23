@@ -118,5 +118,73 @@ public sealed class ServiceRoleExclusionsRepository
         return set.Contains(clientId);
     }
 
+    /// <summary>
+    /// Добавляет clientId в список исключений.
+    /// </summary>
+    public async Task<bool> AddAsync(string clientId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return false;
+        }
+
+        var normalized = clientId.Trim();
+        if (normalized.Length == 0)
+        {
+            return false;
+        }
+
+        await EnsureInitializedAsync(ct);
+
+        await using var conn = new NpgsqlConnection(_connString);
+        await conn.OpenAsync(ct);
+
+        const string sql = @"INSERT INTO service_role_exclusions (client_id)
+                             VALUES (@cid)
+                             ON CONFLICT (client_id) DO NOTHING;";
+
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("cid", normalized.ToLowerInvariant());
+
+        var affected = await cmd.ExecuteNonQueryAsync(ct);
+        if (affected > 0)
+        {
+            InvalidateCache();
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Удаляет clientId из списка исключений.
+    /// </summary>
+    public async Task<string?> RemoveAsync(string clientId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return null;
+        }
+
+        await EnsureInitializedAsync(ct);
+
+        await using var conn = new NpgsqlConnection(_connString);
+        await conn.OpenAsync(ct);
+
+        const string sql = @"DELETE FROM service_role_exclusions WHERE lower(client_id) = lower(@cid) RETURNING client_id;";
+
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("cid", clientId.Trim());
+
+        var result = await cmd.ExecuteScalarAsync(ct);
+        if (result is string removed)
+        {
+            InvalidateCache();
+            return removed;
+        }
+
+        return null;
+    }
+
     public void InvalidateCache() => _cache.Remove(CacheKey);
 }
