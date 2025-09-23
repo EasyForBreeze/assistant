@@ -2,7 +2,6 @@
 @model Assistant.Pages.Admin.ServiceRoleExclusionsModel
 @{
     ViewData["Title"] = "Список исключений";
-    var lookupUrl = Url.Page(null, pageHandler: "ClientLookup");
 }
 
 <div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
@@ -25,51 +24,189 @@
     </div>
 </div>
 
-<section class="kc-card p-5 mb-6">
-    <h4 class="text-lg font-semibold text-slate-200 mb-3">Добавить клиента в исключения</h4>
-    <form method="post" asp-page-handler="Add" class="space-y-2" data-soft-transition="#exclusionsList">
-        <label for="clientIdInput" class="text-xs uppercase tracking-wide text-slate-400">Client ID</label>
-        <div class="flex flex-col gap-3 md:flex-row md:items-center">
-            <div class="flex-1">
-                <input id="clientIdInput" name="ClientId" placeholder="Начните вводить clientId"
-                       autocomplete="off" list="clientIdSuggestions"
-                       data-lookup-url="@lookupUrl"
-                       data-min-length="2" data-max-results="20"
-                       class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
-                <datalist id="clientIdSuggestions"></datalist>
-            </div>
-            <button type="submit" class="btn-subtle whitespace-nowrap md:self-center">Добавить</button>
+<section class="kc-card p-6 mb-6 space-y-5">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div class="space-y-1">
+            <h4 class="text-lg font-semibold text-slate-100 tracking-tight">Добавить клиента в исключения</h4>
+            <p class="text-sm text-slate-400/90 max-w-2xl">
+                Введите часть идентификатора клиента и выполните поиск, чтобы выбрать нужный clientId.
+            </p>
         </div>
-        <span class="text-xs text-slate-400">Выберите клиента из списка — будут игнорироваться пустые значения и дубликаты.</span>
+        @if (Model.SearchPerformed && Model.TotalSearchResults > 0)
+        {
+            <span class="kc-chip text-xs uppercase tracking-wide">Найдено: @Model.TotalSearchResults</span>
+        }
+    </div>
+
+    <form method="get" class="flex flex-col gap-3 md:flex-row md:items-center">
+        <div class="relative flex-1">
+            <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400/70">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.35-4.65a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
+                </svg>
+            </span>
+            <input type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="Введите clientId или его часть"
+                   minlength="@Model.SearchMinLength"
+                   class="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-400 focus:border-white/20 focus:outline-none focus:ring-0" />
+            <input type="hidden" name="Page" value="1" />
+        </div>
+        <button type="submit" class="btn-primary whitespace-nowrap md:self-stretch">Найти</button>
     </form>
+
+    <p class="text-xs uppercase tracking-[0.3em] text-slate-500">
+        Минимальная длина запроса — @Model.SearchMinLength&nbsp;символа.
+    </p>
+
+    <div id="searchResults" data-soft-root class="space-y-4">
+        @if (Model.SearchTermTooShort)
+        {
+            <div class="rounded-xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-3 text-sm text-slate-300">
+                Введите минимум @Model.SearchMinLength символа, чтобы увидеть результаты.
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Model.SearchError))
+        {
+            <div class="rounded-xl border border-rose-400/50 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                @Model.SearchError
+            </div>
+        }
+        else if (Model.SearchPerformed)
+        {
+            if (Model.HasSearchResults)
+            {
+                <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] shadow-[0_20px_50px_rgba(8,12,24,0.45)]">
+                    <div class="border-b border-white/10 bg-gradient-to-r from-white/10 via-transparent to-white/10 px-6 py-4">
+                        <div class="text-sm text-slate-300/80">Выберите клиента и добавьте его в список исключений.</div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-white/5 text-sm leading-6">
+                            <thead class="bg-white/[0.03] text-[0.65rem] uppercase tracking-[0.25em] text-slate-300/80">
+                                <tr>
+                                    <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Client ID</th>
+                                    <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Realm</th>
+                                    <th class="px-6 py-3 text-right font-semibold text-slate-200/90">Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
+                                @foreach (var client in Model.SearchResults)
+                                {
+                                    <tr class="transition-colors duration-150 odd:bg-white/[0.02] even:bg-transparent hover:bg-white/10">
+                                        <td class="px-6 py-3 whitespace-nowrap">
+                                            <span class="inline-flex items-center gap-2 font-mono text-sm text-slate-100">
+                                                <span class="h-2 w-2 rounded-full bg-emerald-400/70 shadow-[0_0_12px_rgba(16,185,129,0.55)]"></span>
+                                                @client.ClientId
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-3 whitespace-nowrap">
+                                            <span class="kc-chip text-xs uppercase tracking-wide">@client.Realm</span>
+                                        </td>
+                                        <td class="px-6 py-3 text-right">
+                                            <form method="post" asp-page-handler="Add" class="inline-flex items-center gap-2" data-soft-transition="#exclusionsList,#searchResults">
+                                                <input type="hidden" name="ClientId" value="@client.ClientId" />
+                                                <input type="hidden" name="SearchTerm" value="@(Model.SearchTerm ?? string.Empty)" />
+                                                <input type="hidden" name="Page" value="@Model.Page" />
+                                                <button type="submit" class="btn-subtle whitespace-nowrap">Добавить</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                @if (Model.TotalSearchPages > 1)
+                {
+                    var prevPage = Model.Page - 1;
+                    var nextPage = Model.Page + 1;
+                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div class="text-xs uppercase tracking-[0.35em] text-slate-500/80">
+                            Страница @Model.Page из @Model.TotalSearchPages
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @if (Model.SearchHasPreviousPage)
+                            {
+                                <a class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide" href="@Url.Page(null, new { SearchTerm = Model.SearchTerm, Page = prevPage })">Назад</a>
+                            }
+                            else
+                            {
+                                <span class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide opacity-40 pointer-events-none">Назад</span>
+                            }
+
+                            @if (Model.SearchHasNextPage)
+                            {
+                                <a class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide" href="@Url.Page(null, new { SearchTerm = Model.SearchTerm, Page = nextPage })">Вперёд</a>
+                            }
+                            else
+                            {
+                                <span class="btn-subtle whitespace-nowrap px-4 py-2 text-xs uppercase tracking-wide opacity-40 pointer-events-none">Вперёд</span>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-6 text-sm text-slate-300">
+                    Клиенты с clientId, содержащим «@Model.SearchTerm», не найдены.
+                </div>
+            }
+        }
+        else
+        {
+            <div class="rounded-xl border border-dashed border-white/12 bg-white/[0.03] px-4 py-4 text-sm text-slate-400">
+                Начните поиск по clientId, чтобы добавить клиента в список исключений.
+            </div>
+        }
+    </div>
 </section>
 
 <div id="exclusionsList" data-soft-root>
     @if (Model.Exclusions.Count == 0)
     {
-        <div class="kc-card p-5 text-sm text-slate-400">
-            Список исключений пуст. Добавьте clientId, чтобы запретить выдачу сервисных ролей от этого клиента.
+        <div class="kc-card p-8 text-center text-sm text-slate-300/90 space-y-4">
+            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.08] text-slate-200/80">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+            </div>
+            <div class="text-base font-medium text-slate-200/90">Список исключений пуст</div>
+            <p class="text-sm text-slate-400/90">Используйте форму выше, чтобы найти клиента и добавить его в список.</p>
         </div>
     }
     else
     {
         <div class="kc-card p-0 overflow-hidden">
+            <div class="flex flex-col gap-1 border-b border-white/10 bg-white/[0.06] px-6 py-5 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h4 class="text-base font-semibold text-slate-100 tracking-tight">Текущие исключения</h4>
+                    <p class="text-xs text-slate-400/80 mt-1">Клиенты, которым запрещено назначение сервисных ролей.</p>
+                </div>
+                <span class="kc-chip text-xs uppercase tracking-wide">Всего: @Model.Exclusions.Count</span>
+            </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-white/10 text-lg leading-7">
-                    <thead class="bg-white/5 uppercase tracking-wide text-base text-slate-300">
+                <table class="min-w-full divide-y divide-white/5 text-sm leading-6">
+                    <thead class="bg-white/[0.03] text-[0.65rem] uppercase tracking-[0.25em] text-slate-300/80">
                         <tr>
-                            <th class="px-6 py-3 text-left">Client ID</th>
-                            <th class="px-6 py-3 text-right">Действия</th>
+                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Client ID</th>
+                            <th class="px-6 py-3 text-right font-semibold text-slate-200/90">Действие</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-white/10">
+                    <tbody class="divide-y divide-white/5">
                         @foreach (var clientId in Model.Exclusions)
                         {
-                            <tr class="hover:bg-white/5 transition">
-                                <td class="px-6 py-3 whitespace-nowrap font-mono text-base text-slate-200">@clientId</td>
+                            <tr class="transition-colors duration-150 odd:bg-white/[0.02] even:bg-transparent hover:bg-white/10">
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-2 font-mono text-sm text-slate-100">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-rose-400/70 shadow-[0_0_10px_rgba(248,113,113,0.45)]"></span>
+                                        @clientId
+                                    </span>
+                                </td>
                                 <td class="px-6 py-3 text-right">
-                                    <form method="post" asp-page-handler="Remove" class="inline-flex" data-soft-transition="#exclusionsList">
+                                    <form method="post" asp-page-handler="Remove" class="inline-flex items-center gap-2" data-soft-transition="#exclusionsList,#searchResults">
                                         <input type="hidden" name="clientId" value="@clientId" />
+                                        <input type="hidden" name="SearchTerm" value="@(Model.SearchTerm ?? string.Empty)" />
+                                        <input type="hidden" name="Page" value="@Model.Page" />
                                         <button type="submit" class="btn-danger whitespace-nowrap">Удалить</button>
                                     </form>
                                 </td>
@@ -81,103 +218,6 @@
         </div>
     }
 </div>
-
-@section Scripts {
-    <script data-soft-nav>
-        (() => {
-            const input = document.getElementById('clientIdInput');
-            if (!input) {
-                return;
-            }
-
-            const listId = input.getAttribute('list');
-            if (!listId) {
-                return;
-            }
-
-            const dataList = document.getElementById(listId);
-            if (!dataList) {
-                return;
-            }
-
-            const lookupUrl = input.dataset.lookupUrl;
-            if (!lookupUrl) {
-                return;
-            }
-
-            const minLength = parseInt(input.dataset.minLength || '2', 10);
-            const maxResults = parseInt(input.dataset.maxResults || '20', 10);
-            let lastQuery = '';
-            let lastController = null;
-
-            const updateOptions = (values) => {
-                const fragment = document.createDocumentFragment();
-                for (const value of values) {
-                    if (typeof value !== 'string' || value.trim().length === 0) {
-                        continue;
-                    }
-                    const option = document.createElement('option');
-                    option.value = value;
-                    fragment.appendChild(option);
-                }
-                dataList.replaceChildren(fragment);
-            };
-
-            const fetchSuggestions = async (query) => {
-                if (lastController) {
-                    lastController.abort();
-                }
-
-                lastController = new AbortController();
-
-                try {
-                    const resp = await fetch(`${lookupUrl}?q=${encodeURIComponent(query)}`, {
-                        signal: lastController.signal,
-                        headers: { 'Accept': 'application/json' }
-                    });
-
-                    if (!resp.ok) {
-                        return;
-                    }
-
-                    const payload = await resp.json();
-                    const values = Array.isArray(payload)
-                        ? payload
-                        : Array.isArray(payload?.clients)
-                            ? payload.clients
-                            : [];
-
-                    const limited = values
-                        .map(item => typeof item === 'string' ? item : item?.clientId)
-                        .filter(value => typeof value === 'string');
-
-                    updateOptions(limited.slice(0, maxResults));
-                } catch (err) {
-                    if (err instanceof DOMException && err.name === 'AbortError') {
-                        return;
-                    }
-                    console.error('Не удалось загрузить подсказки clientId', err);
-                }
-            };
-
-            input.addEventListener('input', (event) => {
-                const query = event.target.value.trim();
-                if (query === lastQuery) {
-                    return;
-                }
-
-                lastQuery = query;
-
-                if (query.length < minLength) {
-                    updateOptions([]);
-                    return;
-                }
-
-                fetchSuggestions(query);
-            });
-        })();
-    </script>
-}
 
 @section Toasts {
     @if (TempData["FlashOk"] is string ok)
