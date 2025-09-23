@@ -1,0 +1,101 @@
+@page
+@model Assistant.Pages.Admin.ServiceRoleExclusionsModel
+@{
+    ViewData["Title"] = "Список исключений";
+}
+
+<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(14,165,233,.55), rgba(59,130,246,.35))"></div>
+        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
+             style="background: radial-gradient(60% 60% at 50% 50%, rgba(45,212,191,.6), rgba(99,102,241,.35))"></div>
+    </div>
+
+    <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h3 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(59,130,246,0.25)]">
+                Список исключений
+            </h3>
+            <p class="text-slate-200/80 mt-2 text-sm max-w-2xl">
+                Управляйте клиентами Keycloak, для которых запрещено назначать сервисные роли в Assistant.
+            </p>
+        </div>
+    </div>
+</div>
+
+<section class="kc-card p-5 mb-6">
+    <h4 class="text-lg font-semibold text-slate-200 mb-3">Добавить клиента в исключения</h4>
+    <form method="post" asp-page-handler="Add" class="flex flex-col gap-3 md:flex-row md:items-end" data-soft-transition="#exclusionsList">
+        <div class="flex-1 flex flex-col gap-1">
+            <label for="clientIdInput" class="text-xs uppercase tracking-wide text-slate-400">Client ID</label>
+            <input id="clientIdInput" name="ClientId" placeholder="client-id"
+                   class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
+            <span class="text-xs text-slate-400">Будут игнорироваться пустые значения и дубликаты.</span>
+        </div>
+        <button type="submit" class="btn-subtle whitespace-nowrap md:self-end">Добавить</button>
+    </form>
+</section>
+
+<div id="exclusionsList" data-soft-root>
+    @if (Model.Exclusions.Count == 0)
+    {
+        <div class="kc-card p-5 text-sm text-slate-400">
+            Список исключений пуст. Добавьте clientId, чтобы запретить выдачу сервисных ролей от этого клиента.
+        </div>
+    }
+    else
+    {
+        <div class="kc-card p-0 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-white/10 text-base leading-6">
+                    <thead class="bg-white/5 uppercase tracking-wide text-sm text-slate-300">
+                        <tr>
+                            <th class="px-5 py-2 text-left">Client ID</th>
+                            <th class="px-5 py-2 text-right">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/10">
+                        @foreach (var clientId in Model.Exclusions)
+                        {
+                            <tr class="hover:bg-white/5 transition">
+                                <td class="px-5 py-2 whitespace-nowrap font-mono text-sm text-slate-200">@clientId</td>
+                                <td class="px-5 py-2 text-right">
+                                    <form method="post" asp-page-handler="Remove" class="inline-flex" data-soft-transition="#exclusionsList">
+                                        <input type="hidden" name="clientId" value="@clientId" />
+                                        <button type="submit" class="btn-danger whitespace-nowrap">Удалить</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@section Toasts {
+    @if (TempData["FlashOk"] is string ok)
+    {
+        <div class="kc-toast kc-toast-success" id="flashToastOk" role="alert">
+            <div class="kc-toast-icon">✓</div>
+            <div class="kc-toast-body">
+                <div class="kc-toast-title">@ok</div>
+            </div>
+            <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
+        </div>
+        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastOk')?.remove(), 10000);</script>
+    }
+    @if (TempData["FlashError"] is string err)
+    {
+        <div class="kc-toast kc-toast-error" id="flashToastError" role="alert">
+            <div class="kc-toast-icon">!</div>
+            <div class="kc-toast-body">
+                <div class="kc-toast-title">@err</div>
+            </div>
+            <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
+        </div>
+        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastError')?.remove(), 10000);</script>
+    }
+}
