@@ -22,9 +22,9 @@
 /* Background */
 .bg-dark-pattern {
     background-color: var(--kc-bg);
-    background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), radial-gradient(700px 420px at 12% -10%, rgba(99,102,241,0.08), transparent 60%), radial-gradient(900px 520px at 100% 110%, rgba(45,212,191,0.06), transparent 65%);
-    background-size: 18px 18px, 32px 32px, auto, auto;
-    background-position: 0 0, 8px 10px, center, center;
+    background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), radial-gradient(700px 420px at 12% -10%, rgba(99,102,241,0.08), transparent 60%);
+    background-size: 18px 18px, 32px 32px, auto;
+    background-position: 0 0, 8px 10px, center;
 }
 
 /* ===== Glass Header ===== */
