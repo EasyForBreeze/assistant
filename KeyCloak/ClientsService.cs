@@ -197,11 +197,13 @@ public sealed class ClientsService
             .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
             .Select(p => $"{p.ClientId.Trim()}:{p.Role.Trim()}")
             .ToList();
-        var afterServiceRoles = after.ServiceRoles
-            .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
-            .Select(p => $"{p.ClientId.Trim()}:{p.Role.Trim()}")
-            .ToList();
-        AddSetChange("serviceRoles", beforeServiceRoles, afterServiceRoles, includeRemoved: false);
+        var afterServiceRoles = after.ServiceAccount
+            ? after.ServiceRoles
+                .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
+                .Select(p => $"{p.ClientId.Trim()}:{p.Role.Trim()}")
+                .ToList()
+            : new List<string>();
+        AddSetChange("serviceRoles", beforeServiceRoles, afterServiceRoles);
 
         return changes.Count == 0 ? null : string.Join("; ", changes);
     }
