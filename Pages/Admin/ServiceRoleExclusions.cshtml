@@ -2,7 +2,7 @@
 @model Assistant.Pages.Admin.ServiceRoleExclusionsModel
 @{
     ViewData["Title"] = "Список исключений";
-    var lookupUrl = Url.Page(null, handler: "ClientLookup");
+    var lookupUrl = Url.Page(null, pageHandler: "ClientLookup");
 }
 
 <div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
