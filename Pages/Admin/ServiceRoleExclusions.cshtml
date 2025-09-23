@@ -2,6 +2,7 @@
 @model Assistant.Pages.Admin.ServiceRoleExclusionsModel
 @{
     ViewData["Title"] = "Список исключений";
+    var lookupUrl = Url.Page(null, handler: "ClientLookup");
 }
 
 <div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
@@ -26,14 +27,20 @@
 
 <section class="kc-card p-5 mb-6">
     <h4 class="text-lg font-semibold text-slate-200 mb-3">Добавить клиента в исключения</h4>
-    <form method="post" asp-page-handler="Add" class="flex flex-col gap-3 md:flex-row md:items-end" data-soft-transition="#exclusionsList">
-        <div class="flex-1 flex flex-col gap-1">
-            <label for="clientIdInput" class="text-xs uppercase tracking-wide text-slate-400">Client ID</label>
-            <input id="clientIdInput" name="ClientId" placeholder="client-id"
-                   class="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
-            <span class="text-xs text-slate-400">Будут игнорироваться пустые значения и дубликаты.</span>
+    <form method="post" asp-page-handler="Add" class="space-y-2" data-soft-transition="#exclusionsList">
+        <label for="clientIdInput" class="text-xs uppercase tracking-wide text-slate-400">Client ID</label>
+        <div class="flex flex-col gap-3 md:flex-row md:items-center">
+            <div class="flex-1">
+                <input id="clientIdInput" name="ClientId" placeholder="Начните вводить clientId"
+                       autocomplete="off" list="clientIdSuggestions"
+                       data-lookup-url="@lookupUrl"
+                       data-min-length="2" data-max-results="20"
+                       class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-white/20" />
+                <datalist id="clientIdSuggestions"></datalist>
+            </div>
+            <button type="submit" class="btn-subtle whitespace-nowrap md:self-center">Добавить</button>
         </div>
-        <button type="submit" class="btn-subtle whitespace-nowrap md:self-end">Добавить</button>
+        <span class="text-xs text-slate-400">Выберите клиента из списка — будут игнорироваться пустые значения и дубликаты.</span>
     </form>
 </section>
 
@@ -48,19 +55,19 @@
     {
         <div class="kc-card p-0 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-white/10 text-base leading-6">
-                    <thead class="bg-white/5 uppercase tracking-wide text-sm text-slate-300">
+                <table class="min-w-full divide-y divide-white/10 text-lg leading-7">
+                    <thead class="bg-white/5 uppercase tracking-wide text-base text-slate-300">
                         <tr>
-                            <th class="px-5 py-2 text-left">Client ID</th>
-                            <th class="px-5 py-2 text-right">Действия</th>
+                            <th class="px-6 py-3 text-left">Client ID</th>
+                            <th class="px-6 py-3 text-right">Действия</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/10">
                         @foreach (var clientId in Model.Exclusions)
                         {
                             <tr class="hover:bg-white/5 transition">
-                                <td class="px-5 py-2 whitespace-nowrap font-mono text-sm text-slate-200">@clientId</td>
-                                <td class="px-5 py-2 text-right">
+                                <td class="px-6 py-3 whitespace-nowrap font-mono text-base text-slate-200">@clientId</td>
+                                <td class="px-6 py-3 text-right">
                                     <form method="post" asp-page-handler="Remove" class="inline-flex" data-soft-transition="#exclusionsList">
                                         <input type="hidden" name="clientId" value="@clientId" />
                                         <button type="submit" class="btn-danger whitespace-nowrap">Удалить</button>
@@ -74,6 +81,103 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script data-soft-nav>
+        (() => {
+            const input = document.getElementById('clientIdInput');
+            if (!input) {
+                return;
+            }
+
+            const listId = input.getAttribute('list');
+            if (!listId) {
+                return;
+            }
+
+            const dataList = document.getElementById(listId);
+            if (!dataList) {
+                return;
+            }
+
+            const lookupUrl = input.dataset.lookupUrl;
+            if (!lookupUrl) {
+                return;
+            }
+
+            const minLength = parseInt(input.dataset.minLength || '2', 10);
+            const maxResults = parseInt(input.dataset.maxResults || '20', 10);
+            let lastQuery = '';
+            let lastController = null;
+
+            const updateOptions = (values) => {
+                const fragment = document.createDocumentFragment();
+                for (const value of values) {
+                    if (typeof value !== 'string' || value.trim().length === 0) {
+                        continue;
+                    }
+                    const option = document.createElement('option');
+                    option.value = value;
+                    fragment.appendChild(option);
+                }
+                dataList.replaceChildren(fragment);
+            };
+
+            const fetchSuggestions = async (query) => {
+                if (lastController) {
+                    lastController.abort();
+                }
+
+                lastController = new AbortController();
+
+                try {
+                    const resp = await fetch(`${lookupUrl}?q=${encodeURIComponent(query)}`, {
+                        signal: lastController.signal,
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!resp.ok) {
+                        return;
+                    }
+
+                    const payload = await resp.json();
+                    const values = Array.isArray(payload)
+                        ? payload
+                        : Array.isArray(payload?.clients)
+                            ? payload.clients
+                            : [];
+
+                    const limited = values
+                        .map(item => typeof item === 'string' ? item : item?.clientId)
+                        .filter(value => typeof value === 'string');
+
+                    updateOptions(limited.slice(0, maxResults));
+                } catch (err) {
+                    if (err instanceof DOMException && err.name === 'AbortError') {
+                        return;
+                    }
+                    console.error('Не удалось загрузить подсказки clientId', err);
+                }
+            };
+
+            input.addEventListener('input', (event) => {
+                const query = event.target.value.trim();
+                if (query === lastQuery) {
+                    return;
+                }
+
+                lastQuery = query;
+
+                if (query.length < minLength) {
+                    updateOptions([]);
+                    return;
+                }
+
+                fetchSuggestions(query);
+            });
+        })();
+    </script>
+}
 
 @section Toasts {
     @if (TempData["FlashOk"] is string ok)
