@@ -328,34 +328,34 @@ public sealed class EventsModel : PageModel
     private static readonly OperationAccentStyles[] OperationAccentPalette =
     {
         new(
-            BarClass: "bg-gradient-to-b from-sky-400/0 via-sky-400/65 to-cyan-400/0 shadow-[0_0_18px_-6px_rgba(14,165,233,0.45)]",
-            BadgeClass: "border border-sky-500/25 bg-sky-500/8 text-sky-100/90 shadow-[0_12px_30px_-18px_rgba(14,165,233,0.35)]",
-            PulseClass: "bg-sky-300/80 shadow-[0_0_0_3px_rgba(56,189,248,0.25)]"),
+            BarClass: "bg-gradient-to-b from-sky-400/0 via-sky-400/45 to-cyan-400/0 shadow-[0_0_18px_-6px_rgba(14,165,233,0.38)]",
+            BadgeClass: "border border-sky-500/20 bg-sky-500/15 text-sky-100/90 shadow-[0_12px_30px_-18px_rgba(14,165,233,0.28)]",
+            PulseClass: "bg-sky-300/70 shadow-[0_0_0_3px_rgba(56,189,248,0.2)]"),
         new(
-            BarClass: "bg-gradient-to-b from-violet-400/0 via-fuchsia-400/65 to-purple-400/0 shadow-[0_0_18px_-6px_rgba(168,85,247,0.4)]",
-            BadgeClass: "border border-fuchsia-500/25 bg-fuchsia-500/8 text-fuchsia-100/90 shadow-[0_12px_30px_-18px_rgba(217,70,239,0.32)]",
-            PulseClass: "bg-fuchsia-300/80 shadow-[0_0_0_3px_rgba(217,70,239,0.25)]"),
+            BarClass: "bg-gradient-to-b from-violet-400/0 via-fuchsia-400/45 to-purple-400/0 shadow-[0_0_18px_-6px_rgba(168,85,247,0.34)]",
+            BadgeClass: "border border-fuchsia-500/20 bg-fuchsia-500/15 text-fuchsia-100/90 shadow-[0_12px_30px_-18px_rgba(217,70,239,0.26)]",
+            PulseClass: "bg-fuchsia-300/70 shadow-[0_0_0_3px_rgba(217,70,239,0.2)]"),
         new(
-            BarClass: "bg-gradient-to-b from-emerald-400/0 via-teal-400/60 to-emerald-400/0 shadow-[0_0_18px_-6px_rgba(16,185,129,0.38)]",
-            BadgeClass: "border border-emerald-500/25 bg-emerald-500/8 text-emerald-100/90 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.3)]",
-            PulseClass: "bg-emerald-300/80 shadow-[0_0_0_3px_rgba(16,185,129,0.22)]"),
+            BarClass: "bg-gradient-to-b from-emerald-400/0 via-teal-400/42 to-emerald-400/0 shadow-[0_0_18px_-6px_rgba(16,185,129,0.32)]",
+            BadgeClass: "border border-emerald-500/20 bg-emerald-500/14 text-emerald-100/90 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.24)]",
+            PulseClass: "bg-emerald-300/70 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]"),
         new(
-            BarClass: "bg-gradient-to-b from-amber-400/0 via-orange-400/60 to-yellow-400/0 shadow-[0_0_18px_-6px_rgba(245,158,11,0.35)]",
-            BadgeClass: "border border-amber-500/25 bg-amber-500/10 text-amber-100/90 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.28)]",
-            PulseClass: "bg-amber-300/85 shadow-[0_0_0_3px_rgba(251,191,36,0.22)]"),
+            BarClass: "bg-gradient-to-b from-amber-400/0 via-orange-400/42 to-yellow-400/0 shadow-[0_0_18px_-6px_rgba(245,158,11,0.3)]",
+            BadgeClass: "border border-amber-500/20 bg-amber-500/16 text-amber-100/90 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.22)]",
+            PulseClass: "bg-amber-300/75 shadow-[0_0_0_3px_rgba(251,191,36,0.18)]"),
         new(
-            BarClass: "bg-gradient-to-b from-rose-400/0 via-rose-400/65 to-pink-400/0 shadow-[0_0_18px_-6px_rgba(244,63,94,0.4)]",
-            BadgeClass: "border border-rose-500/25 bg-rose-500/8 text-rose-100/90 shadow-[0_12px_30px_-18px_rgba(244,63,94,0.3)]",
-            PulseClass: "bg-rose-300/80 shadow-[0_0_0_3px_rgba(244,63,94,0.24)]"),
+            BarClass: "bg-gradient-to-b from-rose-400/0 via-rose-400/45 to-pink-400/0 shadow-[0_0_18px_-6px_rgba(244,63,94,0.34)]",
+            BadgeClass: "border border-rose-500/20 bg-rose-500/15 text-rose-100/90 shadow-[0_12px_30px_-18px_rgba(244,63,94,0.24)]",
+            PulseClass: "bg-rose-300/70 shadow-[0_0_0_3px_rgba(244,63,94,0.19)]"),
     };
 
     private static readonly string[] SoftPillPalette =
     {
-        "border border-sky-500/25 bg-sky-500/7 text-sky-100/85 shadow-[0_12px_28px_-18px_rgba(14,165,233,0.32)]",
-        "border border-fuchsia-500/25 bg-fuchsia-500/7 text-fuchsia-100/85 shadow-[0_12px_28px_-18px_rgba(217,70,239,0.3)]",
-        "border border-emerald-500/25 bg-emerald-500/7 text-emerald-100/85 shadow-[0_12px_28px_-18px_rgba(16,185,129,0.3)]",
-        "border border-amber-500/25 bg-amber-500/8 text-amber-100/85 shadow-[0_12px_28px_-18px_rgba(245,158,11,0.28)]",
-        "border border-rose-500/25 bg-rose-500/7 text-rose-100/85 shadow-[0_12px_28px_-18px_rgba(244,63,94,0.3)]",
+        "border border-sky-500/18 bg-sky-500/12 text-sky-100/85 shadow-[0_12px_28px_-18px_rgba(14,165,233,0.26)]",
+        "border border-fuchsia-500/18 bg-fuchsia-500/12 text-fuchsia-100/85 shadow-[0_12px_28px_-18px_rgba(217,70,239,0.24)]",
+        "border border-emerald-500/18 bg-emerald-500/11 text-emerald-100/85 shadow-[0_12px_28px_-18px_rgba(16,185,129,0.24)]",
+        "border border-amber-500/18 bg-amber-500/13 text-amber-100/85 shadow-[0_12px_28px_-18px_rgba(245,158,11,0.22)]",
+        "border border-rose-500/18 bg-rose-500/12 text-rose-100/85 shadow-[0_12px_28px_-18px_rgba(244,63,94,0.24)]",
     };
 
     private static readonly string[] AvatarPalette =
