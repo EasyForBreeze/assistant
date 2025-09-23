@@ -73,27 +73,27 @@
     {
         <div class="kc-card p-0 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-white/10 text-base leading-6 text-center">
-                    <thead class="bg-white/5 uppercase tracking-wide text-sm text-slate-300">
+                <table class="min-w-full divide-y divide-white/5 text-sm leading-6">
+                    <thead class="bg-white/[0.03] text-[0.65rem] uppercase tracking-[0.25em] text-slate-300/80">
                         <tr>
-                            <th class="px-5 py-2 text-center">Дата и время</th>
-                            <th class="px-5 py-2 text-center">Тип</th>
-                            <th class="px-5 py-2 text-center">Пользователь</th>
-                            <th class="px-5 py-2 text-center">Realm</th>
-                            <th class="px-5 py-2 text-center">Target ID</th>
-                            <th class="px-5 py-2 text-center">Details</th>
+                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Дата и время</th>
+                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Тип</th>
+                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Пользователь</th>
+                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Realm</th>
+                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Target ID</th>
+                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Details</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-white/10">
+                    <tbody class="divide-y divide-white/5">
                         @foreach (var log in Model.Logs)
                         {
-                            <tr class="hover:bg-white/5 transition">
-                                <td class="px-5 py-2 whitespace-nowrap font-mono text-sm text-slate-200 text-center">@Model.FormatTimestamp(log.CreatedAtUtc)</td>
-                                <td class="px-5 py-2 whitespace-nowrap text-slate-100 text-center">@Model.FormatOperationType(log.OperationType)</td>
-                                <td class="px-5 py-2 whitespace-nowrap text-slate-100 text-center">@log.Username</td>
-                                <td class="px-5 py-2 whitespace-nowrap text-slate-100 text-center">@log.Realm</td>
-                                <td class="px-5 py-2 whitespace-nowrap text-slate-100 text-center">@log.TargetId</td>
-                                <td class="px-5 py-2 text-sm text-slate-100 whitespace-pre-wrap font-mono text-center">@(string.IsNullOrWhiteSpace(log.Details) ? "-" : log.Details)</td>
+                            <tr class="transition-colors duration-150 odd:bg-white/[0.02] even:bg-transparent hover:bg-white/10">
+                                <td class="px-6 py-3 whitespace-nowrap font-mono text-sm text-slate-200">@Model.FormatTimestamp(log.CreatedAtUtc)</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@Model.FormatOperationType(log.OperationType)</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.Username</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.Realm</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.TargetId</td>
+                                <td class="px-6 py-3 text-sm text-slate-100 whitespace-pre-wrap font-mono">@(string.IsNullOrWhiteSpace(log.Details) ? "-" : log.Details)</td>
                             </tr>
                         }
                     </tbody>
