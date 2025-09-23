@@ -144,6 +144,7 @@
                                 ? "Детали отсутствуют."
                                 : log.Details;
                             var accent = Model.GetOperationAccentStyles(log.OperationType);
+                            var badgeStyle = string.IsNullOrEmpty(accent.BadgeStyle) ? null : accent.BadgeStyle;
                             var avatarInitials = Model.GetAvatarInitials(log.Username);
                             var avatarAccent = Model.GetAvatarAccentClass(log.Username);
                             var relativeTime = Model.GetRelativeTime(log.CreatedAtUtc);
@@ -170,7 +171,7 @@
                                 <td class="px-6 py-4 align-middle">
                                     <div class="flex flex-col gap-2">
                                         <div class="flex items-center gap-3">
-                                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] @accent.BadgeClass">
+                                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] @accent.BadgeClass" style="@badgeStyle">
                                                 <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                                     <path d="M4 10.5 8.5 15 16 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
                                                 </svg>
@@ -214,7 +215,7 @@
                                                 </svg>
                                                 <span>Детали события</span>
                                             </span>
-                                            <span class="ml-auto inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.25em] @accent.BadgeClass">
+                                            <span class="ml-auto inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.25em] @accent.BadgeClass" style="@badgeStyle">
                                                 <span class="h-2 w-2 rounded-full @accent.PulseClass"></span>
                                                 @Model.FormatOperationType(log.OperationType)
                                             </span>
