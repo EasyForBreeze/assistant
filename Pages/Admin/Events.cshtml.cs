@@ -153,6 +153,11 @@ public sealed class EventsModel : PageModel
             return OperationAccentPalette[0];
         }
 
+        if (OperationAccentOverrides.TryGetValue(operationType, out var overrideAccent))
+        {
+            return overrideAccent;
+        }
+
         var hash = ComputeHash(operationType, seed: 97);
         var index = (int)((uint)hash % (uint)OperationAccentPalette.Length);
         return OperationAccentPalette[index];
@@ -365,6 +370,15 @@ public sealed class EventsModel : PageModel
         "bg-gradient-to-br from-emerald-500/25 via-teal-500/18 to-green-500/25 text-emerald-50/90 ring-1 ring-inset ring-emerald-500/30 shadow-[0_20px_45px_-30px_rgba(16,185,129,0.4)]",
         "bg-gradient-to-br from-amber-500/28 via-orange-500/18 to-yellow-500/25 text-amber-50/90 ring-1 ring-inset ring-amber-500/28 shadow-[0_20px_45px_-30px_rgba(245,158,11,0.38)]",
         "bg-gradient-to-br from-rose-500/25 via-pink-500/18 to-red-500/25 text-rose-50/90 ring-1 ring-inset ring-rose-500/30 shadow-[0_20px_45px_-30px_rgba(244,63,94,0.4)]",
+    };
+
+    private static readonly Dictionary<string, OperationAccentStyles> OperationAccentOverrides = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["CREATE"] = OperationAccentPalette[2],
+        ["GRANT"] = OperationAccentPalette[0],
+        ["REVOKE"] = OperationAccentPalette[4],
+        ["DELETE"] = OperationAccentPalette[4],
+        ["UPDATE"] = OperationAccentPalette[3],
     };
 
     public readonly record struct OperationAccentStyles(string BarClass, string BadgeClass, string PulseClass);
