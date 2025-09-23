@@ -51,7 +51,7 @@ public sealed class ServiceRoleExclusionsModel : PageModel
     public string? SearchTerm { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public int Page { get; set; } = 1;
+    public int SearchPage { get; set; } = 1;
 
     public List<ClientSummary> SearchResults { get; private set; } = [];
 
@@ -65,7 +65,7 @@ public sealed class ServiceRoleExclusionsModel : PageModel
 
     public bool SearchHasNextPage { get; private set; }
 
-    public bool SearchHasPreviousPage => Page > 1 && TotalSearchPages > 0;
+    public bool SearchHasPreviousPage => SearchPage > 1 && TotalSearchPages > 0;
 
     public string? SearchError { get; private set; }
 
@@ -211,7 +211,7 @@ public sealed class ServiceRoleExclusionsModel : PageModel
 
     private async Task LoadSearchResultsAsync(CancellationToken ct)
     {
-        Page = NormalizePage(Page);
+        SearchPage = NormalizePage(SearchPage);
         SearchError = null;
         SearchHasNextPage = false;
         TotalSearchPages = 0;
@@ -251,12 +251,12 @@ public sealed class ServiceRoleExclusionsModel : PageModel
             }
 
             TotalSearchPages = (int)Math.Ceiling(TotalSearchResults / (double)SearchResultsPageSize);
-            if (TotalSearchPages > 0 && Page > TotalSearchPages)
+            if (TotalSearchPages > 0 && SearchPage > TotalSearchPages)
             {
-                Page = TotalSearchPages;
+                SearchPage = TotalSearchPages;
             }
 
-            var skip = (Page - 1) * SearchResultsPageSize;
+            var skip = (SearchPage - 1) * SearchResultsPageSize;
             SearchResults = matches
                 .Skip(skip)
                 .Take(SearchResultsPageSize)
@@ -333,9 +333,9 @@ public sealed class ServiceRoleExclusionsModel : PageModel
 
     private RedirectToPageResult RedirectToSelf()
     {
-        var normalizedPage = NormalizePage(Page);
+        var normalizedPage = NormalizePage(SearchPage);
         var query = string.IsNullOrWhiteSpace(SearchTerm) ? null : SearchTerm.Trim();
-        return RedirectToPage(new { SearchTerm = query, Page = normalizedPage });
+        return RedirectToPage(new { SearchTerm = query, SearchPage = normalizedPage });
     }
 
     private static int NormalizePage(int page) => page <= 0 ? 1 : page;
