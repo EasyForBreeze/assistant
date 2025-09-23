@@ -115,23 +115,25 @@
     }
     else
     {
-        <div class="kc-card p-0 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full table-fixed divide-y divide-white/5 text-sm leading-6">
+        <div class="kc-card relative overflow-hidden border border-white/5 bg-slate-950/50 p-0 shadow-[0_32px_80px_-48px_rgba(14,165,233,0.55)]">
+            <div class="pointer-events-none absolute -top-24 right-[-10%] h-56 w-56 rounded-full bg-sky-500/40 blur-[120px] opacity-40"></div>
+            <div class="pointer-events-none absolute -bottom-28 left-[-12%] h-60 w-60 rounded-full bg-fuchsia-500/40 blur-[120px] opacity-30"></div>
+            <div class="relative overflow-x-auto">
+                <table class="min-w-full table-fixed divide-y divide-white/5 text-sm leading-6 text-slate-100">
                     <colgroup>
-                        <col class="w-56" />
-                        <col class="w-44" />
-                        <col class="w-60" />
-                        <col class="w-48" />
-                        <col class="w-56" />
+                        <col class="w-[21rem]" />
+                        <col class="w-[16rem]" />
+                        <col class="w-[18rem]" />
+                        <col class="w-[13rem]" />
+                        <col class="w-[16rem]" />
                     </colgroup>
-                    <thead class="bg-white/[0.03] text-[0.65rem] uppercase tracking-[0.25em] text-slate-300/80">
+                    <thead class="bg-gradient-to-r from-white/[0.05] via-white/[0.03] to-transparent text-[0.65rem] uppercase tracking-[0.25em] text-slate-200/80 backdrop-blur">
                         <tr>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Дата и время</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Тип</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Пользователь</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Realm</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Target ID</th>
+                            <th class="px-6 py-4 text-left font-semibold text-slate-100/90">Дата и время</th>
+                            <th class="px-6 py-4 text-left font-semibold text-slate-100/90">Тип</th>
+                            <th class="px-6 py-4 text-left font-semibold text-slate-100/90">Пользователь</th>
+                            <th class="px-6 py-4 text-left font-semibold text-slate-100/90">Realm</th>
+                            <th class="px-6 py-4 text-left font-semibold text-slate-100/90">Target ID</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/5">
@@ -141,28 +143,94 @@
                             var detailsText = string.IsNullOrWhiteSpace(log.Details)
                                 ? "Детали отсутствуют."
                                 : log.Details;
+                            var accent = Model.GetOperationAccentStyles(log.OperationType);
+                            var avatarInitials = Model.GetAvatarInitials(log.Username);
+                            var avatarAccent = Model.GetAvatarAccentClass(log.Username);
+                            var relativeTime = Model.GetRelativeTime(log.CreatedAtUtc);
+                            var realmPill = Model.GetSoftPillClasses(log.Realm);
+                            var targetPill = Model.GetSoftPillClasses(log.TargetId);
 
                             <tr data-event-row tabindex="0" aria-expanded="false" aria-controls="@detailsId"
-                                class="group transition-colors duration-150 odd:bg-white/[0.02] even:bg-transparent hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-500 cursor-pointer">
-                                <td class="px-6 py-3 whitespace-nowrap font-mono text-sm text-slate-200">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <span>@Model.FormatTimestamp(log.CreatedAtUtc)</span>
-                                        <svg data-event-indicator class="h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-150"
-                                             viewBox="0 0 12 8" fill="none" aria-hidden="true">
-                                            <path d="M10.5 1.5 6 6 1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
+                                class="group relative cursor-pointer transition duration-200 odd:bg-white/[0.015] even:bg-transparent hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-500/80">
+                                <td class="px-6 py-4 align-top">
+                                    <div class="relative flex gap-5">
+                                        <div class="absolute -left-4 top-1 bottom-1 hidden w-1 rounded-full opacity-0 transition duration-200 group-hover:opacity-90 group-focus-visible:opacity-90 sm:block @accent.BarClass"></div>
+                                        <div class="flex items-start gap-4">
+                                            <div class="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900/70 text-slate-200 ring-1 ring-inset ring-white/10 shadow-[0_18px_42px_-28px_rgba(59,130,246,0.65)] transition duration-200 group-hover:shadow-[0_20px_46px_-26px_rgba(59,130,246,0.85)] group-focus-visible:shadow-[0_20px_46px_-26px_rgba(59,130,246,0.85)]">
+                                                <svg class="h-5 w-5 text-slate-300" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M7 3v2m10-2v2M5.2 8h13.6M5 11v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                    <path d="M9 14h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="flex flex-col gap-1">
+                                                <span class="font-semibold text-slate-100">@Model.FormatTimestamp(log.CreatedAtUtc)</span>
+                                                <span class="text-xs text-slate-400">@relativeTime</span>
+                                            </div>
+                                            <svg data-event-indicator class="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200"
+                                                 viewBox="0 0 12 8" fill="none" aria-hidden="true">
+                                                <path d="M10.5 1.5 6 6 1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@Model.FormatOperationType(log.OperationType)</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.Username</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.Realm</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.TargetId</td>
+                                <td class="px-6 py-4 align-middle">
+                                    <div class="flex flex-col gap-2">
+                                        <div class="flex items-center gap-3">
+                                            <span class="inline-flex h-2.5 w-12 rounded-full opacity-80 @accent.BarClass"></span>
+                                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] @accent.BadgeClass">
+                                                <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                    <path d="M4 10.5 8.5 15 16 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                </svg>
+                                                @Model.FormatOperationType(log.OperationType)
+                                            </span>
+                                        </div>
+                                        <span class="text-[0.65rem] uppercase tracking-[0.3em] text-slate-400/70">Нажмите, чтобы раскрыть детали</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-middle">
+                                    <div class="flex items-center gap-3">
+                                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold uppercase tracking-wide text-white transition duration-200 @avatarAccent group-hover:-translate-y-px group-focus-visible:-translate-y-px">@avatarInitials</span>
+                                        <div class="flex flex-col">
+                                            <span class="font-semibold text-slate-100">@log.Username</span>
+                                            <span class="text-xs text-slate-400/80">Уникальный идентификатор пользователя</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-middle">
+                                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] @realmPill">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M4 6.5a2.5 2.5 0 0 1 2.5-2.5h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>
+                                            <path d="M8.5 9.5h7M8.5 14.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                                        </svg>
+                                        <span class="truncate">@log.Realm</span>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 align-middle">
+                                    <span class="inline-flex max-w-[15rem] items-center gap-2 rounded-xl border px-3 py-1 font-mono text-xs tracking-wide @targetPill">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M12 20a8 8 0 1 0-8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M12 8v4l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        </svg>
+                                        <span class="truncate">@log.TargetId</span>
+                                    </span>
+                                </td>
                             </tr>
                             <tr data-event-details id="@detailsId" class="hidden bg-white/[0.04]">
-                                <td colspan="5" class="px-6 pb-6 pt-0">
-                                    <div class="mt-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-4 text-sm text-slate-200 shadow-inner">
-                                        <div class="text-[0.65rem] uppercase tracking-[0.25em] text-slate-400">Детали события</div>
-                                        <pre class="mt-3 whitespace-pre-wrap break-words font-mono text-[0.8rem] text-slate-200/90">@detailsText</pre>
+                                <td colspan="5" class="px-6 pb-7 pt-0">
+                                    <div class="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950/85 via-slate-900/70 to-slate-950/80 px-5 py-5 text-sm text-slate-200 shadow-[0_28px_65px_-45px_rgba(59,130,246,0.85)]">
+                                        <div class="flex flex-wrap items-center gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">
+                                            <span class="inline-flex items-center gap-2 text-slate-300">
+                                                <svg class="h-3.5 w-3.5 text-slate-400/80" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                    <path d="m4 8 6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                </svg>
+                                                <span>Детали события</span>
+                                            </span>
+                                            <span class="ml-auto inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.25em] @accent.BadgeClass">
+                                                <span class="h-2 w-2 rounded-full @accent.PulseClass"></span>
+                                                @Model.FormatOperationType(log.OperationType)
+                                            </span>
+                                        </div>
+                                        <pre class="mt-3 whitespace-pre-wrap break-words rounded-xl bg-black/20 px-4 py-3 font-mono text-[0.8rem] text-slate-200/90 ring-1 ring-inset ring-white/10">@detailsText</pre>
                                     </div>
                                 </td>
                             </tr>
