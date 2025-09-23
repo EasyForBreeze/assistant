@@ -153,6 +153,11 @@ public sealed class EventsModel : PageModel
             return OperationAccentPalette[0];
         }
 
+        if (OperationAccentOverrides.TryGetValue(operationType, out var overrideAccent))
+        {
+            return overrideAccent;
+        }
+
         var hash = ComputeHash(operationType, seed: 97);
         var index = (int)((uint)hash % (uint)OperationAccentPalette.Length);
         return OperationAccentPalette[index];
@@ -330,23 +335,28 @@ public sealed class EventsModel : PageModel
         new(
             BarClass: "bg-gradient-to-b from-sky-400/0 via-sky-400/45 to-cyan-400/0 shadow-[0_0_18px_-6px_rgba(14,165,233,0.38)]",
             BadgeClass: "border border-sky-500/20 bg-sky-500/15 text-sky-100/90 shadow-[0_12px_30px_-18px_rgba(14,165,233,0.28)]",
-            PulseClass: "bg-sky-300/70 shadow-[0_0_0_3px_rgba(56,189,248,0.2)]"),
+            PulseClass: "bg-sky-300/70 shadow-[0_0_0_3px_rgba(56,189,248,0.2)]",
+            BadgeStyle: string.Empty),
         new(
             BarClass: "bg-gradient-to-b from-violet-400/0 via-fuchsia-400/45 to-purple-400/0 shadow-[0_0_18px_-6px_rgba(168,85,247,0.34)]",
             BadgeClass: "border border-fuchsia-500/20 bg-fuchsia-500/15 text-fuchsia-100/90 shadow-[0_12px_30px_-18px_rgba(217,70,239,0.26)]",
-            PulseClass: "bg-fuchsia-300/70 shadow-[0_0_0_3px_rgba(217,70,239,0.2)]"),
+            PulseClass: "bg-fuchsia-300/70 shadow-[0_0_0_3px_rgba(217,70,239,0.2)]",
+            BadgeStyle: string.Empty),
         new(
             BarClass: "bg-gradient-to-b from-emerald-400/0 via-teal-400/42 to-emerald-400/0 shadow-[0_0_18px_-6px_rgba(16,185,129,0.32)]",
             BadgeClass: "border border-emerald-500/20 bg-emerald-500/14 text-emerald-100/90 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.24)]",
-            PulseClass: "bg-emerald-300/70 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]"),
+            PulseClass: "bg-emerald-300/70 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]",
+            BadgeStyle: string.Empty),
         new(
             BarClass: "bg-gradient-to-b from-amber-400/0 via-orange-400/42 to-yellow-400/0 shadow-[0_0_18px_-6px_rgba(245,158,11,0.3)]",
             BadgeClass: "border border-amber-500/20 bg-amber-500/16 text-amber-100/90 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.22)]",
-            PulseClass: "bg-amber-300/75 shadow-[0_0_0_3px_rgba(251,191,36,0.18)]"),
+            PulseClass: "bg-amber-300/75 shadow-[0_0_0_3px_rgba(251,191,36,0.18)]",
+            BadgeStyle: string.Empty),
         new(
             BarClass: "bg-gradient-to-b from-rose-400/0 via-rose-400/45 to-pink-400/0 shadow-[0_0_18px_-6px_rgba(244,63,94,0.34)]",
             BadgeClass: "border border-rose-500/20 bg-rose-500/15 text-rose-100/90 shadow-[0_12px_30px_-18px_rgba(244,63,94,0.24)]",
-            PulseClass: "bg-rose-300/70 shadow-[0_0_0_3px_rgba(244,63,94,0.19)]"),
+            PulseClass: "bg-rose-300/70 shadow-[0_0_0_3px_rgba(244,63,94,0.19)]",
+            BadgeStyle: string.Empty),
     };
 
     private static readonly string[] SoftPillPalette =
@@ -367,5 +377,14 @@ public sealed class EventsModel : PageModel
         "bg-gradient-to-br from-rose-500/25 via-pink-500/18 to-red-500/25 text-rose-50/90 ring-1 ring-inset ring-rose-500/30 shadow-[0_20px_45px_-30px_rgba(244,63,94,0.4)]",
     };
 
-    public readonly record struct OperationAccentStyles(string BarClass, string BadgeClass, string PulseClass);
+    private static readonly Dictionary<string, OperationAccentStyles> OperationAccentOverrides = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["CREATE"] = OperationAccentPalette[2] with { BadgeStyle = "background-color: rgba(16, 185, 129, 0.22);" },
+        ["GRANT"] = OperationAccentPalette[0] with { BadgeStyle = "background-color: rgba(56, 189, 248, 0.22);" },
+        ["REVOKE"] = OperationAccentPalette[4] with { BadgeStyle = "background-color: rgba(244, 63, 94, 0.24);" },
+        ["DELETE"] = OperationAccentPalette[4] with { BadgeStyle = "background-color: rgba(244, 63, 94, 0.24);" },
+        ["UPDATE"] = OperationAccentPalette[3] with { BadgeStyle = "background-color: rgba(245, 158, 11, 0.24);" },
+    };
+
+    public readonly record struct OperationAccentStyles(string BarClass, string BadgeClass, string PulseClass, string BadgeStyle);
 }
