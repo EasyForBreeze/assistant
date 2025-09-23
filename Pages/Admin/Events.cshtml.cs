@@ -215,7 +215,7 @@ public sealed class EventsModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return "border border-white/10 bg-white/5 text-slate-200";
+            return "border border-white/12 bg-white/10 text-slate-200/90 shadow-[0_14px_32px_-22px_rgba(148,163,184,0.45)] ring-1 ring-inset ring-white/12";
         }
 
         var hash = ComputeHash(value, seed: 131);
@@ -351,11 +351,11 @@ public sealed class EventsModel : PageModel
 
     private static readonly string[] SoftPillPalette =
     {
-        "border border-sky-500/18 bg-sky-500/12 text-sky-100/85 shadow-[0_12px_28px_-18px_rgba(14,165,233,0.26)]",
-        "border border-fuchsia-500/18 bg-fuchsia-500/12 text-fuchsia-100/85 shadow-[0_12px_28px_-18px_rgba(217,70,239,0.24)]",
-        "border border-emerald-500/18 bg-emerald-500/11 text-emerald-100/85 shadow-[0_12px_28px_-18px_rgba(16,185,129,0.24)]",
-        "border border-amber-500/18 bg-amber-500/13 text-amber-100/85 shadow-[0_12px_28px_-18px_rgba(245,158,11,0.22)]",
-        "border border-rose-500/18 bg-rose-500/12 text-rose-100/85 shadow-[0_12px_28px_-18px_rgba(244,63,94,0.24)]",
+        "border border-sky-500/22 bg-sky-500/16 text-sky-100/90 shadow-[0_16px_36px_-24px_rgba(14,165,233,0.55)] ring-1 ring-inset ring-sky-500/25",
+        "border border-fuchsia-500/22 bg-fuchsia-500/15 text-fuchsia-100/90 shadow-[0_16px_36px_-24px_rgba(217,70,239,0.5)] ring-1 ring-inset ring-fuchsia-500/25",
+        "border border-emerald-500/22 bg-emerald-500/14 text-emerald-100/90 shadow-[0_16px_36px_-24px_rgba(16,185,129,0.48)] ring-1 ring-inset ring-emerald-500/25",
+        "border border-amber-500/22 bg-amber-500/16 text-amber-100/90 shadow-[0_16px_36px_-24px_rgba(245,158,11,0.48)] ring-1 ring-inset ring-amber-500/25",
+        "border border-rose-500/22 bg-rose-500/15 text-rose-100/90 shadow-[0_16px_36px_-24px_rgba(244,63,94,0.5)] ring-1 ring-inset ring-rose-500/25",
     };
 
     private static readonly string[] AvatarPalette =
