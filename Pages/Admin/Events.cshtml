@@ -155,13 +155,7 @@
                                 <td class="px-6 py-4 align-top">
                                     <div class="relative flex gap-5">
                                         <div class="absolute -left-4 top-1 bottom-1 hidden w-1 rounded-full opacity-0 transition duration-200 group-hover:opacity-90 group-focus-visible:opacity-90 sm:block @accent.BarClass"></div>
-                                        <div class="flex items-start gap-4">
-                                            <div class="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900/70 text-slate-200 ring-1 ring-inset ring-white/10 shadow-[0_18px_42px_-28px_rgba(59,130,246,0.65)] transition duration-200 group-hover:shadow-[0_20px_46px_-26px_rgba(59,130,246,0.85)] group-focus-visible:shadow-[0_20px_46px_-26px_rgba(59,130,246,0.85)]">
-                                                <svg class="h-5 w-5 text-slate-300" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                                    <path d="M7 3v2m10-2v2M5.2 8h13.6M5 11v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    <path d="M9 14h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-                                                </svg>
-                                            </div>
+                                        <div class="flex items-start gap-3">
                                             <div class="flex flex-col gap-1">
                                                 <span class="font-semibold text-slate-100">@Model.FormatTimestamp(log.CreatedAtUtc)</span>
                                                 <span class="text-xs text-slate-400">@relativeTime</span>
@@ -176,7 +170,6 @@
                                 <td class="px-6 py-4 align-middle">
                                     <div class="flex flex-col gap-2">
                                         <div class="flex items-center gap-3">
-                                            <span class="inline-flex h-2.5 w-12 rounded-full opacity-80 @accent.BarClass"></span>
                                             <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] @accent.BadgeClass">
                                                 <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                                     <path d="M4 10.5 8.5 15 16 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -184,7 +177,6 @@
                                                 @Model.FormatOperationType(log.OperationType)
                                             </span>
                                         </div>
-                                        <span class="text-[0.65rem] uppercase tracking-[0.3em] text-slate-400/70">Нажмите, чтобы раскрыть детали</span>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 align-middle">
