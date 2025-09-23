@@ -144,6 +144,7 @@
                                 ? "Детали отсутствуют."
                                 : log.Details;
                             var accent = Model.GetOperationAccentStyles(log.OperationType);
+                            var badgeStyle = string.IsNullOrEmpty(accent.BadgeStyle) ? null : accent.BadgeStyle;
                             var avatarInitials = Model.GetAvatarInitials(log.Username);
                             var avatarAccent = Model.GetAvatarAccentClass(log.Username);
                             var relativeTime = Model.GetRelativeTime(log.CreatedAtUtc);

@@ -345,6 +345,16 @@ public sealed class EventsModel : PageModel
             BadgeClass: "border border-rose-500/20 bg-rose-500/15 text-rose-100/90 shadow-[0_12px_30px_-18px_rgba(244,63,94,0.24)]",
             PulseClass: "bg-rose-300/70 shadow-[0_0_0_3px_rgba(244,63,94,0.19)]",
             OutlineClass: "ring-1 ring-inset ring-rose-400/45"),
+            BadgeStyle: string.Empty),
+    };
+
+    private static readonly string[] SoftPillPalette =
+    {
+        "border border-sky-500/22 bg-sky-500/16 text-sky-100/90 shadow-[0_16px_36px_-24px_rgba(14,165,233,0.55)] ring-1 ring-inset ring-sky-500/25",
+        "border border-fuchsia-500/22 bg-fuchsia-500/15 text-fuchsia-100/90 shadow-[0_16px_36px_-24px_rgba(217,70,239,0.5)] ring-1 ring-inset ring-fuchsia-500/25",
+        "border border-emerald-500/22 bg-emerald-500/14 text-emerald-100/90 shadow-[0_16px_36px_-24px_rgba(16,185,129,0.48)] ring-1 ring-inset ring-emerald-500/25",
+        "border border-amber-500/22 bg-amber-500/16 text-amber-100/90 shadow-[0_16px_36px_-24px_rgba(245,158,11,0.48)] ring-1 ring-inset ring-amber-500/25",
+        "border border-rose-500/22 bg-rose-500/15 text-rose-100/90 shadow-[0_16px_36px_-24px_rgba(244,63,94,0.5)] ring-1 ring-inset ring-rose-500/25",
     };
 
     private static readonly string[] AvatarPalette =
@@ -358,12 +368,11 @@ public sealed class EventsModel : PageModel
 
     private static readonly Dictionary<string, OperationAccentStyles> OperationAccentOverrides = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["CREATE"] = OperationAccentPalette[2],
-        ["GRANT"] = OperationAccentPalette[0],
-        ["REVOKE"] = OperationAccentPalette[4],
-        ["DELETE"] = OperationAccentPalette[4],
-        ["UPDATE"] = OperationAccentPalette[3],
+        ["CREATE"] = OperationAccentPalette[2] with { BadgeStyle = "background-color: rgba(16, 185, 129, 0.22);" },
+        ["GRANT"] = OperationAccentPalette[0] with { BadgeStyle = "background-color: rgba(56, 189, 248, 0.22);" },
+        ["REVOKE"] = OperationAccentPalette[4] with { BadgeStyle = "background-color: rgba(244, 63, 94, 0.24);" },
+        ["DELETE"] = OperationAccentPalette[4] with { BadgeStyle = "background-color: rgba(244, 63, 94, 0.24);" },
+        ["UPDATE"] = OperationAccentPalette[3] with { BadgeStyle = "background-color: rgba(245, 158, 11, 0.24);" },
     };
-
     public readonly record struct OperationAccentStyles(string BarClass, string BadgeClass, string PulseClass, string OutlineClass);
 }
