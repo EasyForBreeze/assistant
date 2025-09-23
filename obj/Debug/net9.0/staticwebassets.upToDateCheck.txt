@@ -63,7 +63,6 @@ wwwroot\lib\jquery\dist\jquery.slim.min.map
 wwwroot\lib\jquery\LICENSE.txt
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\css\kc.css
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\favicon.ico
-C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\js\soft-navigation.js
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css.map
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\lib\bootstrap\dist\css\bootstrap-grid.min.css
@@ -123,3 +122,4 @@ C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\lib\jquery\dist\jquery.slim.
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\lib\jquery\dist\jquery.slim.min.js
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\lib\jquery\dist\jquery.slim.min.map
 C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\lib\jquery\LICENSE.txt
+C:\Users\bream\source\repos\qwe16\Assistant\wwwroot\js\soft-navigation.js
