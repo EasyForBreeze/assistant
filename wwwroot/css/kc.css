@@ -729,6 +729,7 @@ body.page-loaded #app {
     border-color: rgba(125, 211, 252, .85);
 }
 
+
 .kc-data-table__cell {
     padding: 1.1rem 1.5rem;
     border-bottom: 1px solid rgba(148, 163, 184, .12);
@@ -848,6 +849,10 @@ body.page-loaded #app {
     word-break: break-all;
 }
 
+=======
+.kc-data-table__cell--details {
+    min-width: 18rem;
+}
 .kc-log-details {
     padding: .75rem .9rem;
     border-radius: .85rem;
@@ -899,7 +904,6 @@ body.page-loaded #app {
     text-transform: uppercase;
     color: rgba(148, 163, 184, .7);
 }
-
 @media (max-width: 960px) {
     .kc-data-table__cell,
     .kc-data-table__head th {
@@ -955,7 +959,6 @@ body.page-loaded #app {
         padding-left: 0;
         padding-right: 0;
     }
-
     .kc-data-table__details-row {
         display: none;
         padding: 0;

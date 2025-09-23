@@ -92,6 +92,12 @@
                         @for (var index = 0; index < Model.Logs.Count; index++)
                         {
                             var log = Model.Logs[index];
+                            <th class="kc-data-table__th">Детали</th>
+                        </tr>
+                    </thead>
+                    <tbody class="kc-data-table__body">
+                        @foreach (var log in Model.Logs)
+                        {
                             var hasUsername = !string.IsNullOrWhiteSpace(log.Username);
                             var formattedOperationType = Model.FormatOperationType(log.OperationType);
                             var hasDetails = !string.IsNullOrWhiteSpace(log.Details);
