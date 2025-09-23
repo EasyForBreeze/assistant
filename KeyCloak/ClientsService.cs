@@ -560,6 +560,39 @@ public sealed class ClientsService
         var existingDetails = await GetClientDetailsAsync(spec.Realm, spec.CurrentClientId, ct)
             ?? throw new InvalidOperationException($"Client '{spec.CurrentClientId}' not found.");
 
+        static IEnumerable<(string ClientId, string Role)> NormalizePairs(IEnumerable<(string ClientId, string Role)> source)
+        {
+            foreach (var (client, role) in source)
+            {
+                var clientId = (client ?? string.Empty).Trim();
+                var roleName = (role ?? string.Empty).Trim();
+                if (clientId.Length == 0 || roleName.Length == 0)
+                {
+                    continue;
+                }
+
+                yield return (clientId, roleName);
+            }
+        }
+
+        var comparer = ServiceRolePairComparer.Instance;
+        var existingServiceRoles = NormalizePairs(existingDetails.ServiceRoles)
+            .Distinct(comparer)
+            .ToList();
+        var desiredServiceRoles = spec.ServiceAccount
+            ? NormalizePairs(spec.ServiceRoles).Distinct(comparer).ToList()
+            : new List<(string ClientId, string Role)>();
+
+        var desiredSet = new HashSet<(string ClientId, string Role)>(desiredServiceRoles, comparer);
+        var existingSet = new HashSet<(string ClientId, string Role)>(existingServiceRoles, comparer);
+
+        var rolesToRemove = existingServiceRoles
+            .Where(pair => !desiredSet.Contains(pair))
+            .ToList();
+        var rolesToAdd = desiredServiceRoles
+            .Where(pair => !existingSet.Contains(pair))
+            .ToList();
+
         var body = new
         {
             clientId = spec.ClientId,
@@ -583,9 +616,14 @@ public sealed class ClientsService
             await EnsureLocalRolesAsync(spec.Realm, existingDetails.Id, spec.LocalRoles, ct);
         }
 
-        if (spec.ServiceAccount && spec.ServiceRoles.Count > 0)
+        if (rolesToRemove.Count > 0)
         {
-            await AssignServiceRolesToServiceAccountAsync(spec.Realm, existingDetails.Id, spec.ServiceRoles, ct);
+            await RemoveServiceRolesFromServiceAccountAsync(spec.Realm, existingDetails.Id, rolesToRemove, ct);
+        }
+
+        if (spec.ServiceAccount && rolesToAdd.Count > 0)
+        {
+            await AssignServiceRolesToServiceAccountAsync(spec.Realm, existingDetails.Id, rolesToAdd, ct);
         }
 
         var diff = DescribeClientUpdateChanges(existingDetails, spec);
@@ -698,6 +736,83 @@ public sealed class ClientsService
         }
     }
 
+    private async Task RemoveServiceRolesFromServiceAccountAsync(string realm, string clientUuid, IReadOnlyList<(string ClientId, string Role)> pairs, CancellationToken ct)
+    {
+        if (pairs.Count == 0)
+        {
+            return;
+        }
+
+        var http = CreateAdminClient();
+
+        var getSvcUserNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
+        var getSvcUserLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
+
+        using var userResp = await http.GetWithLegacyFallbackAsync(getSvcUserNew, getSvcUserLegacy, ct);
+        if (userResp.StatusCode == HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        userResp.EnsureAdminSuccess();
+        var svcUser = await ReadJsonAsync<KcUserRep>(userResp, ct);
+        if (svcUser?.Id == null)
+        {
+            return;
+        }
+
+        var groups = pairs
+            .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
+            .GroupBy(p => p.ClientId.Trim(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            var srcClientId = group.Key;
+
+            var srcClient = (await SearchClientsAsync(realm, srcClientId, 0, 2, ct))
+                .FirstOrDefault(c => string.Equals(c.ClientId, srcClientId, StringComparison.OrdinalIgnoreCase));
+            if (srcClient == null)
+            {
+                continue;
+            }
+
+            var mapNewBase = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings/clients/{UR(srcClient.Id)}";
+            var mapLegacyBase = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings/clients/{UR(srcClient.Id)}";
+
+            foreach (var roleName in group.Select(x => x.Role.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var getRoleNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+                    var getRoleLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+
+                    using var roleResp = await http.GetWithLegacyFallbackAsync(getRoleNew, getRoleLegacy, ct);
+                    if (roleResp.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        continue;
+                    }
+
+                    roleResp.EnsureAdminSuccess();
+                    var rep = await ReadJsonAsync<KcRoleRep>(roleResp, ct) ?? new KcRoleRep { Name = roleName };
+                    rep.ClientRole = true;
+                    rep.ContainerId = srcClient.Id;
+
+                    using var deleteResp = await http.DeleteJsonWithLegacyFallbackAsync(mapNewBase, mapLegacyBase, new[] { rep }, JsonOpts, ct);
+                    if (deleteResp.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        continue;
+                    }
+
+                    deleteResp.EnsureAdminSuccess();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Сервисная роль '{roleName}' клиента '{srcClientId}' не удалена: {ex.Message}", ex);
+                }
+            }
+        }
+    }
+
     private async Task<List<(string ClientId, string Role)>> GetServiceAccountRolesAsync(string realm, string clientUuid, CancellationToken ct)
     {
         var http = CreateAdminClient();
@@ -756,4 +871,21 @@ public sealed class ClientsService
 
     private static async Task<T?> ReadJsonAsync<T>(HttpResponseMessage resp, CancellationToken ct)
         => await resp.Content.ReadFromJsonAsync<T>(JsonOpts, ct);
+
+    private sealed class ServiceRolePairComparer : IEqualityComparer<(string ClientId, string Role)>
+    {
+        public static ServiceRolePairComparer Instance { get; } = new();
+
+        public bool Equals((string ClientId, string Role) x, (string ClientId, string Role) y)
+            => string.Equals(x.ClientId, y.ClientId, StringComparison.OrdinalIgnoreCase)
+               && string.Equals(x.Role, y.Role, StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((string ClientId, string Role) obj)
+        {
+            var hash = new HashCode();
+            hash.Add(obj.ClientId, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.Role, StringComparer.OrdinalIgnoreCase);
+            return hash.ToHashCode();
+        }
+    }
 }
