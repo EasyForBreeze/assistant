@@ -74,12 +74,24 @@
         <div class="kc-card p-0 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="kc-data-table text-sm leading-6">
+                    <colgroup>
+                        <col class="kc-data-table__col kc-data-table__col--timestamp" />
+                        <col class="kc-data-table__col kc-data-table__col--type" />
+                        <col class="kc-data-table__col kc-data-table__col--user" />
+                        <col class="kc-data-table__col kc-data-table__col--target" />
+                    </colgroup>
                     <thead class="kc-data-table__head">
                         <tr>
                             <th class="kc-data-table__th">Дата и время</th>
                             <th class="kc-data-table__th">Тип</th>
                             <th class="kc-data-table__th">Пользователь / Realm</th>
                             <th class="kc-data-table__th">Target ID</th>
+                        </tr>
+                    </thead>
+                    <tbody class="kc-data-table__body">
+                        @for (var index = 0; index < Model.Logs.Count; index++)
+                        {
+                            var log = Model.Logs[index];
                             <th class="kc-data-table__th">Детали</th>
                         </tr>
                     </thead>
@@ -95,8 +107,14 @@
                             var targetIdText = string.IsNullOrWhiteSpace(log.TargetId) ? "—" : log.TargetId;
                             var initialChar = hasUsername ? char.ToUpperInvariant(usernameText[0]) : '?';
                             var usernameInitial = initialChar.ToString();
+                            var detailRowId = $"event-details-{index}";
 
-                            <tr class="kc-data-table__row">
+                            <tr class="kc-data-table__row kc-data-table__row--expandable"
+                                data-detail-target="@detailRowId"
+                                role="button"
+                                tabindex="0"
+                                aria-expanded="false"
+                                aria-controls="@detailRowId">
                                 <td class="kc-data-table__cell" data-label="Дата и время">
                                     <span class="kc-cell-primary">@Model.FormatTimestamp(log.CreatedAtUtc)</span>
                                 </td>
@@ -118,8 +136,13 @@
                                         <span class="kc-code-bubble__value">@targetIdText</span>
                                     </div>
                                 </td>
-                                <td class="kc-data-table__cell kc-data-table__cell--details" data-label="Детали">
-                                    <div class="kc-log-details @(hasDetails ? string.Empty : "is-empty")">@detailText</div>
+                            </tr>
+                            <tr id="@detailRowId" class="kc-data-table__details-row" hidden>
+                                <td class="kc-data-table__details-cell" colspan="4">
+                                    <div class="kc-detail-panel">
+                                        <span class="kc-detail-panel__label">Детали</span>
+                                        <div class="kc-log-details @(hasDetails ? string.Empty : "is-empty")">@detailText</div>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -188,3 +211,45 @@
         </div>
     }
 </div>
+
+@section Scripts
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const expandableRows = document.querySelectorAll('.kc-data-table__row--expandable[data-detail-target]');
+
+            const toggleRow = (row) => {
+                const targetId = row.getAttribute('data-detail-target');
+                if (!targetId) {
+                    return;
+                }
+
+                const detailRow = document.getElementById(targetId);
+                if (!detailRow) {
+                    return;
+                }
+
+                const isExpanded = row.classList.toggle('is-expanded');
+                row.setAttribute('aria-expanded', isExpanded.toString());
+                detailRow.hidden = !isExpanded;
+            };
+
+            expandableRows.forEach((row) => {
+                row.addEventListener('click', (event) => {
+                    if ((event.target instanceof HTMLElement) && event.target.closest('a, button, input, textarea, select')) {
+                        return;
+                    }
+
+                    toggleRow(row);
+                });
+
+                row.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleRow(row);
+                    }
+                });
+            });
+        });
+    </script>
+}
