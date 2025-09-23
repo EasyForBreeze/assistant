@@ -287,7 +287,7 @@ public sealed class ClientsService
             .ToList();
 
         var filtered = FilterExcluded(mapped, excluded);
-        await AuditAsync("client:list", realm, $"{first}:{max}", ct);
+        //await AuditAsync("client:list", realm, $"{first}:{max}", ct);
         return (filtered, mapped.Count);
     }
 
@@ -425,7 +425,7 @@ public sealed class ClientsService
         var details = await GetClientDetailsAsync(realm, clientId, ct);
         if (details == null)
         {
-            await AuditAsync("client-secret:regenerate", realm, clientId, ct);
+            await AuditAsync("CLIENT:secret-regenerate", realm, clientId, ct);
             return null;
         }
 
@@ -437,7 +437,7 @@ public sealed class ClientsService
         resp.EnsureAdminSuccess();
         var rep = await ReadJsonAsync<ClientSecretRep>(resp, ct);
         var secret = rep?.Value;
-        await AuditAsync("client-secret:regenerate", realm, details.ClientId, ct);
+        await AuditAsync("CLIENT:secret-regenerate", realm, details.ClientId, ct);
         return secret;
     }
 
@@ -549,7 +549,7 @@ public sealed class ClientsService
                 $"Клиент '{spec.ClientId}' создан, но при назначении ролей произошла ошибка: {ex.Message}", ex);
         }
 
-        await AuditAsync("CREATE", spec.Realm, spec.ClientId, ct);
+        await AuditAsync("CLIENT:CREATE", spec.Realm, spec.ClientId, ct);
         return createdId;
     }
 
@@ -589,7 +589,7 @@ public sealed class ClientsService
         }
 
         var diff = DescribeClientUpdateChanges(existingDetails, spec);
-        await AuditAsync("client:update", spec.Realm, spec.ClientId, ct, diff);
+        await AuditAsync("CLIENT:UPDATE", spec.Realm, spec.ClientId, ct, diff);
     }
 
     public async Task DeleteClientAsync(string realm, string clientId, CancellationToken ct = default)
@@ -608,7 +608,7 @@ public sealed class ClientsService
         var target = string.IsNullOrWhiteSpace(existing.Id)
             ? (string.IsNullOrWhiteSpace(existing.ClientId) ? clientId : existing.ClientId)
             : $"{existing.Id}:{existing.ClientId}";
-        await AuditAsync("client:delete", realm, target, ct);
+        await AuditAsync("CLIENT:DELETE", realm, target, ct);
     }
 
     private async Task EnsureLocalRolesAsync(string realm, string clientUuid, IEnumerable<string> roles, CancellationToken ct)
@@ -688,7 +688,7 @@ public sealed class ClientsService
 
                     using var mapResp = await http.PostJsonWithLegacyFallbackAsync(mapNewBase, mapLegacyBase, new[] { rep }, JsonOpts, ct);
                     mapResp.EnsureAdminSuccess();
-                    await AuditAsync("service-account:role-assign", realm, $"{newClientUuid}:{srcClientId}:{roleName}", ct);
+                    //await AuditAsync("service-account:role-assign", realm, $"{newClientUuid}:{srcClientId}:{roleName}", ct);
                 }
                 catch (Exception ex)
                 {

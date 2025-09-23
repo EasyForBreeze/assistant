@@ -332,7 +332,7 @@ public sealed class UserClientsModel : PageModel
 
         var actor = GetCurrentActorLogin();
         await AuditAssignmentChangeAsync(
-            "user-client:grant",
+            "USER:GRANT",
             actor,
             realm,
             clientId,
@@ -380,7 +380,7 @@ public sealed class UserClientsModel : PageModel
             await _repo.RemoveForUserAsync(username, clientId, realm, ct);
             var actor = GetCurrentActorLogin();
             await AuditAssignmentChangeAsync(
-                "user-client:revoke",
+                "CLIENT:REVOKE",
                 actor,
                 realm,
                 clientId,

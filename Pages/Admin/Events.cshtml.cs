@@ -353,11 +353,11 @@ public sealed class EventsModel : PageModel
 
     private static readonly Dictionary<string, OperationAccentStyles> OperationAccentOverrides = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["CREATE"] = OperationAccentPalette[2],
-        ["GRANT"] = OperationAccentPalette[0],
-        ["REVOKE"] = OperationAccentPalette[4],
-        ["DELETE"] = OperationAccentPalette[4],
-        ["UPDATE"] = OperationAccentPalette[3],
+        ["CLIENT:CREATE"] = OperationAccentPalette[2],
+        ["USER:GRANT"] = OperationAccentPalette[2],
+        ["USER:REVOKE"] = OperationAccentPalette[4],
+        ["CLIENT:DELETE"] = OperationAccentPalette[4],
+        ["CLIENT:UPDATE"] = OperationAccentPalette[3],
     };
 
     public readonly record struct OperationAccentStyles(string BarClass, string BadgeClass, string PulseClass);
