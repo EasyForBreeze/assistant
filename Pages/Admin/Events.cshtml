@@ -148,8 +148,6 @@
                             var avatarInitials = Model.GetAvatarInitials(log.Username);
                             var avatarAccent = Model.GetAvatarAccentClass(log.Username);
                             var relativeTime = Model.GetRelativeTime(log.CreatedAtUtc);
-                            var realmPill = Model.GetSoftPillClasses(log.Realm);
-                            var targetPill = Model.GetSoftPillClasses(log.TargetId);
 
                             <tr data-event-row tabindex="0" aria-expanded="false" aria-controls="@detailsId"
                                 class="group relative cursor-pointer transition duration-200 odd:bg-white/[0.015] even:bg-transparent hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-500/80">
@@ -171,7 +169,7 @@
                                 <td class="px-6 py-4 align-middle">
                                     <div class="flex flex-col gap-2">
                                         <div class="flex items-center gap-3">
-                                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] @accent.BadgeClass" style="@badgeStyle">
+                                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] @accent.BadgeClass @accent.OutlineClass">
                                                 <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                                     <path d="M4 10.5 8.5 15 16 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
                                                 </svg>
@@ -187,7 +185,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 align-middle">
-                                    <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-100/90 shadow-[0_14px_32px_-22px_rgba(148,163,184,0.55)] transition-colors duration-200 @realmPill">
+                                    <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sky-100/90 border border-sky-500/30 bg-sky-500/15 shadow-[0_18px_36px_-26px_rgba(14,165,233,0.55)] ring-1 ring-inset ring-sky-400/45 transition-colors duration-200">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                             <path d="M4 6.5a2.5 2.5 0 0 1 2.5-2.5h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>
                                             <path d="M8.5 9.5h7M8.5 14.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
@@ -196,7 +194,7 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 align-middle">
-                                    <span class="inline-flex max-w-[15rem] items-center gap-2 rounded-full px-3 py-1 font-mono text-xs tracking-wide text-slate-100/90 shadow-[0_14px_32px_-22px_rgba(148,163,184,0.55)] transition-colors duration-200 @targetPill">
+                                    <span class="inline-flex max-w-[15rem] items-center gap-2 rounded-full px-3 py-1 font-mono text-xs tracking-wide text-sky-100/90 border border-sky-500/30 bg-sky-500/15 shadow-[0_18px_36px_-26px_rgba(14,165,233,0.55)] ring-1 ring-inset ring-sky-400/45 transition-colors duration-200">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                             <path d="M12 20a8 8 0 1 0-8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                                             <path d="M12 8v4l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -215,7 +213,7 @@
                                                 </svg>
                                                 <span>Детали события</span>
                                             </span>
-                                            <span class="ml-auto inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.25em] @accent.BadgeClass" style="@badgeStyle">
+                                            <span class="ml-auto inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.25em] @accent.BadgeClass @accent.OutlineClass">
                                                 <span class="h-2 w-2 rounded-full @accent.PulseClass"></span>
                                                 @Model.FormatOperationType(log.OperationType)
                                             </span>

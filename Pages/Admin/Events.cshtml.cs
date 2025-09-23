@@ -216,18 +216,6 @@ public sealed class EventsModel : PageModel
         return AvatarPalette[index];
     }
 
-    public string GetSoftPillClasses(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "border border-white/12 bg-white/10 text-slate-200/90 shadow-[0_14px_32px_-22px_rgba(148,163,184,0.45)] ring-1 ring-inset ring-white/12";
-        }
-
-        var hash = ComputeHash(value, seed: 131);
-        var index = (int)((uint)hash % (uint)SoftPillPalette.Length);
-        return SoftPillPalette[index];
-    }
-
     private static string? Normalize(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
@@ -336,26 +324,27 @@ public sealed class EventsModel : PageModel
             BarClass: "bg-gradient-to-b from-sky-400/0 via-sky-400/45 to-cyan-400/0 shadow-[0_0_18px_-6px_rgba(14,165,233,0.38)]",
             BadgeClass: "border border-sky-500/20 bg-sky-500/15 text-sky-100/90 shadow-[0_12px_30px_-18px_rgba(14,165,233,0.28)]",
             PulseClass: "bg-sky-300/70 shadow-[0_0_0_3px_rgba(56,189,248,0.2)]",
-            BadgeStyle: string.Empty),
+            OutlineClass: "ring-1 ring-inset ring-sky-400/45"),
         new(
             BarClass: "bg-gradient-to-b from-violet-400/0 via-fuchsia-400/45 to-purple-400/0 shadow-[0_0_18px_-6px_rgba(168,85,247,0.34)]",
             BadgeClass: "border border-fuchsia-500/20 bg-fuchsia-500/15 text-fuchsia-100/90 shadow-[0_12px_30px_-18px_rgba(217,70,239,0.26)]",
             PulseClass: "bg-fuchsia-300/70 shadow-[0_0_0_3px_rgba(217,70,239,0.2)]",
-            BadgeStyle: string.Empty),
+            OutlineClass: "ring-1 ring-inset ring-fuchsia-400/45"),
         new(
             BarClass: "bg-gradient-to-b from-emerald-400/0 via-teal-400/42 to-emerald-400/0 shadow-[0_0_18px_-6px_rgba(16,185,129,0.32)]",
             BadgeClass: "border border-emerald-500/20 bg-emerald-500/14 text-emerald-100/90 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.24)]",
             PulseClass: "bg-emerald-300/70 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]",
-            BadgeStyle: string.Empty),
+            OutlineClass: "ring-1 ring-inset ring-emerald-400/45"),
         new(
             BarClass: "bg-gradient-to-b from-amber-400/0 via-orange-400/42 to-yellow-400/0 shadow-[0_0_18px_-6px_rgba(245,158,11,0.3)]",
             BadgeClass: "border border-amber-500/20 bg-amber-500/16 text-amber-100/90 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.22)]",
             PulseClass: "bg-amber-300/75 shadow-[0_0_0_3px_rgba(251,191,36,0.18)]",
-            BadgeStyle: string.Empty),
+            OutlineClass: "ring-1 ring-inset ring-amber-400/45"),
         new(
             BarClass: "bg-gradient-to-b from-rose-400/0 via-rose-400/45 to-pink-400/0 shadow-[0_0_18px_-6px_rgba(244,63,94,0.34)]",
             BadgeClass: "border border-rose-500/20 bg-rose-500/15 text-rose-100/90 shadow-[0_12px_30px_-18px_rgba(244,63,94,0.24)]",
             PulseClass: "bg-rose-300/70 shadow-[0_0_0_3px_rgba(244,63,94,0.19)]",
+            OutlineClass: "ring-1 ring-inset ring-rose-400/45"),
             BadgeStyle: string.Empty),
     };
 
@@ -385,6 +374,5 @@ public sealed class EventsModel : PageModel
         ["DELETE"] = OperationAccentPalette[4] with { BadgeStyle = "background-color: rgba(244, 63, 94, 0.24);" },
         ["UPDATE"] = OperationAccentPalette[3] with { BadgeStyle = "background-color: rgba(245, 158, 11, 0.24);" },
     };
-
-    public readonly record struct OperationAccentStyles(string BarClass, string BadgeClass, string PulseClass, string BadgeStyle);
+    public readonly record struct OperationAccentStyles(string BarClass, string BadgeClass, string PulseClass, string OutlineClass);
 }
