@@ -73,27 +73,54 @@
     {
         <div class="kc-card p-0 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-white/5 text-sm leading-6">
-                    <thead class="bg-white/[0.03] text-[0.65rem] uppercase tracking-[0.25em] text-slate-300/80">
+                <table class="kc-data-table text-sm leading-6">
+                    <thead class="kc-data-table__head">
                         <tr>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Дата и время</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Тип</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Пользователь</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Realm</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Target ID</th>
-                            <th class="px-6 py-3 text-left font-semibold text-slate-200/90">Details</th>
+                            <th class="kc-data-table__th">Дата и время</th>
+                            <th class="kc-data-table__th">Тип</th>
+                            <th class="kc-data-table__th">Пользователь / Realm</th>
+                            <th class="kc-data-table__th">Target ID</th>
+                            <th class="kc-data-table__th">Детали</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-white/5">
+                    <tbody class="kc-data-table__body">
                         @foreach (var log in Model.Logs)
                         {
-                            <tr class="transition-colors duration-150 odd:bg-white/[0.02] even:bg-transparent hover:bg-white/10">
-                                <td class="px-6 py-3 whitespace-nowrap font-mono text-sm text-slate-200">@Model.FormatTimestamp(log.CreatedAtUtc)</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@Model.FormatOperationType(log.OperationType)</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.Username</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.Realm</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-100">@log.TargetId</td>
-                                <td class="px-6 py-3 text-sm text-slate-100 whitespace-pre-wrap font-mono">@(string.IsNullOrWhiteSpace(log.Details) ? "-" : log.Details)</td>
+                            var hasUsername = !string.IsNullOrWhiteSpace(log.Username);
+                            var formattedOperationType = Model.FormatOperationType(log.OperationType);
+                            var hasDetails = !string.IsNullOrWhiteSpace(log.Details);
+                            var detailText = hasDetails ? log.Details : "Нет данных";
+                            var usernameText = hasUsername ? log.Username! : "—";
+                            var realmText = string.IsNullOrWhiteSpace(log.Realm) ? "—" : log.Realm;
+                            var targetIdText = string.IsNullOrWhiteSpace(log.TargetId) ? "—" : log.TargetId;
+                            var initialChar = hasUsername ? char.ToUpperInvariant(usernameText[0]) : '?';
+                            var usernameInitial = initialChar.ToString();
+
+                            <tr class="kc-data-table__row">
+                                <td class="kc-data-table__cell" data-label="Дата и время">
+                                    <span class="kc-cell-primary">@Model.FormatTimestamp(log.CreatedAtUtc)</span>
+                                </td>
+                                <td class="kc-data-table__cell" data-label="Тип">
+                                    <span class="kc-badge">@formattedOperationType</span>
+                                </td>
+                                <td class="kc-data-table__cell kc-data-table__cell--user" data-label="Пользователь / Realm">
+                                    <div class="kc-user">
+                                        <span class="kc-user__avatar">@usernameInitial</span>
+                                        <div class="kc-user__meta">
+                                            <span class="kc-cell-primary">@usernameText</span>
+                                            <span class="kc-cell-secondary">@realmText</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="kc-data-table__cell" data-label="Target ID">
+                                    <div class="kc-code-bubble">
+                                        <span class="kc-code-bubble__label">ID</span>
+                                        <span class="kc-code-bubble__value">@targetIdText</span>
+                                    </div>
+                                </td>
+                                <td class="kc-data-table__cell kc-data-table__cell--details" data-label="Детали">
+                                    <div class="kc-log-details @(hasDetails ? string.Empty : "is-empty")">@detailText</div>
+                                </td>
                             </tr>
                         }
                     </tbody>
