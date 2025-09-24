@@ -118,7 +118,7 @@
         color: rgba(226,232,240,.6);
     }
 
-.kc-select 
+.kc-select
 {
     appearance: none;
     -webkit-appearance: none;
@@ -128,6 +128,14 @@
     background-repeat: no-repeat;
     background-size: 12px;
     background-position: right 12px center;
+    background-color: #0a0f18;
+    color: var(--kc-ink);
+}
+
+.kc-select option
+{
+    background-color: #0a0f18;
+    color: var(--kc-ink);
 }
 
 
