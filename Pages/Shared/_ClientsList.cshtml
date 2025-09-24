@@ -82,12 +82,20 @@ else if (Model.Clients.Any())
             <nav class="flex items-center gap-2">
                 @if (Model.HasPreviousPage)
                 {
-                    <a asp-page="@currentPage" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber - 1)" class="btn-subtle">Previous</a>
+                    <form method="get" asp-page="@currentPage" class="inline-flex" data-soft-transition="#clientsResults">
+                        <input type="hidden" name="q" value="@Model.Q" />
+                        <input type="hidden" name="pageNumber" value="@(Model.PageNumber - 1)" />
+                        <button type="submit" class="btn-subtle">Previous</button>
+                    </form>
                 }
                 <span class="text-sm text-slate-400">Page @Model.PageNumber of @Model.TotalPages</span>
                 @if (Model.HasNextPage)
                 {
-                    <a asp-page="@currentPage" asp-route-q="@Model.Q" asp-route-pageNumber="@(Model.PageNumber + 1)" class="btn-subtle">Next</a>
+                    <form method="get" asp-page="@currentPage" class="inline-flex" data-soft-transition="#clientsResults">
+                        <input type="hidden" name="q" value="@Model.Q" />
+                        <input type="hidden" name="pageNumber" value="@(Model.PageNumber + 1)" />
+                        <button type="submit" class="btn-subtle">Next</button>
+                    </form>
                 }
             </nav>
         </div>
