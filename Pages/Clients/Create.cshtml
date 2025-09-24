@@ -38,7 +38,7 @@
             <div class="mt-3 divider"></div>
         </div>
 
-        <form method="post" id="createForm" class="p-5" asp-page-handler="Create" autocomplete="off" @* data-soft-ignore *@>
+        <form method="post" id="createForm" class="p-5" asp-page-handler="Create" autocomplete="off" data-soft-ignore>
             <!-- hidden -->
             <input type="hidden" asp-for="ClientId" id="hidClientId" />
             <input type="hidden" asp-for="Description" id="hidDesc" />
@@ -571,17 +571,17 @@
             hidServiceOwner.value   = trim(ownerInput?.value);
             hidServiceManager.value = trim(managerInput?.value);
 
-            // const submitter = (e.submitter instanceof HTMLElement) ? e.submitter : null;
-            // const loadingButton = submitter ?? btnCreate;
-            // if (loadingButton && !loadingButton.hasAttribute('data-loading'))
-            // {
-            //   loadingButton.setAttribute('data-loading', 'true');
-            //   loadingButton.setAttribute('disabled', 'disabled');
-            // }
-            // [btnPrev, btnNext, btnSkip].forEach(btn =>
-            // {
-            //   if (btn) btn.setAttribute('disabled', 'disabled');
-            // });
+            const submitter = (e.submitter instanceof HTMLElement) ? e.submitter : null;
+            const loadingButton = submitter ?? btnCreate;
+            if (loadingButton && !loadingButton.hasAttribute('data-loading'))
+            {
+              loadingButton.setAttribute('data-loading', 'true');
+              loadingButton.setAttribute('disabled', 'disabled');
+            }
+            [btnPrev, btnNext, btnSkip].forEach(btn =>
+            {
+              if (btn) btn.setAttribute('disabled', 'disabled');
+            });
 
           });
 

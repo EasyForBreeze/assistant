@@ -1,0 +1,4 @@
+﻿{
+  "internal-bank-idm": "https://localhost:9000/",
+  "external-bank-idm": "https://localhost:9001/"
+}

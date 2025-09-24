@@ -41,7 +41,7 @@ public sealed class ConfluenceWikiService
         {
             var template = _templateProvider.Template;
             var html = BuildHtml(template.Body, payload);
-            var title = BuildTitle(template.Title, payload.ClientId);
+            var title = BuildTitle(template.Title, payload.ClientId,payload.Realm);
 
             using var request = JsonContent.Create(new
             {
@@ -100,13 +100,15 @@ public sealed class ConfluenceWikiService
         }
     }
 
-    private static string BuildTitle(string templateTitle, string clientId)
+    private static string BuildTitle(string templateTitle, string clientId,string realm)
     {
         if (!string.IsNullOrWhiteSpace(templateTitle))
         {
             var adjusted = templateTitle.Replace("ClientID", clientId, StringComparison.OrdinalIgnoreCase);
-            adjusted = adjusted.Replace("Шаблон", "Конфигурация", StringComparison.OrdinalIgnoreCase);
-            adjusted = adjusted.Replace("(не заполенный)", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+            if (realm!= "internal-bank-idm")
+            {
+                realm.Replace("INT-BNK.", "EXT-BNK.", StringComparison.OrdinalIgnoreCase);
+            }
             if (!string.IsNullOrWhiteSpace(adjusted))
             {
                 return adjusted;
@@ -281,7 +283,16 @@ public sealed class ConfluenceWikiService
 
         if (roles.Count == 0)
         {
-            sb.Append("<tr><td colspan=\"3\">—</td></tr>");
+            sb.Append("<td>");
+            sb.Append("—");
+            sb.Append("</td>");
+            sb.Append("<td>");
+            sb.Append("—");
+            sb.Append("</td>");
+            sb.Append("<td>");
+            sb.Append("—");
+            sb.Append("</td>");
+            //sb.Append("<tr><td colspan=\"3\">—</td></tr>");
         }
         else
         {
@@ -308,7 +319,15 @@ public sealed class ConfluenceWikiService
 
         if (serviceRoles.Count == 0)
         {
-            sb.Append("<tr><td colspan=\"3\">—</td></tr>");
+            sb.Append("<td>");
+            sb.Append("—");
+            sb.Append("</td>");
+            sb.Append("<td>");
+            sb.Append("—");
+            sb.Append("</td>");
+            sb.Append("<td>");
+            sb.Append("—");
+            sb.Append("</td>");
         }
         else
         {
