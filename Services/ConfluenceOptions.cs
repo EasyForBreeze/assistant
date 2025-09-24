@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 
 namespace Assistant.Services;
 
@@ -10,6 +12,7 @@ public sealed class ConfluenceOptions
     public string? Password { get; private set; }
     public string? SpaceKey { get; private set; }
     public long? ParentPageId { get; private set; }
+    public IReadOnlyList<string> Labels { get; private set; } = Array.Empty<string>();
 
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(BaseUrl)
@@ -18,11 +21,12 @@ public sealed class ConfluenceOptions
         && !string.IsNullOrWhiteSpace(SpaceKey)
         && ParentPageId.HasValue;
 
-    public static ConfluenceOptions FromConnectionString(string? connectionString)
+    public static ConfluenceOptions FromConnectionString(string? connectionString, IEnumerable<string>? labels = null)
     {
         var options = new ConfluenceOptions();
         if (string.IsNullOrWhiteSpace(connectionString))
         {
+            options.Labels = NormalizeLabels(labels);
             return options;
         }
 
@@ -44,6 +48,8 @@ public sealed class ConfluenceOptions
             }
         }
 
+        options.Labels = NormalizeLabels(labels);
+
         return options;
     }
 
@@ -56,5 +62,22 @@ public sealed class ConfluenceOptions
 
         var value = Convert.ToString(raw)?.Trim();
         return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static IReadOnlyList<string> NormalizeLabels(IEnumerable<string>? labels)
+    {
+        if (labels is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var normalized = labels
+            .Select(label => label?.Trim())
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(label => label!)
+            .ToArray();
+
+        return normalized.Length == 0 ? Array.Empty<string>() : normalized;
     }
 }
