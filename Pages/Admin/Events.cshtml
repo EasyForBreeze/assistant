@@ -245,15 +245,18 @@
                     var routeTo = Model.ToInput;
 
                     <nav class="flex flex-wrap items-center gap-1 text-sm">
-                        <a asp-page="/Admin/Events"
-                           asp-route-pageNumber="@(Model.HasPreviousPage ? Model.PageNumber - 1 : Model.PageNumber)"
-                           asp-route-Username="@routeUsername"
-                           asp-route-OperationType="@routeOperation"
-                           asp-route-From="@routeFrom"
-                           asp-route-To="@routeTo"
-                           class="px-3 py-1 rounded-lg border border-white/10 transition @(!Model.HasPreviousPage ? "opacity-40 pointer-events-none" : "hover:bg-white/10")">
-                            Назад
-                        </a>
+                        <form method="get" asp-page="/Admin/Events" class="inline-flex" data-soft-transition="#eventsTable">
+                            <input type="hidden" name="pageNumber" value="@(Model.HasPreviousPage ? Model.PageNumber - 1 : Model.PageNumber)" />
+                            <input type="hidden" name="Username" value="@routeUsername" />
+                            <input type="hidden" name="OperationType" value="@routeOperation" />
+                            <input type="hidden" name="From" value="@routeFrom" />
+                            <input type="hidden" name="To" value="@routeTo" />
+                            <button type="submit"
+                                    class="px-3 py-1 rounded-lg border border-white/10 transition @(!Model.HasPreviousPage ? "opacity-40 pointer-events-none" : "hover:bg-white/10")"
+                                    disabled="@(!Model.HasPreviousPage ? "disabled" : null)">
+                                Назад
+                            </button>
+                        </form>
                         @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++)
                         {
                             var isCurrent = pageNumber == Model.PageNumber;
@@ -261,26 +264,32 @@
                                 ? "bg-sky-500/20 text-sky-200 border border-sky-500/40"
                                 : "border border-white/10 hover:bg-white/10";
 
-                            <a asp-page="/Admin/Events"
-                               asp-route-pageNumber="@pageNumber"
-                               asp-route-Username="@routeUsername"
-                               asp-route-OperationType="@routeOperation"
-                               asp-route-From="@routeFrom"
-                               asp-route-To="@routeTo"
-                               class="@($"px-3 py-1 rounded-lg transition {pageClasses}")">
-                                @pageNumber
-                            </a>
+                            <form method="get" asp-page="/Admin/Events" class="inline-flex" data-soft-transition="#eventsTable">
+                                <input type="hidden" name="pageNumber" value="@pageNumber" />
+                                <input type="hidden" name="Username" value="@routeUsername" />
+                                <input type="hidden" name="OperationType" value="@routeOperation" />
+                                <input type="hidden" name="From" value="@routeFrom" />
+                                <input type="hidden" name="To" value="@routeTo" />
+                                <button type="submit"
+                                        class="@($"px-3 py-1 rounded-lg transition {pageClasses}")"
+                                        disabled="@(isCurrent ? "disabled" : null)">
+                                    @pageNumber
+                                </button>
+                            </form>
                         }
 
-                        <a asp-page="/Admin/Events"
-                           asp-route-pageNumber="@(Model.HasNextPage ? Model.PageNumber + 1 : Model.PageNumber)"
-                           asp-route-Username="@routeUsername"
-                           asp-route-OperationType="@routeOperation"
-                           asp-route-From="@routeFrom"
-                           asp-route-To="@routeTo"
-                           class="px-3 py-1 rounded-lg border border-white/10 transition @(!Model.HasNextPage ? "opacity-40 pointer-events-none" : "hover:bg-white/10")">
-                            Далее
-                        </a>
+                        <form method="get" asp-page="/Admin/Events" class="inline-flex" data-soft-transition="#eventsTable">
+                            <input type="hidden" name="pageNumber" value="@(Model.HasNextPage ? Model.PageNumber + 1 : Model.PageNumber)" />
+                            <input type="hidden" name="Username" value="@routeUsername" />
+                            <input type="hidden" name="OperationType" value="@routeOperation" />
+                            <input type="hidden" name="From" value="@routeFrom" />
+                            <input type="hidden" name="To" value="@routeTo" />
+                            <button type="submit"
+                                    class="px-3 py-1 rounded-lg border border-white/10 transition @(!Model.HasNextPage ? "opacity-40 pointer-events-none" : "hover:bg-white/10")"
+                                    disabled="@(!Model.HasNextPage ? "disabled" : null)">
+                                Далее
+                            </button>
+                        </form>
                     </nav>
                 }
             </div>
