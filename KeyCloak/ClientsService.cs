@@ -249,8 +249,9 @@ public sealed class ClientsService
             }
         }
 
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
+        //var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
+        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?search=true&clientId={UR(query)}&first={first}&max={max}&briefRepresentation=true";
+        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?search=true&clientId={UR(query)}&first={first}&max={max}&briefRepresentation=true";
 
         using var resp2 = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp2.EnsureAdminSuccess();
