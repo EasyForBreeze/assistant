@@ -38,7 +38,7 @@
             <div class="mt-3 divider"></div>
         </div>
 
-        <form method="post" id="createForm" class="p-5" asp-page-handler="Create" autocomplete="off" data-soft-ignore>
+        <form method="post" id="createForm" class="p-5 step-panels" asp-page-handler="Create" autocomplete="off" data-soft-ignore>
             <!-- hidden -->
             <input type="hidden" asp-for="ClientId" id="hidClientId" />
             <input type="hidden" asp-for="Description" id="hidDesc" />
@@ -54,7 +54,7 @@
             <input type="hidden" asp-for="ServiceManager" id="hidServiceManager" />
 
             <!-- Шаг 1: Realm -->
-            <div class="space-y-4" id="step-1" data-step="1">
+            <div class="step-panel space-y-4" id="step-1" data-step="1">
                 <div class="text-slate-200 font-semibold text-lg">1. Выбор Realm</div>
 
                 <div class="grid md:grid-cols-2 gap-4">
@@ -80,7 +80,7 @@
             </div>
 
             <!-- Шаг 2: Basics -->
-            <div class="space-y-4 hidden" id="step-2" data-step="2">
+            <div class="step-panel space-y-4 hidden" id="step-2" data-step="2">
                 <div class="text-slate-200 font-semibold text-lg">2. Client basics</div>
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
@@ -111,7 +111,7 @@
             </div>
 
             <!-- Шаг 3: System info (АС) -->
-            <div class="space-y-4 hidden" id="step-3" data-step="3">
+            <div class="step-panel space-y-4 hidden" id="step-3" data-step="3">
                 <div class="text-slate-200 font-semibold text-lg">3. Сведения об АС</div>
 
                 <div class="grid md:grid-cols-2 gap-4">
@@ -160,7 +160,7 @@
             </div>
 
             <!-- Шаг 4: Flows -->
-            <div class="space-y-4 hidden" id="step-4" data-step="4">
+            <div class="step-panel space-y-4 hidden" id="step-4" data-step="4">
                 <div class="text-slate-200 font-semibold text-lg">4. Выбор Flow</div>
 
                 <div class="kc-card p-4">
@@ -204,7 +204,7 @@
             </div>
 
             <!-- Шаг 5: Redirect URIs -->
-            <div class="space-y-3 hidden" id="step-5" data-step="5">
+            <div class="step-panel space-y-3 hidden" id="step-5" data-step="5">
                 <div class="text-slate-200 font-semibold text-lg">5. Redirect URIs</div>
                 <div class="hint">Нужны для <b>Standard flow</b>: сюда Keycloak возвращает пользователя после логина. указать домен обязательно, далее можно использовать * для разрешения любых путей.</div>
                 <div class="kc-mini mt-1">Пример: <code>https://localhost:8080/*</code>.</div>
@@ -216,7 +216,7 @@
             </div>
 
             <!-- Шаг 6: Local roles -->
-            <div class="space-y-3 hidden" id="step-6" data-step="6">
+            <div class="step-panel space-y-3 hidden" id="step-6" data-step="6">
                 <div class="text-slate-200 font-semibold text-lg">6. Local roles</div>
                 <div class="hint">Создаются на этом клиенте для назначения другим клиентам/пользователям для доступа.</div>
                 <div id="locList" class="flex flex-wrap gap-2"></div>
@@ -230,7 +230,7 @@
             </div>
 
             <!-- Шаг 7: Service roles -->
-            <div class="space-y-4 hidden" data-step="7">
+            <div class="step-panel space-y-4 hidden" data-step="7">
                 <div class="text-slate-200 font-semibold text-lg">6. Service roles</div>
                 <div class="hint">
                     Введите <b>clientId</b> (или часть) <u>или</u> фрагмент имени роли. В результатах можно
@@ -530,11 +530,17 @@
 
           function applyPanelVisibility()
           {
+            if (createForm)
+            {
+              createForm.classList.remove('step-panels-animating');
+              createForm.style.height = '';
+            }
             panels.forEach(panel =>
             {
               const isCurrent = stepNum(panel) === current;
               panel.classList.toggle('hidden', !isCurrent);
               stripFadeClasses(panel);
+              panel.classList.remove('step-panel-animating','step-panel-enter','step-panel-leave');
             });
           }
 
@@ -546,12 +552,17 @@
               return;
             }
 
+            const container = nextPanel.parentElement || prevPanel?.parentElement || null;
+            const activeSet = new Set([nextPanel]);
+            if (prevPanel) activeSet.add(prevPanel);
+
             panels.forEach(panel =>
             {
-              if (panel !== prevPanel && panel !== nextPanel)
+              if (!activeSet.has(panel))
               {
                 panel.classList.add('hidden');
                 stripFadeClasses(panel);
+                panel.classList.remove('step-panel-animating','step-panel-enter','step-panel-leave');
               }
             });
 
@@ -566,11 +577,26 @@
               prevPanel.classList.add('fade-leave');
             }
 
+            const startHeight = prevPanel ? prevPanel.offsetHeight : nextPanel.offsetHeight;
+            if (container)
+            {
+              container.classList.add('step-panels-animating');
+              container.style.height = `${startHeight}px`;
+            }
+
+            nextPanel.classList.add('step-panel-animating','step-panel-enter');
+            if (prevPanel) prevPanel.classList.add('step-panel-animating','step-panel-leave');
+
             void nextPanel.offsetWidth;
             if (prevPanel) void prevPanel.offsetWidth;
 
-            nextPanel.classList.add('fade-enter-active');
-            if (prevPanel) prevPanel.classList.add('fade-leave-active');
+            const activate = () =>
+            {
+              nextPanel.classList.add('fade-enter-active');
+              if (prevPanel) prevPanel.classList.add('fade-leave-active');
+              if (container) container.style.height = `${nextPanel.offsetHeight}px`;
+            };
+            requestAnimationFrame(activate);
 
             let finished = false;
             const finalize = () =>
@@ -578,10 +604,12 @@
               if (finished) return;
               finished = true;
               stripFadeClasses(nextPanel);
+              nextPanel.classList.remove('step-panel-animating','step-panel-enter');
               if (prevPanel)
               {
                 stripFadeClasses(prevPanel);
                 prevPanel.classList.add('hidden');
+                prevPanel.classList.remove('step-panel-animating','step-panel-leave');
               }
               panels.forEach(panel =>
               {
@@ -589,7 +617,13 @@
                 const shouldHide = stepNum(panel) !== current;
                 panel.classList.toggle('hidden', shouldHide);
                 stripFadeClasses(panel);
+                panel.classList.remove('step-panel-animating','step-panel-enter','step-panel-leave');
               });
+              if (container)
+              {
+                container.classList.remove('step-panels-animating');
+                container.style.height = '';
+              }
               activeAnimationCleanup = null;
             };
 

@@ -493,6 +493,31 @@
     transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.step-panels {
+    position: relative;
+}
+
+.step-panels-animating {
+    position: relative;
+    transition: height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.step-panels-animating .step-panel-animating {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    width: 100%;
+}
+
+.step-panels-animating .step-panel-leave {
+    z-index: 1;
+}
+
+.step-panels-animating .step-panel-enter {
+    z-index: 2;
+}
+
 @media (prefers-reduced-motion: reduce) {
     #app {
         transition: none !important;
