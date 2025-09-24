@@ -29,12 +29,12 @@ public sealed class ConfluenceWikiService
         _logger = logger;
     }
 
-    public async Task CreatePageAsync(ClientWikiPayload payload, CancellationToken cancellationToken)
+    public async Task<string?> CreatePageAsync(ClientWikiPayload payload, CancellationToken cancellationToken)
     {
         if (!_options.IsConfigured)
         {
             _logger.LogDebug("Confluence wiki connection is not configured. Skipping page creation for {ClientId}.", payload.ClientId);
-            return;
+            return null;
         }
 
         try
@@ -72,7 +72,7 @@ public sealed class ConfluenceWikiService
                     payload.ClientId,
                     response.StatusCode,
                     message);
-                return;
+                return null;
             }
 
             var created = await response.Content
@@ -81,15 +81,117 @@ public sealed class ConfluenceWikiService
             if (created is null || string.IsNullOrWhiteSpace(created.Id))
             {
                 _logger.LogWarning("Confluence page created but id is missing for {ClientId}.", payload.ClientId);
-                return;
+                return null;
             }
 
             await AddLabelsAsync(client, created.Id, serializerOptions, payload.ClientId, payload.Realm, cancellationToken)
                 .ConfigureAwait(false);
+            return created.Id;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while creating Confluence page for {ClientId}.", payload.ClientId);
+            return null;
+        }
+    }
+
+    public async Task<bool> UpdatePageAsync(string pageId, ClientWikiPayload payload, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(pageId))
+        {
+            return false;
+        }
+
+        if (!_options.IsConfigured)
+        {
+            _logger.LogDebug(
+                "Confluence wiki connection is not configured. Skipping page update for {ClientId} (page {PageId}).",
+                payload.ClientId,
+                pageId);
+            return false;
+        }
+
+        try
+        {
+            var template = _templateProvider.Template;
+            var html = BuildHtml(template.Body, payload);
+            var title = BuildTitle(template.Title, payload.ClientId, payload.Realm);
+            var serializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+            var client = _httpClientFactory.CreateClient("confluence-wiki");
+            PrepareClient(client);
+
+            using var getResponse = await client
+                .GetAsync($"/rest/api/content/{pageId}?expand=version", cancellationToken)
+                .ConfigureAwait(false);
+            if (!getResponse.IsSuccessStatusCode)
+            {
+                var message = await getResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogError(
+                    "Failed to fetch Confluence page info for {ClientId} (page {PageId}). StatusCode: {Status}. Response: {Response}",
+                    payload.ClientId,
+                    pageId,
+                    getResponse.StatusCode,
+                    message);
+                return false;
+            }
+
+            var existing = await getResponse.Content
+                .ReadFromJsonAsync<ConfluenceContentDetails>(serializerOptions, cancellationToken)
+                .ConfigureAwait(false);
+            var currentVersion = existing?.Version?.Number;
+            if (currentVersion is null)
+            {
+                _logger.LogWarning(
+                    "Unable to determine current Confluence page version for {ClientId} (page {PageId}).",
+                    payload.ClientId,
+                    pageId);
+                return false;
+            }
+
+            using var request = JsonContent.Create(new
+            {
+                id = pageId,
+                type = "page",
+                title,
+                version = new { number = currentVersion.Value + 1 },
+                body = new
+                {
+                    storage = new
+                    {
+                        value = html,
+                        representation = "storage"
+                    }
+                }
+            }, options: serializerOptions);
+
+            using var putResponse = await client
+                .PutAsync($"/rest/api/content/{pageId}", request, cancellationToken)
+                .ConfigureAwait(false);
+            if (!putResponse.IsSuccessStatusCode)
+            {
+                var message = await putResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogError(
+                    "Failed to update Confluence page for {ClientId} (page {PageId}). StatusCode: {Status}. Response: {Response}",
+                    payload.ClientId,
+                    pageId,
+                    putResponse.StatusCode,
+                    message);
+                return false;
+            }
+
+            await AddLabelsAsync(client, pageId, serializerOptions, payload.ClientId, payload.Realm, cancellationToken)
+                .ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unexpected error while updating Confluence page for {ClientId} (page {PageId}).",
+                payload.ClientId,
+                pageId);
+            return false;
         }
     }
 
@@ -172,14 +274,14 @@ public sealed class ConfluenceWikiService
             message);
     }
 
-    private static string BuildTitle(string templateTitle, string clientId,string realm)
+    private static string BuildTitle(string templateTitle, string clientId, string realm)
     {
         if (!string.IsNullOrWhiteSpace(templateTitle))
         {
             var adjusted = templateTitle.Replace("ClientID", clientId, StringComparison.OrdinalIgnoreCase);
-            if (realm!= "internal-bank-idm")
+            if (!string.Equals(realm, "internal-bank-idm", StringComparison.OrdinalIgnoreCase))
             {
-                realm.Replace("INT-BNK.", "EXT-BNK.", StringComparison.OrdinalIgnoreCase);
+                adjusted = adjusted.Replace("INT-BNK.", "EXT-BNK.", StringComparison.OrdinalIgnoreCase);
             }
             if (!string.IsNullOrWhiteSpace(adjusted))
             {
@@ -418,6 +520,10 @@ public sealed class ConfluenceWikiService
     }
 
     private sealed record ConfluenceContentResponse(string? Id);
+
+    private sealed record ConfluenceContentDetails(ConfluenceContentVersion? Version);
+
+    private sealed record ConfluenceContentVersion(int Number);
 
     public sealed record ClientWikiPayload(
         string Realm,
