@@ -15,17 +15,20 @@ public sealed class ConfluenceWikiService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ConfluenceTemplateProvider _templateProvider;
     private readonly ConfluenceOptions _options;
+    private readonly RealmLinkProvider _realmLinkProvider;
     private readonly ILogger<ConfluenceWikiService> _logger;
 
     public ConfluenceWikiService(
         IHttpClientFactory httpClientFactory,
         ConfluenceTemplateProvider templateProvider,
         ConfluenceOptions options,
+        RealmLinkProvider realmLinkProvider,
         ILogger<ConfluenceWikiService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _templateProvider = templateProvider;
         _options = options;
+        _realmLinkProvider = realmLinkProvider;
         _logger = logger;
     }
 
@@ -292,7 +295,7 @@ public sealed class ConfluenceWikiService
         return $"Конфигурация клиента {clientId}";
     }
 
-    private static string BuildHtml(string template, ClientWikiPayload payload)
+    private string BuildHtml(string template, ClientWikiPayload payload)
     {
         var replacements = new Dictionary<string, string>
         {
@@ -336,8 +339,16 @@ public sealed class ConfluenceWikiService
         return $"<td>{name}</td>";
     }
 
-    private static string BuildRealmCell(string realm)
-        => $"<td>{WebUtility.HtmlEncode(realm)}</td>";
+    private string BuildRealmCell(string realm)
+    {
+        var encodedRealm = WebUtility.HtmlEncode(realm);
+        if (_realmLinkProvider.TryGetRealmLink(realm, out var link))
+        {
+            return $"<td><a href=\"{WebUtility.HtmlEncode(link)}\">{encodedRealm}</a></td>";
+        }
+
+        return $"<td>{encodedRealm}</td>";
+    }
 
     private static string BuildDescription(string? description)
     {

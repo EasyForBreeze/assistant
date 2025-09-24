@@ -47,6 +47,7 @@ var confluenceLabels = builder.Configuration.GetSection("Confluence").GetSection
 var confluenceOptions = ConfluenceOptions.FromConnectionString(builder.Configuration.GetConnectionString("ConnectionWiki"), confluenceLabels);
 builder.Services.AddSingleton(confluenceOptions);
 builder.Services.AddSingleton<ConfluenceTemplateProvider>();
+builder.Services.AddSingleton<RealmLinkProvider>();
 builder.Services.AddHttpClient("confluence-wiki", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(100);
