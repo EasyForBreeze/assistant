@@ -21,6 +21,7 @@ public class CreateModel : PageModel
     private readonly UserClientsRepository _repo;
     private readonly ServiceRoleExclusionsRepository _exclusions;
     private readonly ConfluenceWikiService _wiki;
+    private readonly ClientWikiRepository _wikiPages;
     private readonly ILogger<CreateModel> _logger;
 
     public CreateModel(
@@ -29,6 +30,7 @@ public class CreateModel : PageModel
         UserClientsRepository repo,
         ServiceRoleExclusionsRepository exclusions,
         ConfluenceWikiService wiki,
+        ClientWikiRepository wikiPages,
         ILogger<CreateModel> logger)
     {
         _realms = realms;
@@ -36,6 +38,7 @@ public class CreateModel : PageModel
         _repo = repo;
         _exclusions = exclusions;
         _wiki = wiki;
+        _wikiPages = wikiPages;
         _logger = logger;
     }
 
@@ -226,8 +229,13 @@ public class CreateModel : PageModel
         {
             var createdId = await _clients.CreateClientAsync(spec, ct);
 
+            var normalizedAppName = string.IsNullOrWhiteSpace(AppName) ? null : AppName!.Trim();
+            var normalizedAppUrl = string.IsNullOrWhiteSpace(AppUrl) ? null : AppUrl!.Trim();
+            var normalizedOwner = string.IsNullOrWhiteSpace(ServiceOwner) ? null : ServiceOwner!.Trim();
+            var normalizedManager = string.IsNullOrWhiteSpace(ServiceManager) ? null : ServiceManager!.Trim();
+
             var summary = new ClientSummary(
-                Name: AppName ?? spec.ClientId,
+                Name: normalizedAppName ?? spec.ClientId,
                 ClientId: spec.ClientId,
                 Realm: spec.Realm,
                 Enabled: true,
@@ -239,7 +247,7 @@ public class CreateModel : PageModel
                 await _repo.AddAsync(username, summary, ct);
             }
 
-            await _wiki.CreatePageAsync(new ConfluenceWikiService.ClientWikiPayload(
+            var pageId = await _wiki.CreatePageAsync(new ConfluenceWikiService.ClientWikiPayload(
                 Realm: spec.Realm,
                 ClientId: spec.ClientId,
                 Description: Description,
@@ -249,11 +257,30 @@ public class CreateModel : PageModel
                 RedirectUris: redirects,
                 LocalRoles: locals,
                 ServiceRoles: serviceRolePairs,
-                AppName: AppName,
-                AppUrl: AppUrl,
-                ServiceOwner: ServiceOwner,
-                ServiceManager: ServiceManager),
+                AppName: normalizedAppName,
+                AppUrl: normalizedAppUrl,
+                ServiceOwner: normalizedOwner,
+                ServiceManager: normalizedManager),
                 ct);
+
+            if (!string.IsNullOrWhiteSpace(pageId))
+            {
+                try
+                {
+                    await _wikiPages.SetAsync(new ClientWikiRepository.ClientWikiInfo(
+                        spec.Realm,
+                        spec.ClientId,
+                        pageId,
+                        normalizedAppName,
+                        normalizedAppUrl,
+                        normalizedOwner,
+                        normalizedManager), ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to persist Confluence wiki mapping for {ClientId}", spec.ClientId);
+                }
+            }
 
             TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
             return RedirectToPage("/Index");
