@@ -42,6 +42,7 @@ public sealed class ConfluenceWikiService
             var template = _templateProvider.Template;
             var html = BuildHtml(template.Body, payload);
             var title = BuildTitle(template.Title, payload.ClientId,payload.Realm);
+            var serializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
             using var request = JsonContent.Create(new
             {
@@ -57,7 +58,7 @@ public sealed class ConfluenceWikiService
                         representation = "storage"
                     }
                 }
-            }, options: new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            }, options: serializerOptions);
 
             var client = _httpClientFactory.CreateClient("confluence-wiki");
             PrepareClient(client);
@@ -71,7 +72,20 @@ public sealed class ConfluenceWikiService
                     payload.ClientId,
                     response.StatusCode,
                     message);
+                return;
             }
+
+            var created = await response.Content
+                .ReadFromJsonAsync<ConfluenceContentResponse>(serializerOptions, cancellationToken)
+                .ConfigureAwait(false);
+            if (created is null || string.IsNullOrWhiteSpace(created.Id))
+            {
+                _logger.LogWarning("Confluence page created but id is missing for {ClientId}.", payload.ClientId);
+                return;
+            }
+
+            await AddLabelsAsync(client, created.Id, serializerOptions, payload.ClientId, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -98,6 +112,51 @@ public sealed class ConfluenceWikiService
                 "Basic",
                 Convert.ToBase64String(credentials));
         }
+    }
+
+    private async Task AddLabelsAsync(
+        HttpClient client,
+        string pageId,
+        JsonSerializerOptions serializerOptions,
+        string clientId,
+        CancellationToken cancellationToken)
+    {
+        if (_options.Labels.Count == 0)
+        {
+            return;
+        }
+
+        var payload = new List<object>(_options.Labels.Count);
+        foreach (var label in _options.Labels)
+        {
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                continue;
+            }
+
+            payload.Add(new { prefix = "global", name = label });
+        }
+
+        if (payload.Count == 0)
+        {
+            return;
+        }
+
+        using var request = JsonContent.Create(payload, options: serializerOptions);
+        using var response = await client
+            .PostAsync($"/rest/api/content/{pageId}/label", request, cancellationToken)
+            .ConfigureAwait(false);
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var message = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        _logger.LogError(
+            "Failed to apply Confluence labels for {ClientId}. StatusCode: {Status}. Response: {Response}",
+            clientId,
+            response.StatusCode,
+            message);
     }
 
     private static string BuildTitle(string templateTitle, string clientId,string realm)
@@ -344,6 +403,8 @@ public sealed class ConfluenceWikiService
         sb.Append("</tbody></table>");
         return sb.ToString();
     }
+
+    private sealed record ConfluenceContentResponse(string? Id);
 
     public sealed record ClientWikiPayload(
         string Realm,
