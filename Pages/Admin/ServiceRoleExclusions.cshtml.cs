@@ -133,7 +133,7 @@ public sealed class ServiceRoleExclusionsModel : PageModel
         }
 
         var actor = ResolveActor();
-        await _logs.LogAsync("client_ex:add", actor, "-", storedValue, details: input, ct: ct);
+        await _logs.LogAsync("client_ex:add", actor, "-", storedValue, details: "Добавлен клиент в исключения - "+input, ct: ct);
         _logger.LogInformation("{Actor} added client {ClientId} to service role exclusions.", actor, storedValue);
         TempData["FlashOk"] = $"Клиент '{input}' добавлен в список исключений.";
         return RedirectToSelf();
@@ -195,7 +195,7 @@ public sealed class ServiceRoleExclusionsModel : PageModel
         }
 
         var actor = ResolveActor();
-        await _logs.LogAsync("client_ex:remove", actor, "-", removed, details: normalized, ct: ct);
+        await _logs.LogAsync("client_ex:remove", actor, "-", removed, details: "Удален клиент из исключений - "+normalized, ct: ct);
         _logger.LogInformation("{Actor} removed client {ClientId} from service role exclusions.", actor, removed);
         TempData["FlashOk"] = $"Клиент '{normalized}' удалён из списка исключений.";
         return RedirectToSelf();
