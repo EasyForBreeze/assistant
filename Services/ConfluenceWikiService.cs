@@ -84,12 +84,95 @@ public sealed class ConfluenceWikiService
                     payload.ClientId,
                     response.StatusCode,
                     message);
+                return;
             }
+
+            if (_options.Labels.Count == 0)
+            {
+                return;
+            }
+
+            var pageId = await TryExtractPageIdAsync(response.Content, cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(pageId))
+            {
+                _logger.LogWarning(
+                    "Created Confluence page for {ClientId}, but the page id could not be determined to add labels.",
+                    payload.ClientId);
+                return;
+            }
+
+            await AddLabelsAsync(client, pageId, payload, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while creating Confluence page for {ClientId}.", payload.ClientId);
         }
+    }
+
+    private async Task AddLabelsAsync(HttpClient client, string pageId, ClientWikiPayload payload, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = JsonContent.Create(
+                _options.Labels.Select(label => new { prefix = "global", name = label }).ToArray(),
+                options: new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+            using var response = await client.PostAsync($"/rest/api/content/{pageId}/label", request, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                _logger.LogDebug(
+                    "Confluence labels already exist for page {PageId} ({ClientId}). Response: {Response}",
+                    pageId,
+                    payload.ClientId,
+                    body);
+                return;
+            }
+
+            _logger.LogError(
+                "Failed to add labels to Confluence page {PageId} for {ClientId}. StatusCode: {Status}. Response: {Response}",
+                pageId,
+                payload.ClientId,
+                response.StatusCode,
+                body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unexpected error while adding labels to Confluence page {PageId} for {ClientId}.",
+                pageId,
+                payload.ClientId);
+        }
+    }
+
+    private static async Task<string?> TryExtractPageIdAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (document.RootElement.TryGetProperty("id", out var idProperty))
+            {
+                var id = idProperty.GetString();
+                return string.IsNullOrWhiteSpace(id) ? null : id;
+            }
+        }
+        catch (Exception)
+        {
+            // Ignore parsing errors and let the caller handle the missing id scenario.
+        }
+
+        return null;
     }
 
     private void PrepareClient(HttpClient client)
