@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 
 namespace Assistant.Services;
@@ -10,6 +11,9 @@ public sealed class ConfluenceOptions
     public string? Password { get; private set; }
     public string? SpaceKey { get; private set; }
     public long? ParentPageId { get; private set; }
+    public IReadOnlyList<string> Labels => _labels;
+
+    private string[] _labels = Array.Empty<string>();
 
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(BaseUrl)
@@ -45,6 +49,34 @@ public sealed class ConfluenceOptions
         }
 
         return options;
+    }
+
+    public void SetLabels(IEnumerable<string>? labels)
+    {
+        if (labels is null)
+        {
+            _labels = Array.Empty<string>();
+            return;
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<string>();
+
+        foreach (var label in labels)
+        {
+            var trimmed = label?.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                continue;
+            }
+
+            if (seen.Add(trimmed))
+            {
+                result.Add(trimmed);
+            }
+        }
+
+        _labels = result.Count == 0 ? Array.Empty<string>() : result.ToArray();
     }
 
     private static string? GetString(DbConnectionStringBuilder builder, string key)
