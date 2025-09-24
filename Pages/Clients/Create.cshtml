@@ -389,80 +389,6 @@
           const heads  = $$('[id^="stepHead"]');
           const stepNum = (el)=> +el.getAttribute('data-step') || +el.id.replace('stepHead','');
 
-          const panelByStep = new Map();
-          const panelHideHandlers = new WeakMap();
-          const reduceMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-          const prefersReducedMotion = () => reduceMotionMedia?.matches ?? false;
-          let activePanel = null;
-
-          function cancelPendingHide(panel) {
-            if (!panel) return;
-            const handler = panelHideHandlers.get(panel);
-            if (handler) {
-              panel.removeEventListener('transitionend', handler);
-              panelHideHandlers.delete(panel);
-            }
-          }
-
-          function hidePanel(panel, immediate) {
-            if (!panel) return;
-            cancelPendingHide(panel);
-            panel.classList.remove('wizard-step-active');
-            if (immediate) {
-              panel.classList.add('wizard-step-hidden');
-              return;
-            }
-            const onEnd = (event) => {
-              if (event.target !== panel || event.propertyName !== 'opacity') return;
-              panel.classList.add('wizard-step-hidden');
-              cancelPendingHide(panel);
-            };
-            panelHideHandlers.set(panel, onEnd);
-            panel.addEventListener('transitionend', onEnd);
-          }
-
-          function showPanel(panel, immediate) {
-            if (!panel) return;
-            cancelPendingHide(panel);
-            panel.classList.remove('wizard-step-hidden');
-            const alreadyActive = panel.classList.contains('wizard-step-active');
-            if (alreadyActive) return;
-            if (immediate) {
-              panel.classList.add('wizard-step-active');
-              return;
-            }
-            panel.classList.remove('wizard-step-active');
-            void panel.offsetWidth;
-            panel.classList.add('wizard-step-active');
-          }
-
-          function setActiveStepPanel(step, opts) {
-            const panel = panelByStep.get(step);
-            if (!panel) return;
-            const skip = opts?.instant || prefersReducedMotion();
-            if (activePanel === panel) {
-              showPanel(panel, skip);
-              return;
-            }
-            hidePanel(activePanel, skip);
-            showPanel(panel, skip);
-            activePanel = panel;
-          }
-
-          panels.forEach(panel => {
-            const n = stepNum(panel);
-            if (!panelByStep.has(n)) panelByStep.set(n, panel);
-            const initiallyVisible = !panel.classList.contains('hidden');
-            panel.classList.add('wizard-step');
-            panel.classList.remove('hidden');
-            if (initiallyVisible && !activePanel) {
-              panel.classList.add('wizard-step-active');
-              activePanel = panel;
-            } else {
-              panel.classList.add('wizard-step-hidden');
-            }
-          });
-
           // Условия включения шагов
           const predicates =
           {
@@ -538,14 +464,14 @@
             });
           }
 
-          function showStep(requested, opts){
+          function showStep(requested){
             const en = enabledSteps();
             if (en.length===0) return;
 
             let target = en.includes(requested) ? requested : en.find(x=>x>=requested) ?? en[en.length-1];
             current = target;
 
-            setActiveStepPanel(current, opts);
+            panels.forEach(p => p.classList.toggle('hidden', stepNum(p)!==current));
             setHeaderStates(en);
 
             const i = en.indexOf(current);
@@ -664,7 +590,7 @@
           const _srv = Number(window.__stepToShow || 0);
           const _en  = enabledSteps();
           const _start = (_srv > 0 && _en.length) ? (_en.includes(_srv) ? _srv : (_en.find(x => x >= _srv) ?? _en[_en.length - 1])): (_en[0] ?? 1);
-          showStep(_start, { instant: true });
+          showStep(_start);
 
           // локальные рендер-функции уже объявлены выше
           function renderChips(listEl, arr){
