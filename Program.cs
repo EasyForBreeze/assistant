@@ -39,6 +39,7 @@ builder.Services.AddScoped<Assistant.KeyCloak.EventsService>();
 builder.Services.AddSingleton<UserClientsRepository>();
 builder.Services.AddSingleton<ServiceRoleExclusionsRepository>();
 builder.Services.AddSingleton<ApiLogRepository>();
+builder.Services.AddSingleton<ClientWikiRepository>();
 builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.AddScoped<IAccessRequestEmailSender, AccessRequestEmailSender>();

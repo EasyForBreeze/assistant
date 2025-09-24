@@ -2,9 +2,10 @@ using Assistant.KeyCloak;
 using Assistant.KeyCloak.Models;
 using Assistant.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -16,12 +17,24 @@ public class DetailsModel : PageModel
     private readonly ClientsService _clients;
     private readonly UserClientsRepository _repo;
     private readonly EventsService _events;
+    private readonly ConfluenceWikiService _wiki;
+    private readonly ClientWikiRepository _wikiPages;
+    private readonly ILogger<DetailsModel> _logger;
 
-    public DetailsModel(ClientsService clients, UserClientsRepository repo, EventsService events)
+    public DetailsModel(
+        ClientsService clients,
+        UserClientsRepository repo,
+        EventsService events,
+        ConfluenceWikiService wiki,
+        ClientWikiRepository wikiPages,
+        ILogger<DetailsModel> logger)
     {
         _clients = clients;
         _repo = repo;
         _events = events;
+        _wiki = wiki;
+        _wikiPages = wikiPages;
+        _logger = logger;
     }
 
     [BindProperty(SupportsGet = true)] public string? Realm { get; set; }
@@ -122,6 +135,44 @@ public class DetailsModel : PageModel
             return RedirectToPage(new { realm = Realm, clientId = ClientId, returnUrl = ReturnUrl });
         }
 
+        try
+        {
+            var wikiInfo = await _wikiPages.GetAsync(spec.Realm, spec.CurrentClientId, ct);
+            if (wikiInfo is not null)
+            {
+                var payload = new ConfluenceWikiService.ClientWikiPayload(
+                    Realm: spec.Realm,
+                    ClientId: spec.ClientId,
+                    Description: Description,
+                    ClientAuthEnabled: ClientAuth,
+                    StandardFlowEnabled: spec.StandardFlow,
+                    ServiceAccountEnabled: spec.ServiceAccount,
+                    RedirectUris: redirects,
+                    LocalRoles: locals,
+                    ServiceRoles: svc,
+                    AppName: wikiInfo.AppName,
+                    AppUrl: wikiInfo.AppUrl,
+                    ServiceOwner: wikiInfo.ServiceOwner,
+                    ServiceManager: wikiInfo.ServiceManager);
+
+                var updated = await _wiki.UpdatePageAsync(wikiInfo.PageId, payload, ct);
+                if (updated)
+                {
+                    if (!string.Equals(spec.ClientId, spec.CurrentClientId, StringComparison.Ordinal))
+                    {
+                        await _wikiPages.RemoveAsync(spec.Realm, spec.CurrentClientId, ct);
+                    }
+
+                    var infoToPersist = wikiInfo with { Realm = spec.Realm, ClientId = spec.ClientId };
+                    await _wikiPages.SetAsync(infoToPersist, ct);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Confluence wiki page for {ClientId}", spec.ClientId);
+        }
+
         TempData["FlashOk"] = "Клиент успешно обновлён.";
         return RedirectToPage(new { realm = Realm, clientId = newId, returnUrl = ReturnUrl });
     }
@@ -135,6 +186,14 @@ public class DetailsModel : PageModel
 
         await _clients.DeleteClientAsync(Realm!, ClientId!, ct);
         await _repo.RemoveAsync(ClientId!, Realm!, ct);
+        try
+        {
+            await _wikiPages.RemoveAsync(Realm!, ClientId!, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove Confluence wiki mapping for {ClientId}", ClientId);
+        }
         TempData["FlashOk"] = "Client deleted.";
         var backUrl = ResolveBackUrl(ReturnUrl);
         return LocalRedirect(backUrl);
