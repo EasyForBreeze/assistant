@@ -314,6 +314,70 @@
           // ---- DOM helpers
           const $  = (s)=>document.querySelector(s);
           const $$ = (s)=>Array.from(document.querySelectorAll(s));
+          const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+          const fadeClasses = ['fade-enter','fade-enter-active','fade-leave','fade-leave-active'];
+
+          function stripFadeClasses(element)
+          {
+            if (!element) return;
+            element.classList.remove(...fadeClasses);
+          }
+
+          function parseTimeToMsLocal(time)
+          {
+            if (!time) return 0;
+            const trimmed = time.trim();
+            if (trimmed.endsWith('ms')) return parseFloat(trimmed) || 0;
+            if (trimmed.endsWith('s')) return (parseFloat(trimmed) || 0) * 1000;
+            return parseFloat(trimmed) || 0;
+          }
+
+          function transitionDurationMs(element)
+          {
+            if (!element) return 0;
+            const style = window.getComputedStyle(element);
+            const durations = style.transitionDuration.split(',');
+            const delays = style.transitionDelay.split(',');
+            let max = 0;
+            for (let i = 0; i < durations.length; i++)
+            {
+              const dur = parseTimeToMsLocal(durations[i]);
+              const delay = parseTimeToMsLocal(delays[i] !== undefined ? delays[i] : (delays.length ? delays[delays.length - 1] : '0'));
+              max = Math.max(max, dur + delay);
+            }
+            return max;
+          }
+
+          function waitForTransitionEnd(element)
+          {
+            if (!element || reduceMotion)
+            {
+              return Promise.resolve();
+            }
+            const timeout = transitionDurationMs(element);
+            if (timeout <= 0)
+            {
+              return Promise.resolve();
+            }
+            return new Promise(resolve =>
+            {
+              let done = false;
+              const cleanup = () =>
+              {
+                if (done) return;
+                done = true;
+                element.removeEventListener('transitionend', onEnd);
+                resolve();
+              };
+              const onEnd = (event) =>
+              {
+                if (event.target !== element) return;
+                cleanup();
+              };
+              element.addEventListener('transitionend', onEnd);
+              setTimeout(cleanup, timeout + 50);
+            });
+          }
           const idForRealm = "@Html.IdFor(m => m.Realm)";
 
           // ---- Data from server (realm → displayName)
@@ -387,6 +451,7 @@
           // ---- Panels & headers
           const panels = $$('[data-step]');
           const heads  = $$('[id^="stepHead"]');
+          const findPanel = (num) => panels.find(p => stepNum(p) === num) || null;
           const stepNum = (el)=> +el.getAttribute('data-step') || +el.id.replace('stepHead','');
 
           // Условия включения шагов
@@ -452,6 +517,98 @@
 
           // ---- Step engine
           let current = 0;
+          let activeAnimationCleanup = null;
+
+          function finishActiveAnimation()
+          {
+            if (typeof activeAnimationCleanup === 'function')
+            {
+              activeAnimationCleanup();
+              activeAnimationCleanup = null;
+            }
+          }
+
+          function applyPanelVisibility()
+          {
+            panels.forEach(panel =>
+            {
+              const isCurrent = stepNum(panel) === current;
+              panel.classList.toggle('hidden', !isCurrent);
+              stripFadeClasses(panel);
+            });
+          }
+
+          function animatePanels(prevPanel, nextPanel)
+          {
+            if (!nextPanel)
+            {
+              applyPanelVisibility();
+              return;
+            }
+
+            panels.forEach(panel =>
+            {
+              if (panel !== prevPanel && panel !== nextPanel)
+              {
+                panel.classList.add('hidden');
+                stripFadeClasses(panel);
+              }
+            });
+
+            stripFadeClasses(nextPanel);
+            nextPanel.classList.remove('hidden');
+            nextPanel.classList.add('fade-enter');
+
+            if (prevPanel)
+            {
+              stripFadeClasses(prevPanel);
+              prevPanel.classList.remove('hidden');
+              prevPanel.classList.add('fade-leave');
+            }
+
+            void nextPanel.offsetWidth;
+            if (prevPanel) void prevPanel.offsetWidth;
+
+            nextPanel.classList.add('fade-enter-active');
+            if (prevPanel) prevPanel.classList.add('fade-leave-active');
+
+            let finished = false;
+            const finalize = () =>
+            {
+              if (finished) return;
+              finished = true;
+              stripFadeClasses(nextPanel);
+              if (prevPanel)
+              {
+                stripFadeClasses(prevPanel);
+                prevPanel.classList.add('hidden');
+              }
+              panels.forEach(panel =>
+              {
+                if (panel === nextPanel) return;
+                const shouldHide = stepNum(panel) !== current;
+                panel.classList.toggle('hidden', shouldHide);
+                stripFadeClasses(panel);
+              });
+              activeAnimationCleanup = null;
+            };
+
+            activeAnimationCleanup = finalize;
+            const tasks = [waitForTransitionEnd(nextPanel)];
+            if (prevPanel) tasks.push(waitForTransitionEnd(prevPanel));
+            Promise.all(tasks).then(finalize).catch(finalize);
+          }
+
+          function updateNavState(en)
+          {
+            setHeaderStates(en);
+            const i = en.indexOf(current);
+            const isFirst = (i === 0);
+            const isLast = (i === en.length - 1);
+            if (btnPrev) btnPrev.style.display = isFirst ? 'none' : '';
+            if (btnNext) btnNext.style.display = isLast ? 'none' : '';
+            if (btnCreate) btnCreate.style.display = isLast ? '' : 'none';
+          }
 
           function setHeaderStates(en){
             const min = en[0], max = en[en.length-1];
@@ -465,20 +622,28 @@
           }
 
           function showStep(requested){
+            finishActiveAnimation();
             const en = enabledSteps();
             if (en.length===0) return;
 
             let target = en.includes(requested) ? requested : en.find(x=>x>=requested) ?? en[en.length-1];
+            const previous = current;
             current = target;
 
-            panels.forEach(p => p.classList.toggle('hidden', stepNum(p)!==current));
-            setHeaderStates(en);
+            updateNavState(en);
 
-            const i = en.indexOf(current);
-            const isFirst = (i===0), isLast = (i===en.length-1);
-            btnPrev && (btnPrev.style.display = isFirst ? 'none' : '');
-            btnNext && (btnNext.style.display = isLast  ? 'none' : '');
-            btnCreate && (btnCreate.style.display = isLast ? '' : 'none');
+            const prevPanel = findPanel(previous);
+            const nextPanel = findPanel(current);
+            const shouldAnimate = !reduceMotion && prevPanel && nextPanel && previous && previous !== current;
+
+            if (shouldAnimate)
+            {
+              animatePanels(prevPanel, nextPanel);
+            }
+            else
+            {
+              applyPanelVisibility();
+            }
           }
 
           function gotoRelative(delta)
