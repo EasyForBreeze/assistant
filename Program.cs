@@ -43,6 +43,8 @@ builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.AddScoped<IAccessRequestEmailSender, AccessRequestEmailSender>();
 var confluenceOptions = ConfluenceOptions.FromConnectionString(builder.Configuration.GetConnectionString("ConnectionWiki"));
+var confluenceLabels = builder.Configuration.GetSection("Confluence:Labels").Get<string[]>();
+confluenceOptions.SetLabels(confluenceLabels);
 builder.Services.AddSingleton(confluenceOptions);
 builder.Services.AddSingleton<ConfluenceTemplateProvider>();
 builder.Services.AddHttpClient("confluence-wiki", client =>
