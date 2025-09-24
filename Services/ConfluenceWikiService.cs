@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 
 namespace Assistant.Services;
@@ -43,6 +44,17 @@ public sealed class ConfluenceWikiService
             var html = BuildHtml(template.Body, payload);
             var title = BuildTitle(template.Title, payload.ClientId,payload.Realm);
 
+            object? metadata = null;
+            if (_options.Labels.Count > 0)
+            {
+                metadata = new
+                {
+                    labels = _options.Labels
+                        .Select(label => new { prefix = "global", name = label })
+                        .ToArray()
+                };
+            }
+
             using var request = JsonContent.Create(new
             {
                 type = "page",
@@ -56,7 +68,8 @@ public sealed class ConfluenceWikiService
                         value = html,
                         representation = "storage"
                     }
-                }
+                },
+                metadata
             }, options: new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
             var client = _httpClientFactory.CreateClient("confluence-wiki");
