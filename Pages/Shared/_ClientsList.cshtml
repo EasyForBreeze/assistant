@@ -85,16 +85,16 @@ else if (Model.Clients.Any())
                     <form method="get" asp-page="@currentPage" class="inline-flex" data-soft-transition="#clientsResults">
                         <input type="hidden" name="q" value="@Model.Q" />
                         <input type="hidden" name="pageNumber" value="@(Model.PageNumber - 1)" />
-                        <button type="submit" class="btn-subtle">Previous</button>
+                        <button type="submit" class="btn-subtle">Предыдущая</button>
                     </form>
                 }
-                <span class="text-sm text-slate-400">Page @Model.PageNumber of @Model.TotalPages</span>
+                <span class="text-sm text-slate-400">Страница @Model.PageNumber of @Model.TotalPages</span>
                 @if (Model.HasNextPage)
                 {
                     <form method="get" asp-page="@currentPage" class="inline-flex" data-soft-transition="#clientsResults">
                         <input type="hidden" name="q" value="@Model.Q" />
                         <input type="hidden" name="pageNumber" value="@(Model.PageNumber + 1)" />
-                        <button type="submit" class="btn-subtle">Next</button>
+                        <button type="submit" class="btn-subtle">Следующая</button>
                     </form>
                 }
             </nav>

@@ -64,7 +64,7 @@
                     <div class="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-3">
                         <div>
                             <div class="text-slate-100 font-medium">@client.ClientId</div>
-                            <div class="text-xs text-slate-400 uppercase tracking-wide">Realm: @client.Realm</div>
+                            <div class="text-xs text-slate-400 uppercase tracking-wide">Пространство: @client.Realm</div>
                         </div>
                         <form method="get" class="flex items-center gap-2">
                             <input type="hidden" name="clientQuery" value="@Model.ClientQuery" />
@@ -142,7 +142,7 @@
     <section id="userSearchPanel" class="kc-card p-5" data-soft-transition="#userSearchPanel,#selectedUserCard,#grantAccessPanel,#userAssignmentsPanel">
         <div class="flex items-center justify-between mb-4">
             <h4 class="text-lg font-semibold text-slate-200">Поиск пользователя</h4>
-            <span class="text-xs text-slate-400">Realm: @Model.PrimaryRealm</span>
+            <span class="text-xs text-slate-400">Пространство: @Model.PrimaryRealm</span>
         </div>
 
         <form method="get" class="flex flex-col gap-3">
@@ -260,7 +260,7 @@
                 <h4 class="text-lg font-semibold text-slate-200 mb-3">Выбранный клиент</h4>
                 <div class="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
                     <div class="text-slate-100 font-medium text-lg">@Model.SelectedClientId</div>
-                    <div class="text-xs text-slate-400 uppercase tracking-wide">Realm: @Model.SelectedClientRealm</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wide">Пространство: @Model.SelectedClientRealm</div>
                 </div>
             </div>
         }
@@ -283,7 +283,7 @@
     <div id="grantAccessPanel" class="kc-card p-5 mt-6" data-soft-transition="#grantAccessPanel,#userAssignmentsPanel">
         <h4 class="text-lg font-semibold text-slate-200">Предоставить доступ</h4>
         <p class="text-sm text-slate-400 mt-2">
-            Клиент <span class="text-slate-200 font-medium">@Model.SelectedClientId</span> из realm
+            Клиент <span class="text-slate-200 font-medium">@Model.SelectedClientId</span> из пространтсва
             <span class="text-slate-200 font-medium">@Model.SelectedClientRealm</span> будет доступен пользователю
             <span class="text-slate-200 font-medium">@Model.SelectedUsername</span>.
         </p>
