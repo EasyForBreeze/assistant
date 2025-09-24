@@ -84,7 +84,7 @@ public sealed class ConfluenceWikiService
                 return;
             }
 
-            await AddLabelsAsync(client, created.Id, serializerOptions, payload.ClientId, cancellationToken)
+            await AddLabelsAsync(client, created.Id, serializerOptions, payload.ClientId, payload.Realm, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -119,14 +119,11 @@ public sealed class ConfluenceWikiService
         string pageId,
         JsonSerializerOptions serializerOptions,
         string clientId,
+        string realm,
         CancellationToken cancellationToken)
     {
-        if (_options.Labels.Count == 0)
-        {
-            return;
-        }
+        var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var payload = new List<object>(_options.Labels.Count);
         foreach (var label in _options.Labels)
         {
             if (string.IsNullOrWhiteSpace(label))
@@ -134,6 +131,22 @@ public sealed class ConfluenceWikiService
                 continue;
             }
 
+            labels.Add(label.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(realm))
+        {
+            labels.Add(realm.Trim());
+        }
+
+        if (labels.Count == 0)
+        {
+            return;
+        }
+
+        var payload = new List<object>(labels.Count);
+        foreach (var label in labels)
+        {
             payload.Add(new { prefix = "global", name = label });
         }
 
