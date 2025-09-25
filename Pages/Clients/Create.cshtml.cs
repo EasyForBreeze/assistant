@@ -334,8 +334,7 @@ public class CreateModel : PageModel
                     _logger.LogError(ex, "Failed to persist Confluence wiki mapping for {ClientId}", spec.ClientId);
                 }
             }
-
-            var flashMessage = BuildClientCreatedFlashMessage(spec.ClientId, createdId, wikiLink);
+            var flashMessage = BuildClientCreatedFlashMessage(wikiLink);
             if (!IsAdmin)
             {
                 TempData["FlashOk"] = flashMessage;
@@ -427,12 +426,13 @@ public class CreateModel : PageModel
     private static bool IsValidEmailAddress(string? value)
         => !string.IsNullOrWhiteSpace(value) && MailAddress.TryCreate(value, out _);
 
-    private string BuildClientCreatedFlashMessage(string clientId, string createdId, string? wikiLink)
+    private string BuildClientCreatedFlashMessage(string? wikiLink)
     {
-        var message = $"Клиент '{clientId}' создан (id={createdId}).";
+        var message = "Клиент успешно создан.";
         if (!string.IsNullOrWhiteSpace(wikiLink))
         {
-            message += $" Ссылка на страницу в Confluence: {wikiLink}.";
+            var encodedLink = System.Net.WebUtility.HtmlEncode(wikiLink);
+            message += $" <a href=\"{encodedLink}\" target=\"_blank\" rel=\"noopener noreferrer\">Открыть страницу в Confluence</a>.";
         }
 
         return message;

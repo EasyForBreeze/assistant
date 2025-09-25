@@ -181,7 +181,7 @@ public class DetailsModel : PageModel
             _logger.LogError(ex, "Failed to update Confluence wiki page for {ClientId}", spec.ClientId);
         }
 
-        TempData["FlashOk"] = BuildClientUpdatedFlashMessage(spec.ClientId, wikiLink);
+        TempData["FlashOk"] = BuildClientUpdatedFlashMessage(wikiLink);
         return RedirectToPage(new { realm = Realm, clientId = newId, returnUrl = ReturnUrl });
     }
 
@@ -225,12 +225,13 @@ public class DetailsModel : PageModel
     public async Task<IActionResult> OnGetClientRolesAsync(string realm, string id, int first = 0, int max = 50, string? q = null, CancellationToken ct = default)
         => new JsonResult(await _clients.GetClientRolesAsync(realm, id, first, max, q, ct));
 
-    private string BuildClientUpdatedFlashMessage(string clientId, string? wikiLink)
+    private string BuildClientUpdatedFlashMessage(string? wikiLink)
     {
-        var message = $"Клиент '{clientId}' успешно обновлён.";
+        var message = "Клиент успешно обновлён.";
         if (!string.IsNullOrWhiteSpace(wikiLink))
         {
-            message += $" Ссылка на страницу в Confluence: {wikiLink}.";
+            var encodedLink = System.Net.WebUtility.HtmlEncode(wikiLink);
+            message += $" <a href=\"{encodedLink}\" target=\"_blank\" rel=\"noopener noreferrer\">Открыть страницу в Confluence</a>.";
         }
 
         return message;
