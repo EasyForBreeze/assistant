@@ -411,7 +411,7 @@
           const swService    = $('#swService');
 
           // Admin step
-          const isAdmin = @(Model.IsAdmin ? "true" : "false");
+          const isAdmin = @Model.IsAdmin.ToString().ToLowerInvariant();
           const creatioInput = $('#creatioNumber');
           const archiveEmailInput = $('#archiveEmail');
           const errCreatio = $('#errCreatio');
@@ -680,10 +680,11 @@
               loadingButton.setAttribute('data-loading', 'true');
               loadingButton.setAttribute('disabled', 'disabled');
             }
-            [btnPrev, btnNext, btnSkip].forEach(btn =>
-            {
-              if (btn) btn.setAttribute('disabled', 'disabled');
-            });
+          const navButtons = [btnPrev, btnNext, btnSkip];
+          navButtons.forEach(btn =>
+          {
+            if (btn) btn.setAttribute('disabled', 'disabled');
+          });
 
           });
 
@@ -695,18 +696,6 @@
           showStep(_start);
 
           // локальные рендер-функции уже объявлены выше
-          function renderChips(listEl, arr){
-            if (!listEl) return;
-            listEl.innerHTML = '';
-            arr.forEach((v, idx) => {
-              const span = document.createElement('span');
-              span.className = 'chip';
-              span.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
-              span.querySelector('button')
-                  .addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(listEl, arr); });
-              listEl.appendChild(span);
-            });
-          }
         })();
     </script>
 
