@@ -334,7 +334,6 @@ public class CreateModel : PageModel
                     _logger.LogError(ex, "Failed to persist Confluence wiki mapping for {ClientId}", spec.ClientId);
                 }
             }
-
             var flashMessage = BuildClientCreatedFlashMessage(wikiLink);
             if (!IsAdmin)
             {
