@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "+N5+x/kU5r0=",
+  "dgSpecHash": "ln+587jFYmA=",
   "success": true,
-  "projectFilePath": "C:\\Users\\bream\\source\\repos\\qwe29\\Assistant\\Assistant.csproj",
+  "projectFilePath": "C:\\Users\\bream\\source\\repos\\qwe30\\Assistant\\Assistant.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\bream\\.nuget\\packages\\microsoft.aspnetcore.authentication.openidconnect\\9.0.8\\microsoft.aspnetcore.authentication.openidconnect.9.0.8.nupkg.sha512",
     "C:\\Users\\bream\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
@@ -14,6 +14,7 @@
     "C:\\Users\\bream\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\8.0.1\\microsoft.identitymodel.protocols.openidconnect.8.0.1.nupkg.sha512",
     "C:\\Users\\bream\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.0.1\\microsoft.identitymodel.tokens.8.0.1.nupkg.sha512",
     "C:\\Users\\bream\\.nuget\\packages\\npgsql\\8.0.3\\npgsql.8.0.3.nupkg.sha512",
+    "C:\\Users\\bream\\.nuget\\packages\\sharpziplib\\1.4.2\\sharpziplib.1.4.2.nupkg.sha512",
     "C:\\Users\\bream\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.0.1\\system.identitymodel.tokens.jwt.8.0.1.nupkg.sha512"
   ],
   "logs": []
