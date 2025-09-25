@@ -335,9 +335,10 @@ public class CreateModel : PageModel
                 }
             }
 
+            var flashMessage = BuildClientCreatedFlashMessage(spec.ClientId, createdId, wikiLink);
             if (!IsAdmin)
             {
-                TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
+                TempData["FlashOk"] = flashMessage;
                 return RedirectToPage("/Index");
             }
 
@@ -411,7 +412,7 @@ public class CreateModel : PageModel
                 ModelState.AddModelError(string.Empty, distributionError);
             }
 
-            TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
+            TempData["FlashOk"] = flashMessage;
             return Page();
         }
         catch (Exception ex)
@@ -425,6 +426,17 @@ public class CreateModel : PageModel
 
     private static bool IsValidEmailAddress(string? value)
         => !string.IsNullOrWhiteSpace(value) && MailAddress.TryCreate(value, out _);
+
+    private string BuildClientCreatedFlashMessage(string clientId, string createdId, string? wikiLink)
+    {
+        var message = $"Клиент '{clientId}' создан (id={createdId}).";
+        if (!string.IsNullOrWhiteSpace(wikiLink))
+        {
+            message += $" Ссылка на страницу в Confluence: {wikiLink}.";
+        }
+
+        return message;
+    }
 
     private string BuildModalMessage(NewClientSpec spec, string? wikiLink, string secretLine)
     {

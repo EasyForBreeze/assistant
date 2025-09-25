@@ -20,6 +20,7 @@ public class DetailsModel : PageModel
     private readonly ConfluenceWikiService _wiki;
     private readonly ClientWikiRepository _wikiPages;
     private readonly ILogger<DetailsModel> _logger;
+    private readonly ConfluenceOptions _confluenceOptions;
 
     public DetailsModel(
         ClientsService clients,
@@ -27,6 +28,7 @@ public class DetailsModel : PageModel
         EventsService events,
         ConfluenceWikiService wiki,
         ClientWikiRepository wikiPages,
+        ConfluenceOptions confluenceOptions,
         ILogger<DetailsModel> logger)
     {
         _clients = clients;
@@ -34,6 +36,7 @@ public class DetailsModel : PageModel
         _events = events;
         _wiki = wiki;
         _wikiPages = wikiPages;
+        _confluenceOptions = confluenceOptions;
         _logger = logger;
     }
 
@@ -135,11 +138,15 @@ public class DetailsModel : PageModel
             return RedirectToPage(new { realm = Realm, clientId = ClientId, returnUrl = ReturnUrl });
         }
 
+        string? wikiLink = null;
+
         try
         {
             var wikiInfo = await _wikiPages.GetAsync(spec.Realm, spec.CurrentClientId, ct);
             if (wikiInfo is not null)
             {
+                wikiLink = BuildConfluenceLink(wikiInfo.PageId);
+
                 var payload = new ConfluenceWikiService.ClientWikiPayload(
                     Realm: spec.Realm,
                     ClientId: spec.ClientId,
@@ -165,6 +172,7 @@ public class DetailsModel : PageModel
 
                     var infoToPersist = wikiInfo with { Realm = spec.Realm, ClientId = spec.ClientId };
                     await _wikiPages.SetAsync(infoToPersist, ct);
+                    wikiLink = BuildConfluenceLink(infoToPersist.PageId);
                 }
             }
         }
@@ -173,7 +181,7 @@ public class DetailsModel : PageModel
             _logger.LogError(ex, "Failed to update Confluence wiki page for {ClientId}", spec.ClientId);
         }
 
-        TempData["FlashOk"] = "Клиент успешно обновлён.";
+        TempData["FlashOk"] = BuildClientUpdatedFlashMessage(spec.ClientId, wikiLink);
         return RedirectToPage(new { realm = Realm, clientId = newId, returnUrl = ReturnUrl });
     }
 
@@ -216,6 +224,33 @@ public class DetailsModel : PageModel
 
     public async Task<IActionResult> OnGetClientRolesAsync(string realm, string id, int first = 0, int max = 50, string? q = null, CancellationToken ct = default)
         => new JsonResult(await _clients.GetClientRolesAsync(realm, id, first, max, q, ct));
+
+    private string BuildClientUpdatedFlashMessage(string clientId, string? wikiLink)
+    {
+        var message = $"Клиент '{clientId}' успешно обновлён.";
+        if (!string.IsNullOrWhiteSpace(wikiLink))
+        {
+            message += $" Ссылка на страницу в Confluence: {wikiLink}.";
+        }
+
+        return message;
+    }
+
+    private string? BuildConfluenceLink(string? pageId)
+    {
+        if (string.IsNullOrWhiteSpace(pageId))
+        {
+            return null;
+        }
+
+        var baseUrl = _confluenceOptions.BaseUrl;
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return null;
+        }
+
+        return $"{baseUrl.TrimEnd('/')}/pages/{pageId}";
+    }
 
     public async Task<IActionResult> OnGetGenerateTokenAsync(
         string realm,
