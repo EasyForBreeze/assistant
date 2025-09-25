@@ -334,7 +334,7 @@
 @if (Model.ShowSuccessModal && !string.IsNullOrEmpty(Model.ModalMessage))
 {
     <div id="creationModal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div class="relative w-full max-w-2xl rounded-2xl bg-slate-900 p-6 shadow-2xl border border-white/10">
+        <div class="relative w-full max-w-2xl rounded-2xl bg-slate-900 p-6 shadow-2xl border border-white/10" data-modal-panel>
             <button type="button"
                     class="absolute top-3 right-3 text-slate-400 hover:text-slate-200"
                     aria-label="Закрыть"
@@ -750,11 +750,175 @@
           const modal = document.getElementById('creationModal');
           if (modal)
           {
-            const close = () => modal.remove();
+            const panel = modal.querySelector('[data-modal-panel]');
+            const prefersReducedMotion = () =>
+              window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            const animateSoftVisibility = (target, shouldShow) =>
+            {
+              if (!target || typeof target.animate !== 'function' || prefersReducedMotion())
+              {
+                return null;
+              }
+
+              const computed = window.getComputedStyle(target);
+              const currentOpacity = parseFloat(computed.opacity);
+              const startOpacity = isNaN(currentOpacity) ? (shouldShow ? 0 : 1) : currentOpacity;
+              const startTransform = computed.transform && computed.transform !== 'none'
+                ? computed.transform
+                : (shouldShow ? 'translateY(12px)' : 'translateY(0px)');
+              const endTransform = shouldShow ? 'translateY(0px)' : 'translateY(12px)';
+              const endOpacity = shouldShow ? 1 : 0;
+
+              const previousTransition = target.style.transition;
+              target.style.transition = 'none';
+
+              const previousWillChange = target.style.willChange;
+              let willChangeOverridden = false;
+              if (!previousWillChange)
+              {
+                target.style.willChange = 'opacity, transform';
+                willChangeOverridden = true;
+              }
+
+              const midShowOpacity = Math.min(1, Math.max(startOpacity, 0.85));
+              const midHideOpacity = Math.min(1, Math.max(endOpacity, startOpacity - 0.15));
+              const keyframes = shouldShow
+                ? [
+                    { opacity: startOpacity, transform: startTransform },
+                    { opacity: midShowOpacity, transform: 'translateY(-4px)', offset: 0.7 },
+                    { opacity: endOpacity, transform: endTransform }
+                  ]
+                : [
+                    { opacity: startOpacity, transform: startTransform },
+                    { opacity: midHideOpacity, transform: 'translateY(6px)', offset: 0.35 },
+                    { opacity: endOpacity, transform: endTransform }
+                  ];
+
+              let animation;
+              try
+              {
+                animation = target.animate(keyframes, {
+                  duration: shouldShow ? 420 : 320,
+                  easing: shouldShow ? 'cubic-bezier(0.33, 1, 0.68, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)',
+                  fill: 'forwards'
+                });
+              }
+              catch (_)
+              {
+                target.style.transition = previousTransition;
+                if (willChangeOverridden)
+                {
+                  target.style.willChange = previousWillChange;
+                }
+                return null;
+              }
+
+              let cleaned = false;
+              const cleanup = () =>
+              {
+                if (cleaned)
+                {
+                  return;
+                }
+                cleaned = true;
+                target.style.transition = previousTransition;
+                if (willChangeOverridden)
+                {
+                  target.style.willChange = previousWillChange;
+                }
+              };
+
+              return new Promise(resolve =>
+              {
+                const finalize = () =>
+                {
+                  cleanup();
+                  resolve();
+                };
+
+                animation.addEventListener('finish', () =>
+                {
+                  if (typeof animation.commitStyles === 'function')
+                  {
+                    try
+                    {
+                      animation.commitStyles();
+                    }
+                    catch (_)
+                    {
+                      // Ignore browsers that throw for commitStyles.
+                    }
+                  }
+                  animation.cancel();
+                  finalize();
+                }, { once: true });
+
+                animation.addEventListener('cancel', finalize, { once: true });
+              });
+            };
+
+            if (panel)
+            {
+              panel.style.opacity = '0';
+              panel.style.transform = 'translateY(12px)';
+              const enter = animateSoftVisibility(panel, true);
+              if (enter && typeof enter.then === 'function')
+              {
+                enter.then(() =>
+                {
+                  panel.style.opacity = '';
+                  panel.style.transform = '';
+                });
+              }
+              else
+              {
+                panel.style.opacity = '';
+                panel.style.transform = '';
+              }
+            }
+
+            let closing = false;
+            const detachKeydown = handler => document.removeEventListener('keydown', handler);
+            const close = () =>
+            {
+              if (closing)
+              {
+                return;
+              }
+              closing = true;
+              detachKeydown(onKeydown);
+
+              const exit = panel ? animateSoftVisibility(panel, false) : null;
+              if (exit && typeof exit.then === 'function')
+              {
+                exit.then(() => modal.remove());
+              }
+              else
+              {
+                modal.remove();
+              }
+            };
+
+            const onKeydown = (evt) =>
+            {
+              if (evt.key === 'Escape')
+              {
+                evt.preventDefault();
+                close();
+              }
+            };
+
+            document.addEventListener('keydown', onKeydown);
+
             modal.querySelectorAll('[data-close-modal]')
                  .forEach(btn => btn.addEventListener('click', close));
-            modal.addEventListener('click', (evt) => {
-              if (evt.target === modal) close();
+            modal.addEventListener('click', (evt) =>
+            {
+              if (evt.target === modal)
+              {
+                close();
+              }
             });
           }
         })();
