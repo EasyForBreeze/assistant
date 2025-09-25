@@ -2,38 +2,26 @@ using Assistant.KeyCloak;
 using Assistant.KeyCloak.Models;
 using Assistant.Interfaces;
 using Assistant.Services;
-using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.IO;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.ComponentModel.DataAnnotations;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Assistant.Pages.Clients;
 
 [Authorize(Roles = "assistant-user,assistant-admin")]
 public class CreateModel : PageModel
 {
-    private static readonly EmailAddressAttribute EmailValidator = new();
-
     private readonly RealmsService _realms;
     private readonly ClientsService _clients;
     private readonly UserClientsRepository _repo;
     private readonly ServiceRoleExclusionsRepository _exclusions;
     private readonly ConfluenceWikiService _wiki;
     private readonly ClientWikiRepository _wikiPages;
-    private readonly ISimpleEmailSender _emailSender;
-    private readonly ConfluenceOptions _confluenceOptions;
-    private readonly RealmLinkProvider _realmLinks;
-    private readonly AdminApiOptions _adminOptions;
     private readonly ILogger<CreateModel> _logger;
 
     public CreateModel(
@@ -43,10 +31,6 @@ public class CreateModel : PageModel
         ServiceRoleExclusionsRepository exclusions,
         ConfluenceWikiService wiki,
         ClientWikiRepository wikiPages,
-        ISimpleEmailSender emailSender,
-        ConfluenceOptions confluenceOptions,
-        RealmLinkProvider realmLinks,
-        IOptions<AdminApiOptions> adminOptions,
         ILogger<CreateModel> logger)
     {
         _realms = realms;
@@ -55,16 +39,10 @@ public class CreateModel : PageModel
         _exclusions = exclusions;
         _wiki = wiki;
         _wikiPages = wikiPages;
-        _emailSender = emailSender;
-        _confluenceOptions = confluenceOptions;
-        _realmLinks = realmLinks;
-        _adminOptions = adminOptions.Value;
         _logger = logger;
     }
 
     public int StepToShow { get; set; }
-
-    public bool IsAdmin { get; private set; }
 
     [BindProperty] public string? Realm { get; set; }
     public List<SelectListItem> RealmOptions { get; private set; } = new();
@@ -85,20 +63,7 @@ public class CreateModel : PageModel
     [BindProperty] public string? ServiceOwner { get; set; }
     [BindProperty] public string? ServiceManager { get; set; }
 
-    [BindProperty] public string? CreatioRequestNumber { get; set; }
-    [BindProperty] public string? ArchivePasswordEmail { get; set; }
-
-    public string? ArchiveBase64 { get; private set; }
-    public string? ArchiveFileName { get; private set; }
-    public AdminCreationSummary? SuccessInfo { get; private set; }
-
-    public sealed record AdminCreationSummary(string BaseUrl, string Realm, string ClientId, string? WikiUrl, string? EndpointsUrl);
-
-    public async Task OnGet()
-    {
-        IsAdmin = User.IsInRole("assistant-admin");
-        await LoadViewDataAsync();
-    }
+    public async Task OnGet() => await LoadViewDataAsync();
 
     private static bool IsValidClientId(string? id)
     {
@@ -138,13 +103,11 @@ public class CreateModel : PageModel
         if (Hit(nameof(RedirectUrisJson))) return 5;
         if (Hit(nameof(LocalRolesJson))) return 6;
         if (Hit(nameof(ServiceRolesJson))) return 7;
-        if (Hit(nameof(CreatioRequestNumber)) || Hit(nameof(ArchivePasswordEmail))) return 8;
         return 1;
     }
 
     private async Task LoadViewDataAsync()
     {
-        IsAdmin = User.IsInRole("assistant-admin");
         var names = await _realms.GetRealmsAsync();
         if (User.IsInRole("assistant-user") && !User.IsInRole("assistant-admin"))
         {
@@ -171,13 +134,6 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPostCreate(CancellationToken ct)
     {
-        ArchiveBase64 = null;
-        ArchiveFileName = null;
-        SuccessInfo = null;
-        IsAdmin = User.IsInRole("assistant-admin");
-        CreatioRequestNumber = string.IsNullOrWhiteSpace(CreatioRequestNumber) ? null : CreatioRequestNumber.Trim();
-        ArchivePasswordEmail = string.IsNullOrWhiteSpace(ArchivePasswordEmail) ? null : ArchivePasswordEmail.Trim();
-
         await LoadViewDataAsync();
 
         if (string.IsNullOrWhiteSpace(Realm))
@@ -213,24 +169,6 @@ public class CreateModel : PageModel
         if (FlowService)
         {
             ClientAuth = true;
-        }
-
-        var requiresAdminExtras = IsAdmin && ClientAuth;
-        if (requiresAdminExtras)
-        {
-            if (string.IsNullOrWhiteSpace(CreatioRequestNumber))
-            {
-                ModelState.AddModelError(nameof(CreatioRequestNumber), "Укажите номер заявки Creatio.");
-            }
-
-            if (string.IsNullOrWhiteSpace(ArchivePasswordEmail))
-            {
-                ModelState.AddModelError(nameof(ArchivePasswordEmail), "Укажите email для пароля.");
-            }
-            else if (!EmailValidator.IsValid(ArchivePasswordEmail))
-            {
-                ModelState.AddModelError(nameof(ArchivePasswordEmail), "Некорректный email.");
-            }
         }
 
         var redirects = ClientFormUtilities.NormalizeDistinct(ClientFormUtilities.ParseStringList(RedirectUrisJson));
@@ -325,7 +263,6 @@ public class CreateModel : PageModel
                 ServiceManager: normalizedManager),
                 ct);
 
-            string? wikiUrl = null;
             if (!string.IsNullOrWhiteSpace(pageId))
             {
                 try
@@ -343,60 +280,6 @@ public class CreateModel : PageModel
                 {
                     _logger.LogError(ex, "Failed to persist Confluence wiki mapping for {ClientId}", spec.ClientId);
                 }
-
-                wikiUrl = BuildWikiUrl(pageId);
-            }
-
-            string? endpointsUrl = null;
-            if (_realmLinks.TryGetRealmLink(spec.Realm, out var link))
-            {
-                endpointsUrl = link;
-            }
-
-            if (IsAdmin)
-            {
-                var baseUrl = (_adminOptions.BaseUrl ?? string.Empty).Trim();
-                SuccessInfo = new AdminCreationSummary(baseUrl, spec.Realm, spec.ClientId, wikiUrl, endpointsUrl);
-            }
-
-            if (requiresAdminExtras)
-            {
-                var secret = await _clients.GetClientSecretAsync(spec.Realm, spec.ClientId, ct);
-                if (string.IsNullOrWhiteSpace(secret))
-                {
-                    ModelState.AddModelError(string.Empty, "Не удалось получить secret созданного клиента.");
-                    StepToShow = DetermineStepFromErrors(ModelState);
-                    return Page();
-                }
-
-                var password = GenerateSecurePassword();
-                var archiveBytes = BuildSecretArchive(spec.ClientId, secret, password);
-                var archiveName = $"{spec.ClientId}.zip";
-                var requestNumber = CreatioRequestNumber ?? string.Empty;
-                var subject = $"Пароль от архива по заявке - {requestNumber}";
-                var body = $"Добрый день пароль от архива - {password}";
-
-                try
-                {
-                    await _emailSender.SendAsync(ArchivePasswordEmail!, subject, body, ct);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send archive password email for {ClientId}", spec.ClientId);
-                    ModelState.AddModelError(nameof(ArchivePasswordEmail), "Не удалось отправить письмо с паролем. Попробуйте другой email или повторите позднее.");
-                    StepToShow = DetermineStepFromErrors(ModelState);
-                    return Page();
-                }
-
-                ArchiveBase64 = Convert.ToBase64String(archiveBytes);
-                ArchiveFileName = archiveName;
-            }
-
-            if (IsAdmin)
-            {
-                ModelState.Clear();
-                StepToShow = requiresAdminExtras ? 8 : 1;
-                return Page();
             }
 
             TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
@@ -409,56 +292,5 @@ public class CreateModel : PageModel
             StepToShow = DetermineStepFromErrors(ModelState);
             return Page();
         }
-    }
-
-    private static string GenerateSecurePassword()
-    {
-        Span<byte> buffer = stackalloc byte[24];
-        RandomNumberGenerator.Fill(buffer);
-        return Convert.ToBase64String(buffer);
-    }
-
-    private static byte[] BuildSecretArchive(string clientId, string secret, string password)
-    {
-        using var memory = new MemoryStream();
-        using (var zip = new ZipOutputStream(memory))
-        {
-            zip.SetLevel(9);
-            zip.Password = password;
-            var entry = new ZipEntry($"{clientId}.txt")
-            {
-                DateTime = DateTime.UtcNow,
-                Size = Encoding.UTF8.GetByteCount(secret)
-            };
-            zip.PutNextEntry(entry);
-            var data = Encoding.UTF8.GetBytes(secret);
-            zip.Write(data, 0, data.Length);
-            zip.CloseEntry();
-            zip.IsStreamOwner = false;
-        }
-
-        return memory.ToArray();
-    }
-
-    private string? BuildWikiUrl(string? pageId)
-    {
-        if (string.IsNullOrWhiteSpace(pageId))
-        {
-            return null;
-        }
-
-        var baseUrl = _confluenceOptions.BaseUrl?.TrimEnd('/');
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            return null;
-        }
-
-        var spaceKey = _confluenceOptions.SpaceKey?.Trim();
-        if (!string.IsNullOrWhiteSpace(spaceKey))
-        {
-            return $"{baseUrl}/spaces/{spaceKey}/pages/{pageId}";
-        }
-
-        return $"{baseUrl}/pages/{pageId}";
     }
 }

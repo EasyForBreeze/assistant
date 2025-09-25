@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "SYsix9C33zE=",
+  "dgSpecHash": "+N5+x/kU5r0=",
   "success": true,
-  "projectFilePath": "C:\\Users\\bream\\source\\repos\\qwe28\\Assistant\\Assistant.csproj",
+  "projectFilePath": "C:\\Users\\bream\\source\\repos\\qwe29\\Assistant\\Assistant.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\bream\\.nuget\\packages\\microsoft.aspnetcore.authentication.openidconnect\\9.0.8\\microsoft.aspnetcore.authentication.openidconnect.9.0.8.nupkg.sha512",
     "C:\\Users\\bream\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
