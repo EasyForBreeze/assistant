@@ -462,23 +462,25 @@ public class CreateModel : PageModel
             return string.Empty;
         }
 
-        if (_realmLinks.TryGetRealmLink(realm, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
-        {
-            var normalized = mapped.TrimEnd('/');
-            return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
-                ? normalized
-                : $"{normalized}/realms/{realm}";
-        }
-
         if (!string.IsNullOrWhiteSpace(_kcBaseUrl))
         {
-            var normalized = _kcBaseUrl.TrimEnd('/');
-            return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
-                ? normalized
-                : $"{normalized}/realms/{realm}";
+            return NormalizeIssuer(_kcBaseUrl, realm);
+        }
+
+        if (_realmLinks.TryGetRealmLink(realm, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
+        {
+            return NormalizeIssuer(mapped, realm);
         }
 
         return realm;
+    }
+
+    private static string NormalizeIssuer(string baseUrl, string realm)
+    {
+        var normalized = baseUrl.TrimEnd('/');
+        return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
+            ? normalized
+            : $"{normalized}/realms/{realm}";
     }
 
     private string ComposeEndpointsUrl(string realm)
