@@ -517,7 +517,7 @@
               }
 
               const emailVal = trim(archiveEmailInput?.value);
-              const emailValid = emailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+              const emailValid = emailVal && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailVal);
               if (!emailValid)
               {
                 errArchiveEmail?.classList.add('show');
@@ -680,11 +680,11 @@
               loadingButton.setAttribute('data-loading', 'true');
               loadingButton.setAttribute('disabled', 'disabled');
             }
-          const navButtons = [btnPrev, btnNext, btnSkip];
-          navButtons.forEach(btn =>
-          {
-            if (btn) btn.setAttribute('disabled', 'disabled');
-          });
+            const navButtons = [btnPrev, btnNext, btnSkip];
+            navButtons.forEach(btn =>
+            {
+              if (btn) btn.setAttribute('disabled', 'disabled');
+            });
 
           });
 
