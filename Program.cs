@@ -43,6 +43,7 @@ builder.Services.AddSingleton<ClientWikiRepository>();
 builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.AddScoped<IAccessRequestEmailSender, AccessRequestEmailSender>();
+builder.Services.AddScoped<ClientSecretDistributionService>();
 var confluenceLabels = builder.Configuration.GetSection("Confluence").GetSection("Labels").Get<string[]?>();
 var confluenceOptions = ConfluenceOptions.FromConnectionString(builder.Configuration.GetConnectionString("ConnectionWiki"), confluenceLabels);
 builder.Services.AddSingleton(confluenceOptions);

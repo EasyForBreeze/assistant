@@ -8,8 +8,11 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Net.Mail;
+using System.Text;
 
 namespace Assistant.Pages.Clients;
 
@@ -22,7 +25,11 @@ public class CreateModel : PageModel
     private readonly ServiceRoleExclusionsRepository _exclusions;
     private readonly ConfluenceWikiService _wiki;
     private readonly ClientWikiRepository _wikiPages;
+    private readonly ClientSecretDistributionService _secretDistribution;
+    private readonly ConfluenceOptions _confluenceOptions;
+    private readonly RealmLinkProvider _realmLinks;
     private readonly ILogger<CreateModel> _logger;
+    private readonly string _kcBaseUrl;
 
     public CreateModel(
         RealmsService realms,
@@ -31,6 +38,10 @@ public class CreateModel : PageModel
         ServiceRoleExclusionsRepository exclusions,
         ConfluenceWikiService wiki,
         ClientWikiRepository wikiPages,
+        ClientSecretDistributionService secretDistribution,
+        ConfluenceOptions confluenceOptions,
+        RealmLinkProvider realmLinks,
+        IConfiguration configuration,
         ILogger<CreateModel> logger)
     {
         _realms = realms;
@@ -39,10 +50,20 @@ public class CreateModel : PageModel
         _exclusions = exclusions;
         _wiki = wiki;
         _wikiPages = wikiPages;
+        _secretDistribution = secretDistribution;
+        _confluenceOptions = confluenceOptions;
+        _realmLinks = realmLinks;
         _logger = logger;
+        _kcBaseUrl = (configuration["Keycloak:BaseUrl"] ?? string.Empty).TrimEnd('/');
     }
 
     public int StepToShow { get; set; }
+    public bool IsAdmin { get; private set; }
+    public bool ShowSuccessModal { get; private set; }
+    public string? ModalMessage { get; private set; }
+    public string? SecretArchiveBase64 { get; private set; }
+    public string? SecretArchiveFileName { get; private set; }
+    public string? SecretArchiveContentType { get; private set; }
 
     [BindProperty] public string? Realm { get; set; }
     public List<SelectListItem> RealmOptions { get; private set; } = new();
@@ -62,8 +83,14 @@ public class CreateModel : PageModel
     [BindProperty] public string? AppUrl { get; set; }
     [BindProperty] public string? ServiceOwner { get; set; }
     [BindProperty] public string? ServiceManager { get; set; }
+    [BindProperty] public string? CreatioRequestNumber { get; set; }
+    [BindProperty] public string? CreatioSecretEmail { get; set; }
 
-    public async Task OnGet() => await LoadViewDataAsync();
+    public async Task OnGet()
+    {
+        IsAdmin = User.IsInRole("assistant-admin");
+        await LoadViewDataAsync();
+    }
 
     private static bool IsValidClientId(string? id)
     {
@@ -103,6 +130,7 @@ public class CreateModel : PageModel
         if (Hit(nameof(RedirectUrisJson))) return 5;
         if (Hit(nameof(LocalRolesJson))) return 6;
         if (Hit(nameof(ServiceRolesJson))) return 7;
+        if (Hit(nameof(CreatioRequestNumber)) || Hit(nameof(CreatioSecretEmail))) return 8;
         return 1;
     }
 
@@ -134,6 +162,16 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPostCreate(CancellationToken ct)
     {
+        IsAdmin = User.IsInRole("assistant-admin");
+        ShowSuccessModal = false;
+        ModalMessage = null;
+        SecretArchiveBase64 = null;
+        SecretArchiveFileName = null;
+        SecretArchiveContentType = null;
+
+        CreatioRequestNumber = CreatioRequestNumber?.Trim();
+        CreatioSecretEmail = CreatioSecretEmail?.Trim();
+
         await LoadViewDataAsync();
 
         if (string.IsNullOrWhiteSpace(Realm))
@@ -161,7 +199,7 @@ public class CreateModel : PageModel
             ModelState.AddModelError(nameof(Realm), "Такого realm не существет.");
         }
 
-        if (!User.IsInRole("assistant-admin") && string.Equals(Realm, "master", StringComparison.OrdinalIgnoreCase))
+        if (!IsAdmin && string.Equals(Realm, "master", StringComparison.OrdinalIgnoreCase))
         {
             ModelState.AddModelError(nameof(Realm), "Realm 'master' недоступен.");
         }
@@ -169,6 +207,19 @@ public class CreateModel : PageModel
         if (FlowService)
         {
             ClientAuth = true;
+        }
+
+        if (IsAdmin && ClientAuth)
+        {
+            if (string.IsNullOrWhiteSpace(CreatioRequestNumber))
+            {
+                ModelState.AddModelError(nameof(CreatioRequestNumber), "Укажите номер заявки Creatio.");
+            }
+
+            if (!IsValidEmailAddress(CreatioSecretEmail))
+            {
+                ModelState.AddModelError(nameof(CreatioSecretEmail), "Укажите корректный email.");
+            }
         }
 
         var redirects = ClientFormUtilities.NormalizeDistinct(ClientFormUtilities.ParseStringList(RedirectUrisJson));
@@ -242,7 +293,7 @@ public class CreateModel : PageModel
                 FlowStandard: spec.StandardFlow,
                 FlowService: spec.ServiceAccount);
             var username = User.Identity?.Name ?? string.Empty;
-            if (!string.IsNullOrEmpty(username) && !User.IsInRole("assistant-admin"))
+            if (!string.IsNullOrEmpty(username) && !IsAdmin)
             {
                 await _repo.AddAsync(username, summary, ct);
             }
@@ -263,8 +314,10 @@ public class CreateModel : PageModel
                 ServiceManager: normalizedManager),
                 ct);
 
+            string? wikiLink = null;
             if (!string.IsNullOrWhiteSpace(pageId))
             {
+                wikiLink = BuildConfluenceLink(pageId);
                 try
                 {
                     await _wikiPages.SetAsync(new ClientWikiRepository.ClientWikiInfo(
@@ -282,8 +335,84 @@ public class CreateModel : PageModel
                 }
             }
 
+            if (!IsAdmin)
+            {
+                TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
+                return RedirectToPage("/Index");
+            }
+
+            string? distributionError = null;
+            var secretPrepared = false;
+            if (spec.ClientAuthentication)
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(CreatioSecretEmail) || string.IsNullOrWhiteSpace(CreatioRequestNumber))
+                    {
+                        throw new InvalidOperationException("Не заполнены данные для доставки client_secret.");
+                    }
+
+                    var secret = await _clients.GetClientSecretAsync(spec.Realm, spec.ClientId, ct);
+                    if (string.IsNullOrWhiteSpace(secret))
+                    {
+                        throw new InvalidOperationException("Не удалось получить secret клиента.");
+                    }
+
+                    var archive = await _secretDistribution.CreateAsync(
+                        spec.ClientId,
+                        secret,
+                        CreatioSecretEmail!,
+                        CreatioRequestNumber!,
+                        ct);
+
+                    SecretArchiveFileName = archive.FileName;
+                    SecretArchiveContentType = archive.ContentType;
+                    SecretArchiveBase64 = Convert.ToBase64String(archive.Content);
+                    secretPrepared = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to distribute client secret for {ClientId}", spec.ClientId);
+                    distributionError = $"Клиент создан, но не удалось подготовить архив с client_secret: {ex.Message}";
+                }
+            }
+
+            var secretLine = spec.ClientAuthentication
+                ? (secretPrepared
+                    ? "Secret: в архиве, пароль от архива выслан на почту"
+                    : "Secret: не удалось подготовить архив, обратитесь к администратору.")
+                : "Secret: клиент публичный, secret отсутствует.";
+
+            ModalMessage = BuildModalMessage(spec, wikiLink, secretLine);
+            ShowSuccessModal = true;
+            StepToShow = 1;
+
+            var currentRealm = Realm;
+            ClientId = null;
+            Description = null;
+            ClientAuth = false;
+            FlowStandard = false;
+            FlowService = false;
+            RedirectUrisJson = JsonSerializer.Serialize(Array.Empty<string>());
+            LocalRolesJson = JsonSerializer.Serialize(Array.Empty<string>());
+            ServiceRolesJson = JsonSerializer.Serialize(Array.Empty<string>());
+            AppName = null;
+            AppUrl = null;
+            ServiceOwner = null;
+            ServiceManager = null;
+            CreatioRequestNumber = null;
+            CreatioSecretEmail = null;
+            Realm = currentRealm;
+
+            ModelState.Clear();
+
+            if (!string.IsNullOrEmpty(distributionError))
+            {
+                ModelState.AddModelError(string.Empty, distributionError);
+            }
+
             TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
-            return RedirectToPage("/Index");
+            return Page();
         }
         catch (Exception ex)
         {
@@ -292,5 +421,90 @@ public class CreateModel : PageModel
             StepToShow = DetermineStepFromErrors(ModelState);
             return Page();
         }
+    }
+
+    private static bool IsValidEmailAddress(string? value)
+        => !string.IsNullOrWhiteSpace(value) && MailAddress.TryCreate(value, out _);
+
+    private string BuildModalMessage(NewClientSpec spec, string? wikiLink, string secretLine)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Создана конфигурация в TEST среде");
+
+        var issuer = ComposeRealmIssuer(spec.Realm);
+        if (!string.IsNullOrWhiteSpace(issuer))
+        {
+            sb.AppendLine($"Base URL: {issuer}");
+        }
+
+        sb.AppendLine($"Realm: {spec.Realm}");
+        sb.AppendLine($"ClientID: {spec.ClientId}");
+        sb.AppendLine(secretLine);
+
+        if (!string.IsNullOrWhiteSpace(wikiLink))
+        {
+            sb.AppendLine($"Ссылка на конфигурацию в реестре: {wikiLink}");
+        }
+
+        var endpoints = ComposeEndpointsUrl(spec.Realm);
+        if (!string.IsNullOrWhiteSpace(endpoints))
+        {
+            sb.AppendLine($"Endpoints: {endpoints}");
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private string ComposeRealmIssuer(string realm)
+    {
+        if (string.IsNullOrWhiteSpace(realm))
+        {
+            return string.Empty;
+        }
+
+        if (_realmLinks.TryGetRealmLink(realm, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
+        {
+            var normalized = mapped.TrimEnd('/');
+            return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
+                ? normalized
+                : $"{normalized}/realms/{realm}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(_kcBaseUrl))
+        {
+            var normalized = _kcBaseUrl.TrimEnd('/');
+            return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
+                ? normalized
+                : $"{normalized}/realms/{realm}";
+        }
+
+        return realm;
+    }
+
+    private string ComposeEndpointsUrl(string realm)
+    {
+        var issuer = ComposeRealmIssuer(realm);
+        if (string.IsNullOrWhiteSpace(issuer))
+        {
+            return string.Empty;
+        }
+
+        return $"{issuer.TrimEnd('/')}/.well-known/openid-configuration";
+    }
+
+    private string? BuildConfluenceLink(string? pageId)
+    {
+        if (string.IsNullOrWhiteSpace(pageId))
+        {
+            return null;
+        }
+
+        var baseUrl = _confluenceOptions.BaseUrl;
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return null;
+        }
+
+        return $"{baseUrl.TrimEnd('/')}/pages/{pageId}";
     }
 }
