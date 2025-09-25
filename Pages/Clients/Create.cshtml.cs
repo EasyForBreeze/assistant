@@ -335,9 +335,10 @@ public class CreateModel : PageModel
                 }
             }
 
+            var flashMessage = BuildClientCreatedFlashMessage(wikiLink);
             if (!IsAdmin)
             {
-                TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
+                TempData["FlashOk"] = flashMessage;
                 return RedirectToPage("/Index");
             }
 
@@ -411,7 +412,7 @@ public class CreateModel : PageModel
                 ModelState.AddModelError(string.Empty, distributionError);
             }
 
-            TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
+            TempData["FlashOk"] = flashMessage;
             return Page();
         }
         catch (Exception ex)
@@ -425,6 +426,18 @@ public class CreateModel : PageModel
 
     private static bool IsValidEmailAddress(string? value)
         => !string.IsNullOrWhiteSpace(value) && MailAddress.TryCreate(value, out _);
+
+    private string BuildClientCreatedFlashMessage(string? wikiLink)
+    {
+        var message = "Клиент успешно создан.";
+        if (!string.IsNullOrWhiteSpace(wikiLink))
+        {
+            var encodedLink = System.Net.WebUtility.HtmlEncode(wikiLink);
+            message += $" <a href=\"{encodedLink}\" target=\"_blank\" rel=\"noopener noreferrer\">Открыть страницу в Confluence</a>.";
+        }
+
+        return message;
+    }
 
     private string BuildModalMessage(NewClientSpec spec, string? wikiLink, string secretLine)
     {
