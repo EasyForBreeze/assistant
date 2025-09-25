@@ -2169,7 +2169,6 @@ C:\Users\bream\source\repos\qwe20\Assistant\obj\Debug\net9.0\refint\Assistant.dl
 C:\Users\bream\source\repos\qwe20\Assistant\obj\Debug\net9.0\Assistant.pdb
 C:\Users\bream\source\repos\qwe20\Assistant\obj\Debug\net9.0\Assistant.genruntimeconfig.cache
 C:\Users\bream\source\repos\qwe20\Assistant\obj\Debug\net9.0\ref\Assistant.dll
-C:\Users\bream\source\repos\qwe30\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-awciv9qso7.gz
 C:\Users\bream\source\repos\qwe30\Assistant\obj\Debug\net9.0\compressed\495dkwcspf-enthjy8xtc.gz
 C:\Users\bream\source\repos\qwe38\Assistant\bin\Debug\net9.0\appsettings.Development.json
 C:\Users\bream\source\repos\qwe38\Assistant\bin\Debug\net9.0\appsettings.json
@@ -3024,3 +3023,6 @@ C:\Users\bream\source\repos\qwe27\Assistant\obj\Debug\net9.0\compressed\495dkwcs
 C:\Users\bream\source\repos\qwe28\Assistant\bin\Debug\net9.0\link_realms.json
 C:\Users\bream\source\repos\qwe28\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-3c9ewv71e8.gz
 C:\Users\bream\source\repos\qwe28\Assistant\obj\Debug\net9.0\compressed\495dkwcspf-enthjy8xtc.gz
+C:\Users\bream\source\repos\qwe30\Assistant\bin\Debug\net9.0\link_realms.json
+C:\Users\bream\source\repos\qwe30\Assistant\bin\Debug\net9.0\ICSharpCode.SharpZipLib.dll
+C:\Users\bream\source\repos\qwe30\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-3c9ewv71e8.gz
