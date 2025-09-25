@@ -333,8 +333,8 @@
 
 @if (Model.ShowSuccessModal && !string.IsNullOrEmpty(Model.ModalMessage))
 {
-    <div id="creationModal" class="kc-modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div class="kc-modal-panel relative w-full max-w-2xl rounded-2xl p-6 shadow-2xl border border-white/10">
+    <div id="creationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 px-4">
+        <div class="relative w-full max-w-2xl rounded-2xl bg-slate-900 p-6 shadow-2xl border border-white/10">
             <button type="button"
                     class="absolute top-3 right-3 text-slate-400 hover:text-slate-200"
                     aria-label="Закрыть"
@@ -342,7 +342,7 @@
                 ×
             </button>
             <div class="text-xl font-semibold text-slate-100 mb-4">Конфигурация создана</div>
-            <div class="rounded-xl bg-slate-950/80 border border-white/10 p-4 text-sm text-slate-200 whitespace-pre-line"
+            <div class="rounded-xl bg-slate-950/60 border border-white/5 p-4 text-sm text-slate-200 whitespace-pre-line"
                  id="creationModalMessage">@Model.ModalMessage</div>
             <div class="mt-6 text-right">
                 <button type="button" class="btn-primary" data-close-modal>Закрыть</button>
@@ -750,18 +750,12 @@
           const modal = document.getElementById('creationModal');
           if (modal)
           {
-            const active = document.activeElement;
-            if (active instanceof HTMLElement) active.blur();
-
             const close = () => modal.remove();
             modal.querySelectorAll('[data-close-modal]')
                  .forEach(btn => btn.addEventListener('click', close));
             modal.addEventListener('click', (evt) => {
               if (evt.target === modal) close();
             });
-
-            const primaryClose = modal.querySelector('.btn-primary[data-close-modal]');
-            if (primaryClose instanceof HTMLElement) primaryClose.focus();
           }
         })();
     </script>

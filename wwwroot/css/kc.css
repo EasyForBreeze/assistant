@@ -73,20 +73,6 @@
     padding-top: 0.5rem;
     padding-bottom: 0.65rem;
 }
-
-/* ===== Modal ===== */
-.kc-modal-overlay {
-    background: rgba(3, 7, 18, .88);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.kc-modal-panel {
-    background: linear-gradient(180deg, rgba(9, 13, 22, .97), rgba(5, 8, 15, .98));
-    border: 1px solid rgba(255, 255, 255, .08);
-    box-shadow: 0 28px 60px rgba(0, 0, 0, .6);
-}
-
 /* ===== Cards / Panels ===== */
 .kc-card {
     position: relative;

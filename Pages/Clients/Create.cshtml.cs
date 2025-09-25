@@ -431,10 +431,10 @@ public class CreateModel : PageModel
         var sb = new StringBuilder();
         sb.AppendLine("Создана конфигурация в TEST среде");
 
-        var baseUrl = ComposeRealmBaseUrl(spec.Realm);
-        if (!string.IsNullOrWhiteSpace(baseUrl))
+        var issuer = ComposeRealmIssuer(spec.Realm);
+        if (!string.IsNullOrWhiteSpace(issuer))
         {
-            sb.AppendLine($"Base URL: {baseUrl}");
+            sb.AppendLine($"Base URL: {issuer}");
         }
 
         sb.AppendLine($"Realm: {spec.Realm}");
@@ -455,7 +455,7 @@ public class CreateModel : PageModel
         return sb.ToString().TrimEnd();
     }
 
-    private string ComposeRealmBaseUrl(string realm)
+    private string ComposeRealmIssuer(string realm)
     {
         if (string.IsNullOrWhiteSpace(realm))
         {
@@ -464,29 +464,21 @@ public class CreateModel : PageModel
 
         if (_realmLinks.TryGetRealmLink(realm, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
         {
-            return mapped.TrimEnd('/');
+            var normalized = mapped.TrimEnd('/');
+            return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
+                ? normalized
+                : $"{normalized}/realms/{realm}";
         }
 
         if (!string.IsNullOrWhiteSpace(_kcBaseUrl))
         {
-            return _kcBaseUrl.TrimEnd('/');
+            var normalized = _kcBaseUrl.TrimEnd('/');
+            return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
+                ? normalized
+                : $"{normalized}/realms/{realm}";
         }
 
-        return string.Empty;
-    }
-
-    private string ComposeRealmIssuer(string realm)
-    {
-        var baseUrl = ComposeRealmBaseUrl(realm);
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            return string.Empty;
-        }
-
-        var normalized = baseUrl.TrimEnd('/');
-        return normalized.Contains("/realms/", StringComparison.OrdinalIgnoreCase)
-            ? normalized
-            : $"{normalized}/realms/{realm}";
+        return realm;
     }
 
     private string ComposeEndpointsUrl(string realm)
