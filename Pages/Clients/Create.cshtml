@@ -26,7 +26,7 @@
     <!-- Stepper -->
     <div class="kc-card md:max-w-[1000px] mx-auto">
         <div class="p-5">
-            <div class="grid grid-cols-7 gap-1">
+            <div class="flex flex-wrap gap-1">
                 <div class="step" id="stepHead1"><div class="dot">1</div><div class="label">Realm</div></div>
                 <div class="step" id="stepHead2"><div class="dot">2</div><div class="label">Basics</div></div>
                 <div class="step" id="stepHead3"><div class="dot">3</div><div class="label">System info</div></div>
@@ -34,6 +34,10 @@
                 <div class="step" id="stepHead5"><div class="dot">5</div><div class="label">Redirect URIs</div></div>
                 <div class="step" id="stepHead6"><div class="dot">6</div><div class="label">Local roles</div></div>
                 <div class="step" id="stepHead7"><div class="dot">7</div><div class="label">Service roles</div></div>
+                @if (Model.IsAdmin)
+                {
+                    <div class="step" id="stepHead8"><div class="dot">8</div><div class="label">Creatio</div></div>
+                }
             </div>
             <div class="mt-3 divider"></div>
         </div>
@@ -52,6 +56,8 @@
             <input type="hidden" asp-for="AppUrl" id="hidAppUrl" />
             <input type="hidden" asp-for="ServiceOwner" id="hidServiceOwner" />
             <input type="hidden" asp-for="ServiceManager" id="hidServiceManager" />
+            <input type="hidden" asp-for="CreatioRequestNumber" id="hidCreatioNumber" />
+            <input type="hidden" asp-for="ArchivePasswordEmail" id="hidArchiveEmail" />
 
             <!-- Шаг 1: Realm -->
             <div class="space-y-4" id="step-1" data-step="1">
@@ -271,6 +277,41 @@
                 </div>
             </div>
 
+            @if (Model.IsAdmin)
+            {
+                <!-- Шаг 8: Creatio -->
+                <div class="space-y-4 hidden" id="step-8" data-step="8">
+                    <div class="text-slate-200 font-semibold text-lg">8. Дополнительные данные</div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Номер заявки Creatio <span class="text-rose-500">*</span></label>
+                            <input id="creatioNumber"
+                                   value="@(Model.CreatioRequestNumber ?? string.Empty)"
+                                   maxlength="64"
+                                   class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full"
+                                   placeholder="Например: CR-12345"
+                                   autocomplete="off" autocapitalize="off" spellcheck="false" />
+                            <div id="errCreatio" class="err">Укажите номер заявки Creatio.</div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Email для пароля <span class="text-rose-500">*</span></label>
+                            <input id="archiveEmail"
+                                   value="@(Model.ArchivePasswordEmail ?? string.Empty)"
+                                   maxlength="100"
+                                   type="email"
+                                   class="kc-input kc-select-dark rounded-xl px-3 py-2 text-sm w-full"
+                                   placeholder="name@example.com"
+                                   autocomplete="off" autocapitalize="off" spellcheck="false" />
+                            <div id="errArchiveEmail" class="err">Укажите корректный email.</div>
+                        </div>
+                    </div>
+
+                    <div class="hint">Пароль от архива будет отправлен на указанный email.</div>
+                </div>
+            }
+
             <!-- Навигация -->
             <div class="wizard-nav mt-6">
                 <button type="button" class="btn-subtle" id="btnPrev">Back</button>
@@ -281,6 +322,25 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="creationModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4">
+    <div class="kc-card relative w-full max-w-xl p-6">
+        <button type="button" class="absolute top-3 right-3 text-slate-400 hover:text-slate-200" data-modal-close>&times;</button>
+        <div class="text-xl text-slate-100 font-semibold">Конфигурация создана</div>
+        <div class="mt-4 space-y-2 text-slate-300 text-sm" id="creationModalBody">
+            <p>Создана конфигурация в TEST среде.</p>
+            <p><span class="text-slate-400">Base URL:</span> <span data-modal-base-url>—</span></p>
+            <p><span class="text-slate-400">Realm:</span> <span data-modal-realm>—</span></p>
+            <p><span class="text-slate-400">ClientID:</span> <span data-modal-client>—</span></p>
+            <p><span class="text-slate-400">Secret:</span> в архиве, пароль от архива выслан на почту.</p>
+            <p><span class="text-slate-400">Ссылка на конфигурацию в реестре:</span> <a href="#" data-modal-wiki target="_blank" rel="noopener" class="text-indigo-300 underline break-all">—</a></p>
+            <p><span class="text-slate-400">Endpoints:</span> <a href="#" data-modal-endpoints target="_blank" rel="noopener" class="text-indigo-300 underline break-all">—</a></p>
+        </div>
+        <div class="mt-6 text-right">
+            <button type="button" class="btn-subtle" data-modal-close>Закрыть</button>
+        </div>
     </div>
 </div>
 
@@ -350,6 +410,13 @@
           const swStandard   = $('#swStandard');
           const swService    = $('#swService');
 
+          // Admin step
+          const isAdmin = @(Model.IsAdmin ? "true" : "false");
+          const creatioInput = $('#creatioNumber');
+          const archiveEmailInput = $('#archiveEmail');
+          const errCreatio = $('#errCreatio');
+          const errArchiveEmail = $('#errArchiveEmail');
+
           // AC (шаг 3)
           const appNameInput = $('#appName');
           const appUrlInput  = $('#appUrl');
@@ -375,6 +442,8 @@
           const hidAppUrl        = $('#hidAppUrl');
           const hidServiceOwner  = $('#hidServiceOwner');
           const hidServiceManager= $('#hidServiceManager');
+          const hidCreatioNumber = $('#hidCreatioNumber');
+          const hidArchiveEmail  = $('#hidArchiveEmail');
 
           // ---- Chips data
           const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
@@ -390,10 +459,13 @@
           const stepNum = (el)=> +el.getAttribute('data-step') || +el.id.replace('stepHead','');
 
           // Условия включения шагов
+          const requiresAdminStep = () => isAdmin && (swClientAuth?.checked ?? false);
+
           const predicates =
           {
             5: ()=> swStandard?.checked ?? true,
             7: ()=> swService?.checked  ?? false,
+            8: ()=> requiresAdminStep(),
           };
 
           const enabledSteps = () =>
@@ -419,6 +491,8 @@
             $('#errRealm')?.classList.remove('show');
             errCid?.classList.remove('show');
             errAppName?.classList.remove('show');
+            errCreatio?.classList.remove('show');
+            errArchiveEmail?.classList.remove('show');
 
             if (n===1)
             {
@@ -432,6 +506,26 @@
             {
               if (!trim(appNameInput?.value)){ errAppName?.classList.add('show'); appNameInput?.focus(); return false; }
             }
+
+            if (n===8 && requiresAdminStep())
+            {
+              if (!trim(creatioInput?.value))
+              {
+                errCreatio?.classList.add('show');
+                creatioInput?.focus();
+                return false;
+              }
+
+              const emailVal = trim(archiveEmailInput?.value);
+              const emailValid = emailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+              if (!emailValid)
+              {
+                errArchiveEmail?.classList.add('show');
+                archiveEmailInput?.focus();
+                return false;
+              }
+            }
+
             return true;
           }
 
@@ -448,6 +542,12 @@
           }
           swClientAuth?.addEventListener('change', () => {
             if (swService?.checked) swClientAuth.checked = true;
+            const en = enabledSteps();
+            if (en.length)
+            {
+              if (!en.includes(current)) showStep(en[en.length-1]);
+              else showStep(current);
+            }
           });
 
           // ---- Step engine
@@ -570,6 +670,8 @@
             hidAppUrl.value         = trim(appUrlInput?.value);
             hidServiceOwner.value   = trim(ownerInput?.value);
             hidServiceManager.value = trim(managerInput?.value);
+            if (hidCreatioNumber) hidCreatioNumber.value = requiresAdminStep() ? trim(creatioInput?.value) : '';
+            if (hidArchiveEmail)  hidArchiveEmail.value  = requiresAdminStep() ? trim(archiveEmailInput?.value) : '';
 
             const submitter = (e.submitter instanceof HTMLElement) ? e.submitter : null;
             const loadingButton = submitter ?? btnCreate;
@@ -980,6 +1082,95 @@
           }
 
           realmEl?.addEventListener('change', safe(resetForRealmChange));
+        })();
+    </script>
+
+    @if (!string.IsNullOrEmpty(Model.ArchiveBase64) && !string.IsNullOrEmpty(Model.ArchiveFileName))
+    {
+        <script data-soft-nav>
+            window.__creationArchive = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { fileName = Model.ArchiveFileName, base64 = Model.ArchiveBase64 }));
+        </script>
+    }
+
+    @if (Model.SuccessInfo is not null)
+    {
+        <script data-soft-nav>
+            window.__creationSuccess = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SuccessInfo));
+        </script>
+    }
+
+    <script data-soft-nav>
+        (() => {
+            const archive = window.__creationArchive;
+            if (archive?.base64 && archive?.fileName)
+            {
+                try
+                {
+                    const binary = atob(archive.base64);
+                    const len = binary.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+                    const blob = new Blob([bytes], { type: 'application/zip' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = archive.fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        URL.revokeObjectURL(link.href);
+                        link.remove();
+                    }, 100);
+                }
+                catch (err)
+                {
+                    console.error('Failed to trigger archive download', err);
+                }
+                finally
+                {
+                    window.__creationArchive = null;
+                }
+            }
+
+            const modalInfo = window.__creationSuccess;
+            const modal = document.getElementById('creationModal');
+            if (!modal || !modalInfo)
+            {
+                return;
+            }
+
+            const setText = (selector, value, isLink = false) => {
+                const el = modal.querySelector(selector);
+                if (!el) return;
+                const text = value && value.trim() ? value : '—';
+                if (isLink)
+                {
+                    el.textContent = text;
+                    if (value && value.trim()) el.setAttribute('href', value);
+                    else el.removeAttribute('href');
+                }
+                else
+                {
+                    el.textContent = text;
+                }
+            };
+
+            setText('[data-modal-base-url]', modalInfo.baseUrl ?? '');
+            setText('[data-modal-realm]', modalInfo.realm ?? '');
+            setText('[data-modal-client]', modalInfo.clientId ?? '');
+            setText('[data-modal-wiki]', modalInfo.wikiUrl ?? '', true);
+            setText('[data-modal-endpoints]', modalInfo.endpointsUrl ?? '', true);
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            modal.querySelectorAll('[data-modal-close]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                });
+            });
+
+            window.__creationSuccess = null;
         })();
     </script>
 }
