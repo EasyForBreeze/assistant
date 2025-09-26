@@ -1,8 +1,7 @@
-using System.Net;
+using System;
 using System.Net.Mail;
 using System.Text;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Assistant.Services;
 
@@ -13,12 +12,12 @@ public interface IAccessRequestEmailSender
 
 public sealed class AccessRequestEmailSender : IAccessRequestEmailSender
 {
-    private readonly EmailOptions _options;
+    private readonly EmailClientFactory _emailFactory;
     private readonly ILogger<AccessRequestEmailSender> _logger;
 
-    public AccessRequestEmailSender(IOptions<EmailOptions> options, ILogger<AccessRequestEmailSender> logger)
+    public AccessRequestEmailSender(EmailClientFactory emailFactory, ILogger<AccessRequestEmailSender> logger)
     {
-        _options = options.Value;
+        _emailFactory = emailFactory;
         _logger = logger;
     }
 
@@ -26,50 +25,21 @@ public sealed class AccessRequestEmailSender : IAccessRequestEmailSender
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(login);
 
-        var host = _options.Host;
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            throw new InvalidOperationException("SMTP host is not configured.");
-        }
-
-        var recipient = _options.SupportRecipient;
-        if (string.IsNullOrWhiteSpace(recipient))
-        {
-            throw new InvalidOperationException("Support recipient email is not configured.");
-        }
-
-        var fromAddress = _options.From;
-        if (string.IsNullOrWhiteSpace(fromAddress))
-        {
-            fromAddress = _options.Username;
-            if (string.IsNullOrWhiteSpace(fromAddress))
-            {
-                throw new InvalidOperationException("Sender email is not configured.");
-            }
-        }
-
         var trimmedLogin = login.Trim();
+        var supportRecipient = _emailFactory.GetSupportRecipient();
 
         using var message = new MailMessage
         {
-            From = new MailAddress(fromAddress),
+            From = _emailFactory.CreateSenderAddress(),
             Subject = "Заявка на доступ к Assistant",
             Body = $"Прошу предоставить доступ в Assistant.{Environment.NewLine}Логин: {trimmedLogin}",
             SubjectEncoding = Encoding.UTF8,
             BodyEncoding = Encoding.UTF8
         };
 
-        message.To.Add(new MailAddress(recipient));
+        message.To.Add(new MailAddress(supportRecipient));
 
-        using var client = new SmtpClient(host, _options.Port)
-        {
-            EnableSsl = _options.EnableSsl
-        };
-
-        if (!string.IsNullOrWhiteSpace(_options.Username))
-        {
-            client.Credentials = new NetworkCredential(_options.Username, _options.Password);
-        }
+        using var client = _emailFactory.CreateClient();
 
         try
         {

@@ -1,11 +1,10 @@
+using System;
 using System.IO;
-using System.Net;
 using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Assistant.Services;
 
@@ -20,12 +19,12 @@ public sealed class ClientSecretDistributionService
     private static readonly char[] PasswordChars =
         "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@$?*-_#".ToCharArray();
 
-    private readonly EmailOptions _options;
+    private readonly EmailClientFactory _emailFactory;
     private readonly ILogger<ClientSecretDistributionService> _logger;
 
-    public ClientSecretDistributionService(IOptions<EmailOptions> options, ILogger<ClientSecretDistributionService> logger)
+    public ClientSecretDistributionService(EmailClientFactory emailFactory, ILogger<ClientSecretDistributionService> logger)
     {
-        _options = options.Value;
+        _emailFactory = emailFactory;
         _logger = logger;
     }
 
@@ -58,25 +57,9 @@ public sealed class ClientSecretDistributionService
         string password,
         CancellationToken cancellationToken)
     {
-        var host = _options.Host;
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            throw new InvalidOperationException("SMTP host is not configured.");
-        }
-
-        var fromAddress = _options.From;
-        if (string.IsNullOrWhiteSpace(fromAddress))
-        {
-            fromAddress = _options.Username;
-            if (string.IsNullOrWhiteSpace(fromAddress))
-            {
-                throw new InvalidOperationException("Sender email is not configured.");
-            }
-        }
-
         using var message = new MailMessage
         {
-            From = new MailAddress(fromAddress),
+            From = _emailFactory.CreateSenderAddress(),
             Subject = $"Пароль от архива по заявке - {requestNumber}",
             Body = $"Добрый день пароль от архива - {password}",
             BodyEncoding = Encoding.UTF8,
@@ -85,15 +68,7 @@ public sealed class ClientSecretDistributionService
 
         message.To.Add(new MailAddress(recipientEmail));
 
-        using var client = new SmtpClient(host, _options.Port)
-        {
-            EnableSsl = _options.EnableSsl
-        };
-
-        if (!string.IsNullOrWhiteSpace(_options.Username))
-        {
-            client.Credentials = new NetworkCredential(_options.Username, _options.Password);
-        }
+        using var client = _emailFactory.CreateClient();
 
         try
         {
