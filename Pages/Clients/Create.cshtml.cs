@@ -26,7 +26,6 @@ public class CreateModel : PageModel
     private readonly ConfluenceWikiService _wiki;
     private readonly ClientWikiRepository _wikiPages;
     private readonly ClientSecretDistributionService _secretDistribution;
-    private readonly ConfluenceOptions _confluenceOptions;
     private readonly RealmLinkProvider _realmLinks;
     private readonly ILogger<CreateModel> _logger;
     private readonly string _kcBaseUrl;
@@ -39,7 +38,6 @@ public class CreateModel : PageModel
         ConfluenceWikiService wiki,
         ClientWikiRepository wikiPages,
         ClientSecretDistributionService secretDistribution,
-        ConfluenceOptions confluenceOptions,
         RealmLinkProvider realmLinks,
         IConfiguration configuration,
         ILogger<CreateModel> logger)
@@ -51,7 +49,6 @@ public class CreateModel : PageModel
         _wiki = wiki;
         _wikiPages = wikiPages;
         _secretDistribution = secretDistribution;
-        _confluenceOptions = confluenceOptions;
         _realmLinks = realmLinks;
         _logger = logger;
         _kcBaseUrl = (configuration["Keycloak:BaseUrl"] ?? string.Empty).TrimEnd('/');
@@ -317,7 +314,7 @@ public class CreateModel : PageModel
             string? wikiLink = null;
             if (!string.IsNullOrWhiteSpace(pageId))
             {
-                wikiLink = BuildConfluenceLink(pageId);
+                wikiLink = _wiki.BuildPageUrl(pageId, spec.Realm, spec.ClientId);
                 try
                 {
                     await _wikiPages.SetAsync(new ClientWikiRepository.ClientWikiInfo(
@@ -335,9 +332,10 @@ public class CreateModel : PageModel
                 }
             }
 
+            var flashMessage = BuildClientCreatedFlashMessage(wikiLink);
             if (!IsAdmin)
             {
-                TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
+                TempData["FlashOk"] = flashMessage;
                 return RedirectToPage("/Index");
             }
 
@@ -411,7 +409,7 @@ public class CreateModel : PageModel
                 ModelState.AddModelError(string.Empty, distributionError);
             }
 
-            TempData["FlashOk"] = $"Клиент '{spec.ClientId}' создан (id={createdId}).";
+            TempData["FlashOk"] = flashMessage;
             return Page();
         }
         catch (Exception ex)
@@ -425,6 +423,18 @@ public class CreateModel : PageModel
 
     private static bool IsValidEmailAddress(string? value)
         => !string.IsNullOrWhiteSpace(value) && MailAddress.TryCreate(value, out _);
+
+    private string BuildClientCreatedFlashMessage(string? wikiLink)
+    {
+        var message = "Клиент успешно создан.";
+        if (!string.IsNullOrWhiteSpace(wikiLink))
+        {
+            var encodedLink = System.Net.WebUtility.HtmlEncode(wikiLink);
+            message += $" <a href=\"{encodedLink}\" target=\"_blank\" rel=\"noopener noreferrer\">Открыть страницу в Confluence</a>.";
+        }
+
+        return message;
+    }
 
     private string BuildModalMessage(NewClientSpec spec, string? wikiLink, string secretLine)
     {
@@ -494,19 +504,4 @@ public class CreateModel : PageModel
         return $"{issuer.TrimEnd('/')}/.well-known/openid-configuration";
     }
 
-    private string? BuildConfluenceLink(string? pageId)
-    {
-        if (string.IsNullOrWhiteSpace(pageId))
-        {
-            return null;
-        }
-
-        var baseUrl = _confluenceOptions.BaseUrl;
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            return null;
-        }
-
-        return $"{baseUrl.TrimEnd('/')}/pages/{pageId}";
-    }
 }

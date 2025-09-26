@@ -135,11 +135,15 @@ public class DetailsModel : PageModel
             return RedirectToPage(new { realm = Realm, clientId = ClientId, returnUrl = ReturnUrl });
         }
 
+        string? wikiLink = null;
+
         try
         {
             var wikiInfo = await _wikiPages.GetAsync(spec.Realm, spec.CurrentClientId, ct);
             if (wikiInfo is not null)
             {
+                wikiLink = _wiki.BuildPageUrl(wikiInfo.PageId, spec.Realm, spec.CurrentClientId);
+
                 var payload = new ConfluenceWikiService.ClientWikiPayload(
                     Realm: spec.Realm,
                     ClientId: spec.ClientId,
@@ -165,6 +169,7 @@ public class DetailsModel : PageModel
 
                     var infoToPersist = wikiInfo with { Realm = spec.Realm, ClientId = spec.ClientId };
                     await _wikiPages.SetAsync(infoToPersist, ct);
+                    wikiLink = _wiki.BuildPageUrl(infoToPersist.PageId, infoToPersist.Realm, infoToPersist.ClientId);
                 }
             }
         }
@@ -173,7 +178,7 @@ public class DetailsModel : PageModel
             _logger.LogError(ex, "Failed to update Confluence wiki page for {ClientId}", spec.ClientId);
         }
 
-        TempData["FlashOk"] = "Клиент успешно обновлён.";
+        TempData["FlashOk"] = BuildClientUpdatedFlashMessage(wikiLink);
         return RedirectToPage(new { realm = Realm, clientId = newId, returnUrl = ReturnUrl });
     }
 
@@ -216,6 +221,18 @@ public class DetailsModel : PageModel
 
     public async Task<IActionResult> OnGetClientRolesAsync(string realm, string id, int first = 0, int max = 50, string? q = null, CancellationToken ct = default)
         => new JsonResult(await _clients.GetClientRolesAsync(realm, id, first, max, q, ct));
+
+    private string BuildClientUpdatedFlashMessage(string? wikiLink)
+    {
+        var message = "Клиент успешно обновлён.";
+        if (!string.IsNullOrWhiteSpace(wikiLink))
+        {
+            var encodedLink = System.Net.WebUtility.HtmlEncode(wikiLink);
+            message += $" <a href=\"{encodedLink}\" target=\"_blank\" rel=\"noopener noreferrer\">Открыть страницу в Confluence</a>.";
+        }
+
+        return message;
+    }
 
     public async Task<IActionResult> OnGetGenerateTokenAsync(
         string realm,
