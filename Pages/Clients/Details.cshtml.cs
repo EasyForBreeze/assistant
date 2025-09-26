@@ -20,6 +20,7 @@ public class DetailsModel : PageModel
     private readonly ConfluenceWikiService _wiki;
     private readonly ClientWikiRepository _wikiPages;
     private readonly ILogger<DetailsModel> _logger;
+    private readonly ConfluenceOptions _confluenceOptions;
 
     public DetailsModel(
         ClientsService clients,
@@ -27,6 +28,7 @@ public class DetailsModel : PageModel
         EventsService events,
         ConfluenceWikiService wiki,
         ClientWikiRepository wikiPages,
+        ConfluenceOptions confluenceOptions,
         ILogger<DetailsModel> logger)
     {
         _clients = clients;
@@ -34,6 +36,7 @@ public class DetailsModel : PageModel
         _events = events;
         _wiki = wiki;
         _wikiPages = wikiPages;
+        _confluenceOptions = confluenceOptions;
         _logger = logger;
     }
 
@@ -143,7 +146,6 @@ public class DetailsModel : PageModel
             if (wikiInfo is not null)
             {
                 wikiLink = _wiki.BuildPageUrl(wikiInfo.PageId, spec.Realm, spec.CurrentClientId);
-
                 var payload = new ConfluenceWikiService.ClientWikiPayload(
                     Realm: spec.Realm,
                     ClientId: spec.ClientId,
