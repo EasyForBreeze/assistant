@@ -103,6 +103,13 @@ public sealed class ClientsService
 
     private string BaseUrl => _opt.BaseUrl.TrimEnd('/');
 
+    private (string Primary, string Legacy) BuildAdminUrls(string realm, string relativePath)
+    {
+        var path = relativePath.TrimStart('/');
+        var encodedRealm = UR(realm);
+        return ($"{BaseUrl}/admin/realms/{encodedRealm}/{path}", $"{BaseUrl}/auth/admin/realms/{encodedRealm}/{path}");
+    }
+
     private string ResolveUsername()
     {
         var username = _httpContextAccessor.HttpContext?.User?.Identity?.Name;
@@ -225,8 +232,8 @@ public sealed class ClientsService
         var http = CreateAdminClient();
         var excluded = await _exclusions.GetAllAsync(ct);
 
-        var urlExactNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?clientId={UR(query)}&briefRepresentation=true";
-        var urlExactLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?clientId={UR(query)}&briefRepresentation=true";
+        var (urlExactNew, urlExactLegacy) =
+            BuildAdminUrls(realm, $"clients?clientId={UR(query)}&briefRepresentation=true");
 
         using (var resp = await http.GetWithLegacyFallbackAsync(urlExactNew, urlExactLegacy, ct))
         {
@@ -249,9 +256,9 @@ public sealed class ClientsService
             }
         }
 
-        //var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?search={UR(query)}&first={first}&max={max}&briefRepresentation=true";
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?search=true&clientId={UR(query)}&first={first}&max={max}&briefRepresentation=true";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?search=true&clientId={UR(query)}&first={first}&max={max}&briefRepresentation=true";
+        var (urlNew, urlLegacy) = BuildAdminUrls(
+            realm,
+            $"clients?search=true&clientId={UR(query)}&first={first}&max={max}&briefRepresentation=true");
 
         using var resp2 = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp2.EnsureAdminSuccess();
@@ -277,8 +284,8 @@ public sealed class ClientsService
         var http = CreateAdminClient();
         var excluded = await _exclusions.GetAllAsync(ct);
 
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?first={first}&max={max}&briefRepresentation=true";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?first={first}&max={max}&briefRepresentation=true";
+        var (urlNew, urlLegacy) =
+            BuildAdminUrls(realm, $"clients?first={first}&max={max}&briefRepresentation=true");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -298,8 +305,7 @@ public sealed class ClientsService
     {
         var http = CreateAdminClient();
 
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients?clientId={UR(clientId)}";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients?clientId={UR(clientId)}";
+        var (urlNew, urlLegacy) = BuildAdminUrls(realm, $"clients?clientId={UR(clientId)}");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -342,8 +348,7 @@ public sealed class ClientsService
 
         var http = CreateAdminClient();
 
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users?username={UR(username)}";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users?username={UR(username)}";
+        var (urlNew, urlLegacy) = BuildAdminUrls(realm, $"users?username={UR(username)}");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -387,10 +392,9 @@ public sealed class ClientsService
         var userIdEncoded = UR(userId);
         foreach (var segment in segments)
         {
-            var urlNew =
-                $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/evaluate-scopes/{segment}?userId={userIdEncoded}";
-            var urlLegacy =
-                $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/evaluate-scopes/{segment}?userId={userIdEncoded}";
+            var (urlNew, urlLegacy) = BuildAdminUrls(
+                realm,
+                $"clients/{UR(clientUuid)}/evaluate-scopes/{segment}?userId={userIdEncoded}");
 
             using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
             if (resp.StatusCode == HttpStatusCode.NotFound)
@@ -414,8 +418,8 @@ public sealed class ClientsService
         }
 
         var http = CreateAdminClient();
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
+        var (urlNew, urlLegacy) =
+            BuildAdminUrls(realm, $"clients/{UR(details.Id)}/client-secret");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -433,8 +437,8 @@ public sealed class ClientsService
         }
 
         var http = CreateAdminClient();
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(details.Id)}/client-secret";
+        var (urlNew, urlLegacy) =
+            BuildAdminUrls(realm, $"clients/{UR(details.Id)}/client-secret");
 
         using var resp = await http.PostWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -454,8 +458,8 @@ public sealed class ClientsService
         var qs = $"briefRepresentation=true&first={first}&max={max}" +
                  (string.IsNullOrWhiteSpace(search) ? string.Empty : $"&search={UR(search!)}");
 
-        var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles?{qs}";
-        var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles?{qs}";
+        var (urlNew, urlLegacy) =
+            BuildAdminUrls(realm, $"clients/{UR(clientUuid)}/roles?{qs}");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -509,8 +513,7 @@ public sealed class ClientsService
             description = spec.Description
         };
 
-        var postNew = $"{BaseUrl}/admin/realms/{UR(spec.Realm)}/clients";
-        var postLegacy = $"{BaseUrl}/auth/admin/realms/{UR(spec.Realm)}/clients";
+        var (postNew, postLegacy) = BuildAdminUrls(spec.Realm, "clients");
 
         using var createResp = await http.PostJsonWithLegacyFallbackAsync(postNew, postLegacy, body, JsonOpts, ct);
         if (createResp.StatusCode == HttpStatusCode.Conflict)
@@ -608,8 +611,7 @@ public sealed class ClientsService
             description = spec.Description
         };
 
-        var putNew = $"{BaseUrl}/admin/realms/{UR(spec.Realm)}/clients/{UR(existingDetails.Id)}";
-        var putLegacy = $"{BaseUrl}/auth/admin/realms/{UR(spec.Realm)}/clients/{UR(existingDetails.Id)}";
+        var (putNew, putLegacy) = BuildAdminUrls(spec.Realm, $"clients/{UR(existingDetails.Id)}");
 
         using var resp = await http.PutJsonWithLegacyFallbackAsync(putNew, putLegacy, body, JsonOpts, ct);
         resp.EnsureAdminSuccess();
@@ -641,8 +643,7 @@ public sealed class ClientsService
             .FirstOrDefault(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException($"Client '{clientId}' not found.");
 
-        var delNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(existing.Id)}";
-        var delLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(existing.Id)}";
+        var (delNew, delLegacy) = BuildAdminUrls(realm, $"clients/{UR(existing.Id)}");
 
         using var resp = await http.DeleteWithLegacyFallbackAsync(delNew, delLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -662,8 +663,7 @@ public sealed class ClientsService
             {
                 var payload = new { name = name.Trim() };
 
-                var urlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
-                var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/roles";
+                var (urlNew, urlLegacy) = BuildAdminUrls(realm, $"clients/{UR(clientUuid)}/roles");
 
                 using var resp = await http.PostJsonWithLegacyFallbackAsync(urlNew, urlLegacy, payload, JsonOpts, ct);
 
@@ -685,8 +685,8 @@ public sealed class ClientsService
     {
         var http = CreateAdminClient();
 
-        var getSvcUserNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(newClientUuid)}/service-account-user";
-        var getSvcUserLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(newClientUuid)}/service-account-user";
+        var (getSvcUserNew, getSvcUserLegacy) =
+            BuildAdminUrls(realm, $"clients/{UR(newClientUuid)}/service-account-user");
 
         using var userResp = await http.GetWithLegacyFallbackAsync(getSvcUserNew, getSvcUserLegacy, ct);
         userResp.EnsureAdminSuccess();
@@ -711,15 +711,17 @@ public sealed class ClientsService
                 throw new InvalidOperationException($"Client '{srcClientId}' not found.");
             }
 
-            var mapNewBase = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
-            var mapLegacyBase = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}";
+            var (mapNewBase, mapLegacyBase) = BuildAdminUrls(
+                realm,
+                $"users/{UR(svcUser.Id!)}/role-mappings/clients/{UR(srcClient.Id)}");
 
             foreach (var roleName in group.Select(x => x.Role.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 try
                 {
-                    var getRoleNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
-                    var getRoleLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+                    var (getRoleNew, getRoleLegacy) = BuildAdminUrls(
+                        realm,
+                        $"clients/{UR(srcClient.Id)}/roles/{UR(roleName)}");
 
                     using var rr = await http.GetWithLegacyFallbackAsync(getRoleNew, getRoleLegacy, ct);
                     rr.EnsureAdminSuccess();
@@ -748,8 +750,8 @@ public sealed class ClientsService
 
         var http = CreateAdminClient();
 
-        var getSvcUserNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
-        var getSvcUserLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
+        var (getSvcUserNew, getSvcUserLegacy) =
+            BuildAdminUrls(realm, $"clients/{UR(clientUuid)}/service-account-user");
 
         using var userResp = await http.GetWithLegacyFallbackAsync(getSvcUserNew, getSvcUserLegacy, ct);
         if (userResp.StatusCode == HttpStatusCode.NotFound)
@@ -779,15 +781,17 @@ public sealed class ClientsService
                 continue;
             }
 
-            var mapNewBase = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings/clients/{UR(srcClient.Id)}";
-            var mapLegacyBase = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings/clients/{UR(srcClient.Id)}";
+            var (mapNewBase, mapLegacyBase) = BuildAdminUrls(
+                realm,
+                $"users/{UR(svcUser.Id)}/role-mappings/clients/{UR(srcClient.Id)}");
 
             foreach (var roleName in group.Select(x => x.Role.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 try
                 {
-                    var getRoleNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
-                    var getRoleLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(srcClient.Id)}/roles/{UR(roleName)}";
+                    var (getRoleNew, getRoleLegacy) = BuildAdminUrls(
+                        realm,
+                        $"clients/{UR(srcClient.Id)}/roles/{UR(roleName)}");
 
                     using var roleResp = await http.GetWithLegacyFallbackAsync(getRoleNew, getRoleLegacy, ct);
                     if (roleResp.StatusCode == HttpStatusCode.NotFound)
@@ -820,8 +824,8 @@ public sealed class ClientsService
     {
         var http = CreateAdminClient();
 
-        var getSvcUserNew = $"{BaseUrl}/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
-        var getSvcUserLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/clients/{UR(clientUuid)}/service-account-user";
+        var (getSvcUserNew, getSvcUserLegacy) =
+            BuildAdminUrls(realm, $"clients/{UR(clientUuid)}/service-account-user");
 
         using var userResp = await http.GetWithLegacyFallbackAsync(getSvcUserNew, getSvcUserLegacy, ct);
         userResp.EnsureAdminSuccess();
@@ -831,8 +835,8 @@ public sealed class ClientsService
             return new List<(string, string)>();
         }
 
-        var mapUrlNew = $"{BaseUrl}/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings";
-        var mapUrlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(realm)}/users/{UR(svcUser.Id)}/role-mappings";
+        var (mapUrlNew, mapUrlLegacy) =
+            BuildAdminUrls(realm, $"users/{UR(svcUser.Id)}/role-mappings");
 
         using var mapResp = await http.GetWithLegacyFallbackAsync(mapUrlNew, mapUrlLegacy, ct);
         mapResp.EnsureAdminSuccess();
