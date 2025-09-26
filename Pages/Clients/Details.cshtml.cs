@@ -145,8 +145,7 @@ public class DetailsModel : PageModel
             var wikiInfo = await _wikiPages.GetAsync(spec.Realm, spec.CurrentClientId, ct);
             if (wikiInfo is not null)
             {
-                wikiLink = BuildConfluenceLink(wikiInfo.PageId);
-
+                wikiLink = _wiki.BuildPageUrl(wikiInfo.PageId, spec.Realm, spec.CurrentClientId);
                 var payload = new ConfluenceWikiService.ClientWikiPayload(
                     Realm: spec.Realm,
                     ClientId: spec.ClientId,
@@ -172,7 +171,7 @@ public class DetailsModel : PageModel
 
                     var infoToPersist = wikiInfo with { Realm = spec.Realm, ClientId = spec.ClientId };
                     await _wikiPages.SetAsync(infoToPersist, ct);
-                    wikiLink = BuildConfluenceLink(infoToPersist.PageId);
+                    wikiLink = _wiki.BuildPageUrl(infoToPersist.PageId, infoToPersist.Realm, infoToPersist.ClientId);
                 }
             }
         }
@@ -235,22 +234,6 @@ public class DetailsModel : PageModel
         }
 
         return message;
-    }
-
-    private string? BuildConfluenceLink(string? pageId)
-    {
-        if (string.IsNullOrWhiteSpace(pageId))
-        {
-            return null;
-        }
-
-        var baseUrl = _confluenceOptions.BaseUrl;
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            return null;
-        }
-
-        return $"{baseUrl.TrimEnd('/')}/pages/{pageId}";
     }
 
     public async Task<IActionResult> OnGetGenerateTokenAsync(

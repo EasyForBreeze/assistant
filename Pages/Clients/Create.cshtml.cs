@@ -26,7 +26,6 @@ public class CreateModel : PageModel
     private readonly ConfluenceWikiService _wiki;
     private readonly ClientWikiRepository _wikiPages;
     private readonly ClientSecretDistributionService _secretDistribution;
-    private readonly ConfluenceOptions _confluenceOptions;
     private readonly RealmLinkProvider _realmLinks;
     private readonly ILogger<CreateModel> _logger;
     private readonly string _kcBaseUrl;
@@ -39,7 +38,6 @@ public class CreateModel : PageModel
         ConfluenceWikiService wiki,
         ClientWikiRepository wikiPages,
         ClientSecretDistributionService secretDistribution,
-        ConfluenceOptions confluenceOptions,
         RealmLinkProvider realmLinks,
         IConfiguration configuration,
         ILogger<CreateModel> logger)
@@ -51,7 +49,6 @@ public class CreateModel : PageModel
         _wiki = wiki;
         _wikiPages = wikiPages;
         _secretDistribution = secretDistribution;
-        _confluenceOptions = confluenceOptions;
         _realmLinks = realmLinks;
         _logger = logger;
         _kcBaseUrl = (configuration["Keycloak:BaseUrl"] ?? string.Empty).TrimEnd('/');
@@ -317,7 +314,7 @@ public class CreateModel : PageModel
             string? wikiLink = null;
             if (!string.IsNullOrWhiteSpace(pageId))
             {
-                wikiLink = BuildConfluenceLink(pageId);
+                wikiLink = _wiki.BuildPageUrl(pageId, spec.Realm, spec.ClientId);
                 try
                 {
                     await _wikiPages.SetAsync(new ClientWikiRepository.ClientWikiInfo(
@@ -506,19 +503,4 @@ public class CreateModel : PageModel
         return $"{issuer.TrimEnd('/')}/.well-known/openid-configuration";
     }
 
-    private string? BuildConfluenceLink(string? pageId)
-    {
-        if (string.IsNullOrWhiteSpace(pageId))
-        {
-            return null;
-        }
-
-        var baseUrl = _confluenceOptions.BaseUrl;
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            return null;
-        }
-
-        return $"{baseUrl.TrimEnd('/')}/pages/{pageId}";
-    }
 }

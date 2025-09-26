@@ -198,6 +198,34 @@ public sealed class ConfluenceWikiService
         }
     }
 
+    public string? BuildPageUrl(string? pageId, string realm, string clientId)
+    {
+        if (string.IsNullOrWhiteSpace(pageId))
+        {
+            return null;
+        }
+
+        if (!_options.IsConfigured)
+        {
+            return null;
+        }
+
+        var baseUrl = _options.BaseUrl;
+        var spaceKey = _options.SpaceKey;
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(spaceKey))
+        {
+            return null;
+        }
+
+        var normalizedBase = baseUrl.TrimEnd('/');
+        var title = BuildTitle(_templateProvider.Template.Title, clientId, realm);
+        var slug = WebUtility.UrlEncode(title);
+
+        return string.IsNullOrWhiteSpace(slug)
+            ? $"{normalizedBase}/spaces/{spaceKey}/pages/{pageId}"
+            : $"{normalizedBase}/spaces/{spaceKey}/pages/{pageId}/{slug}";
+    }
+
     private void PrepareClient(HttpClient client)
     {
         if (!_options.IsConfigured)
