@@ -331,6 +331,7 @@ public sealed class ConfluenceWikiService
             ["{{REALM_CELL}}"] = BuildRealmCell(payload.Realm),
             ["{{CLIENT_ID}}"] = WebUtility.HtmlEncode(payload.ClientId),
             ["{{CLIENT_NAME}}"] = WebUtility.HtmlEncode(BuildClientName(payload.ClientId)),
+            ["{{CLIENT_STATUS}}"] = FormatToggle(payload.ClientEnabled),
             ["{{ACCESS_TYPE}}"] = WebUtility.HtmlEncode(payload.ClientAuthEnabled ? "confidential" : "public"),
             ["{{DESCRIPTION}}"] = BuildDescription(payload.Description),
             ["{{SERVICE_OWNER_CELL}}"] = BuildPersonCell(payload.ServiceOwner),
@@ -567,6 +568,7 @@ public sealed class ConfluenceWikiService
     public sealed record ClientWikiPayload(
         string Realm,
         string ClientId,
+        bool ClientEnabled,
         string? Description,
         bool ClientAuthEnabled,
         bool StandardFlowEnabled,
