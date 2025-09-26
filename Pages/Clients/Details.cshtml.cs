@@ -149,6 +149,7 @@ public class DetailsModel : PageModel
                 var payload = new ConfluenceWikiService.ClientWikiPayload(
                     Realm: spec.Realm,
                     ClientId: spec.ClientId,
+                    ClientEnabled: spec.Enabled,
                     Description: Description,
                     ClientAuthEnabled: ClientAuth,
                     StandardFlowEnabled: spec.StandardFlow,
@@ -178,6 +179,22 @@ public class DetailsModel : PageModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update Confluence wiki page for {ClientId}", spec.ClientId);
+        }
+
+        if (string.IsNullOrWhiteSpace(wikiLink))
+        {
+            try
+            {
+                var fallbackInfo = await _wikiPages.GetAsync(spec.Realm, spec.ClientId, ct);
+                if (fallbackInfo is not null)
+                {
+                    wikiLink = _wiki.BuildPageUrl(fallbackInfo.PageId, fallbackInfo.Realm, fallbackInfo.ClientId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resolve Confluence wiki link for {ClientId}", spec.ClientId);
+            }
         }
 
         TempData["FlashOk"] = BuildClientUpdatedFlashMessage(wikiLink);

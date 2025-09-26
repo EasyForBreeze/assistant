@@ -298,6 +298,7 @@ public class CreateModel : PageModel
             var pageId = await _wiki.CreatePageAsync(new ConfluenceWikiService.ClientWikiPayload(
                 Realm: spec.Realm,
                 ClientId: spec.ClientId,
+                ClientEnabled: true,
                 Description: Description,
                 ClientAuthEnabled: ClientAuth,
                 StandardFlowEnabled: spec.StandardFlow,

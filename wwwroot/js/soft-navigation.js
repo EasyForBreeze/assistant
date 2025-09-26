@@ -579,7 +579,7 @@
         return url.toString();
     }
 
-    async function fetchAndSwap(url, options, hidePromise, transition) {
+    async function fetchAndSwap(url, options, transition) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const fetchInit = {
@@ -633,6 +633,18 @@
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
         }
+
+        let hidePromise = null;
+        if (transition && typeof transition.hide === 'function') {
+            try {
+                hidePromise = transition.hide();
+            } catch (_) {
+                hidePromise = null;
+            }
+        } else {
+            hidePromise = hideApp();
+        }
+
         if (hidePromise) {
             try {
                 await hidePromise;
@@ -693,10 +705,9 @@
             window.location.href = url;
             return;
         }
-        const hidePromise = transition ? transition.hide() : hideApp();
         let success;
         try {
-            success = await fetchAndSwap(url, options, hidePromise, transition);
+            success = await fetchAndSwap(url, options, transition);
             return success;
         } finally {
             showApp();
