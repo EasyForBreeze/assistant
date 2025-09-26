@@ -275,6 +275,29 @@ public sealed class ClientsService
         static ClientShort MapClient(ClientRep c) => new(c.Id ?? string.Empty, c.ClientId ?? string.Empty);
     }
 
+    private async Task<ClientShort?> GetClientShortByClientIdAsync(string realm, string clientId, CancellationToken ct)
+    {
+        clientId = (clientId ?? string.Empty).Trim();
+        if (clientId.Length == 0)
+        {
+            return null;
+        }
+
+        var http = CreateAdminClient();
+        var (urlNew, urlLegacy) =
+            BuildAdminUrls(realm, $"clients?clientId={UR(clientId)}&briefRepresentation=true");
+
+        using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
+        resp.EnsureAdminSuccess();
+        var list = await ReadJsonAsync<List<ClientRep>>(resp, ct) ?? new();
+
+        var rep = list
+            .Where(x => !string.IsNullOrWhiteSpace(x.Id) && !string.IsNullOrWhiteSpace(x.ClientId))
+            .FirstOrDefault(x => string.Equals(x.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
+
+        return rep == null ? null : new ClientShort(rep.Id!, rep.ClientId!);
+    }
+
     public async Task<(List<ClientShort> Clients, int TotalFetched)> ListClientsAsync(
         string realm, int first = 0, int max = 50, CancellationToken ct = default)
     {
@@ -411,15 +434,15 @@ public sealed class ClientsService
 
     public async Task<string?> GetClientSecretAsync(string realm, string clientId, CancellationToken ct = default)
     {
-        var details = await GetClientDetailsAsync(realm, clientId, ct);
-        if (details == null)
+        var client = await GetClientShortByClientIdAsync(realm, clientId, ct);
+        if (client == null)
         {
             return null;
         }
 
         var http = CreateAdminClient();
         var (urlNew, urlLegacy) =
-            BuildAdminUrls(realm, $"clients/{UR(details.Id)}/client-secret");
+            BuildAdminUrls(realm, $"clients/{UR(client.Id)}/client-secret");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
@@ -429,8 +452,8 @@ public sealed class ClientsService
 
     public async Task<string?> RegenerateClientSecretAsync(string realm, string clientId, CancellationToken ct = default)
     {
-        var details = await GetClientDetailsAsync(realm, clientId, ct);
-        if (details == null)
+        var client = await GetClientShortByClientIdAsync(realm, clientId, ct);
+        if (client == null)
         {
             await AuditAsync("CLIENT:secret-regenerate", realm, clientId, ct);
             return null;
@@ -438,13 +461,13 @@ public sealed class ClientsService
 
         var http = CreateAdminClient();
         var (urlNew, urlLegacy) =
-            BuildAdminUrls(realm, $"clients/{UR(details.Id)}/client-secret");
+            BuildAdminUrls(realm, $"clients/{UR(client.Id)}/client-secret");
 
         using var resp = await http.PostWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
         resp.EnsureAdminSuccess();
         var rep = await ReadJsonAsync<ClientSecretRep>(resp, ct);
         var secret = rep?.Value;
-        await AuditAsync("CLIENT:secret-regenerate", realm, details.ClientId, ct);
+        await AuditAsync("CLIENT:secret-regenerate", realm, client.ClientId, ct);
         return secret;
     }
 
@@ -698,15 +721,20 @@ public sealed class ClientsService
 
         var groups = pairs
             .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
-            .GroupBy(p => p.ClientId.Trim(), StringComparer.OrdinalIgnoreCase);
+            .GroupBy(p => p.ClientId.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var clients = new Dictionary<string, ClientShort?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in groups)
+        {
+            clients[group.Key] = await GetClientShortByClientIdAsync(realm, group.Key, ct);
+        }
 
         foreach (var group in groups)
         {
             var srcClientId = group.Key;
 
-            var srcClient = (await SearchClientsAsync(realm, srcClientId, 0, 2, ct))
-                .FirstOrDefault(c => string.Equals(c.ClientId, srcClientId, StringComparison.OrdinalIgnoreCase));
-            if (srcClient == null)
+            if (!clients.TryGetValue(srcClientId, out var srcClient) || srcClient == null)
             {
                 throw new InvalidOperationException($"Client '{srcClientId}' not found.");
             }
@@ -768,15 +796,20 @@ public sealed class ClientsService
 
         var groups = pairs
             .Where(p => !string.IsNullOrWhiteSpace(p.ClientId) && !string.IsNullOrWhiteSpace(p.Role))
-            .GroupBy(p => p.ClientId.Trim(), StringComparer.OrdinalIgnoreCase);
+            .GroupBy(p => p.ClientId.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var clients = new Dictionary<string, ClientShort?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in groups)
+        {
+            clients[group.Key] = await GetClientShortByClientIdAsync(realm, group.Key, ct);
+        }
 
         foreach (var group in groups)
         {
             var srcClientId = group.Key;
 
-            var srcClient = (await SearchClientsAsync(realm, srcClientId, 0, 2, ct))
-                .FirstOrDefault(c => string.Equals(c.ClientId, srcClientId, StringComparison.OrdinalIgnoreCase));
-            if (srcClient == null)
+            if (!clients.TryGetValue(srcClientId, out var srcClient) || srcClient == null)
             {
                 continue;
             }
