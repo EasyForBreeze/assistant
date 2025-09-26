@@ -409,7 +409,6 @@ public class CreateModel : PageModel
                 ModelState.AddModelError(string.Empty, distributionError);
             }
 
-            TempData["FlashOk"] = flashMessage;
             return Page();
         }
         catch (Exception ex)
