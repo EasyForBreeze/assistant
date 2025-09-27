@@ -91,7 +91,7 @@ export function animateAppVisibility(target, shouldShow) {
 
     target.classList.add(CLASSNAMES.animating);
     if (shouldShow) {
-        applyVisibility(target, true);
+        target.classList.remove(CLASSNAMES.visible);
         target.classList.add(CLASSNAMES.showing);
     } else {
         target.classList.add(CLASSNAMES.hiding);
@@ -102,9 +102,7 @@ export function animateAppVisibility(target, shouldShow) {
 
     if (animations.length === 0) {
         clearAnimationClasses(target);
-        if (!shouldShow) {
-            applyVisibility(target, false);
-        }
+        applyVisibility(target, shouldShow);
         return null;
     }
 
