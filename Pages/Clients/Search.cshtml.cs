@@ -29,15 +29,21 @@ public class SearchModel : ClientsPageModel
         if (!string.IsNullOrEmpty(Q))
         {
             var realms = await _realms.GetRealmsAsync();
-            foreach (var realm in realms)
-            {
-                if (string.IsNullOrWhiteSpace(realm.Realm))
+            var searchTasks = realms
+                .Where(r => !string.IsNullOrWhiteSpace(r.Realm))
+                .Select(async realm =>
                 {
-                    continue;
-                }
+                    var hits = await _clients.SearchClientsAsync(realm.Realm!, Q);
+                    return hits
+                        .Select(c => ClientSummary.ForLookup(realm.Realm!, c.ClientId))
+                        .ToList();
+                })
+                .ToList();
 
-                var hits = await _clients.SearchClientsAsync(realm.Realm!, Q);
-                list.AddRange(hits.Select(c => ClientSummary.ForLookup(realm.Realm!, c.ClientId)));
+            var results = await Task.WhenAll(searchTasks);
+            foreach (var hits in results)
+            {
+                list.AddRange(hits);
             }
         }
 
