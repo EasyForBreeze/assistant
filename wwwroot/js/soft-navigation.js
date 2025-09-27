@@ -1,6 +1,5 @@
 import { initNavigation } from './navigation.js';
 import { setupLoadingHooks } from './loading.js';
-
 function bootstrap() {
     const body = document.body;
     if (!body) {
