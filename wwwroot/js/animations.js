@@ -56,6 +56,19 @@ function clearAnimationClasses(target) {
     target.classList.remove(CLASSNAMES.animating, CLASSNAMES.showing, CLASSNAMES.hiding);
 }
 
+function resetToHidden(target) {
+    if (!target || !target.classList) {
+        return;
+    }
+    ensureBaseClass(target);
+    clearAnimationClasses(target);
+    target.classList.remove(CLASSNAMES.visible);
+}
+
+export function seedAppVisibility(target) {
+    resetToHidden(target);
+}
+
 export function cancelAppAnimation(target) {
     if (!target) {
         return;
@@ -91,12 +104,32 @@ export function animateAppVisibility(target, shouldShow) {
 
     target.classList.add(CLASSNAMES.animating);
     if (shouldShow) {
+        target.classList.add(CLASSNAMES.showing);
+    } else {
+        target.classList.add(CLASSNAMES.hiding);
+    }
+        return null;
+    }
+
+    ensureBaseClass(target);
+    cancelAppAnimation(target);
+    clearAnimationClasses(target);
+
+    const prefersReducedMotion = motionPreference && motionPreference.matches;
+    const supportsCssAnimations = typeof target.getAnimations === 'function';
+
+    if (!supportsCssAnimations || prefersReducedMotion) {
+        applyVisibility(target, shouldShow);
+        return null;
+    }
+
+    target.classList.add(CLASSNAMES.animating);
+    if (shouldShow) {
         target.classList.remove(CLASSNAMES.visible);
         target.classList.add(CLASSNAMES.showing);
     } else {
         target.classList.add(CLASSNAMES.hiding);
     }
-
     const expectedName = shouldShow ? 'app-visibility-show' : 'app-visibility-hide';
     let animations = [];
     try {
@@ -153,7 +186,7 @@ export function animateAppVisibility(target, shouldShow) {
                 try {
                     animation.cancel();
                 } catch (_) {
-                    // Ignore cancellation errors.
+                    // Ignore cancellation errors
                 }
             });
             finalize();
