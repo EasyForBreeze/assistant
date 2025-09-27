@@ -1,6 +1,60 @@
 import { waitForTransition } from './transitions.js';
 
 const animationStates = new WeakMap();
+const activeAnimationStates = new Set();
+
+const CLASSNAMES = {
+    base: 'app-visibility',
+    visible: 'app-visible',
+    animating: 'app-animating',
+    showing: 'app-showing',
+    hiding: 'app-hiding'
+};
+
+const PREFERS_REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+const motionPreference = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia(PREFERS_REDUCED_MOTION_QUERY)
+    : null;
+
+function onMotionPreferenceChange(event) {
+    if (!event.matches) {
+        return;
+    }
+    activeAnimationStates.forEach(state => {
+        try {
+            state.finish();
+        } catch (_) {
+            // Ignore finish errors.
+        }
+    });
+}
+
+if (motionPreference && typeof motionPreference.addEventListener === 'function') {
+    motionPreference.addEventListener('change', onMotionPreferenceChange);
+} else if (motionPreference && typeof motionPreference.addListener === 'function') {
+    motionPreference.addListener(onMotionPreferenceChange);
+}
+
+function ensureBaseClass(target) {
+    if (!target || !target.classList) {
+        return;
+    }
+    target.classList.add(CLASSNAMES.base);
+}
+
+function applyVisibility(target, shouldShow) {
+    if (!target || !target.classList) {
+        return;
+    }
+    target.classList.toggle(CLASSNAMES.visible, Boolean(shouldShow));
+}
+
+function clearAnimationClasses(target) {
+    if (!target || !target.classList) {
+        return;
+    }
+    target.classList.remove(CLASSNAMES.animating, CLASSNAMES.showing, CLASSNAMES.hiding);
+}
 
 export function cancelAppAnimation(target) {
     if (!target) {
@@ -10,125 +64,120 @@ export function cancelAppAnimation(target) {
     if (!state) {
         return;
     }
-    animationStates.delete(target);
-    const { animation, cleanup } = state;
-    if (animation) {
-        try {
-            animation.cancel();
-        } catch (_) {
-            // Ignore animation cancellation errors.
-        }
-    }
-    if (typeof cleanup === 'function') {
-        try {
-            cleanup();
-        } catch (_) {
-            // Ignore cleanup errors.
-        }
+    try {
+        state.cancel();
+    } finally {
+        animationStates.delete(target);
+        activeAnimationStates.delete(state);
     }
 }
 
 export function animateAppVisibility(target, shouldShow) {
-    if (!target || typeof target.animate !== 'function') {
-        return null;
-    }
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!target) {
         return null;
     }
 
+    ensureBaseClass(target);
     cancelAppAnimation(target);
+    clearAnimationClasses(target);
 
-    const computed = window.getComputedStyle(target);
-    const currentOpacity = parseFloat(computed.opacity);
-    const startOpacity = isNaN(currentOpacity) ? (shouldShow ? 0 : 1) : currentOpacity;
-    const startTransform = computed.transform && computed.transform !== 'none'
-        ? computed.transform
-        : (shouldShow ? 'translateY(12px)' : 'translateY(0px)');
-    const endTransform = shouldShow ? 'translateY(0px)' : 'translateY(12px)';
-    const endOpacity = shouldShow ? 1 : 0;
+    const prefersReducedMotion = motionPreference && motionPreference.matches;
+    const supportsCssAnimations = typeof target.getAnimations === 'function';
 
-    const previousTransition = target.style.transition;
-    target.style.transition = 'none';
-
-    const previousWillChange = target.style.willChange;
-    let willChangeOverridden = false;
-    if (!previousWillChange) {
-        target.style.willChange = 'opacity, transform';
-        willChangeOverridden = true;
+    if (!supportsCssAnimations || prefersReducedMotion) {
+        applyVisibility(target, shouldShow);
+        return null;
     }
 
-    const midShowOpacity = Math.min(1, Math.max(startOpacity, 0.85));
-    const midHideOpacity = Math.min(1, Math.max(endOpacity, startOpacity - 0.15));
-    const keyframes = shouldShow
-        ? [
-            { opacity: startOpacity, transform: startTransform },
-            { opacity: midShowOpacity, transform: 'translateY(-4px)', offset: 0.7 },
-            { opacity: endOpacity, transform: endTransform }
-        ]
-        : [
-            { opacity: startOpacity, transform: startTransform },
-            { opacity: midHideOpacity, transform: 'translateY(6px)', offset: 0.35 },
-            { opacity: endOpacity, transform: endTransform }
-        ];
+    target.classList.add(CLASSNAMES.animating);
+    if (shouldShow) {
+        applyVisibility(target, true);
+        target.classList.add(CLASSNAMES.showing);
+    } else {
+        target.classList.add(CLASSNAMES.hiding);
+    }
 
-    let animation;
-    try {
-        animation = target.animate(keyframes, {
-            duration: shouldShow ? 460 : 360,
-            easing: shouldShow ? 'cubic-bezier(0.33, 1, 0.68, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)',
-            fill: 'forwards'
-        });
-    } catch (_) {
-        target.style.transition = previousTransition;
-        if (willChangeOverridden) {
-            target.style.willChange = previousWillChange;
+    const expectedName = shouldShow ? 'app-visibility-show' : 'app-visibility-hide';
+    const animations = target.getAnimations().filter(animation => animation.animationName === expectedName);
+
+    if (animations.length === 0) {
+        clearAnimationClasses(target);
+        if (!shouldShow) {
+            applyVisibility(target, false);
         }
         return null;
     }
 
-    let cleaned = false;
-    const cleanup = () => {
-        if (cleaned) {
+    let state = null;
+    let resolved = false;
+    let resolvePromise = () => {};
+
+    const finalize = () => {
+        if (resolved) {
             return;
         }
-        cleaned = true;
-        target.style.transition = previousTransition;
-        if (willChangeOverridden) {
-            target.style.willChange = previousWillChange;
+        resolved = true;
+        clearAnimationClasses(target);
+        applyVisibility(target, shouldShow);
+        if (state) {
+            animationStates.delete(target);
+            activeAnimationStates.delete(state);
         }
     };
 
-    const state = { animation, cleanup };
-    animationStates.set(target, state);
-
     const promise = new Promise(resolve => {
-        let resolved = false;
-        const finalize = () => {
-            if (resolved) {
-                return;
-            }
-            resolved = true;
-            if (animationStates.get(target) === state) {
-                animationStates.delete(target);
-            }
-            cleanup();
+        resolvePromise = () => {
             resolve();
+            resolvePromise = () => {};
         };
-
-        animation.addEventListener('finish', () => {
-            if (typeof animation.commitStyles === 'function') {
-                try {
-                    animation.commitStyles();
-                } catch (_) {
-                    // Ignore browsers that throw for commitStyles.
-                }
-            }
-            animation.cancel();
+        const finishOnce = () => {
             finalize();
-        }, { once: true });
-
-        animation.addEventListener('cancel', finalize, { once: true });
+            resolvePromise();
+        };
+        animations.forEach(animation => {
+            animation.addEventListener('finish', finishOnce, { once: true });
+            animation.addEventListener('cancel', finishOnce, { once: true });
+        });
     });
+
+    state = {
+        target,
+        shouldShow,
+        cancel() {
+            animations.forEach(animation => {
+                try {
+                    animation.cancel();
+                } catch (_) {
+                    // Ignore cancellation errors.
+                }
+            });
+            finalize();
+            resolvePromise();
+        },
+        finish() {
+            animations.forEach(animation => {
+                try {
+                    if (typeof animation.finish === 'function') {
+                        animation.finish();
+                    } else {
+                        animation.cancel();
+                    }
+                } catch (_) {
+                    try {
+                        animation.cancel();
+                    } catch (_) {
+                        // Ignore finish errors.
+                    }
+                }
+            });
+            finalize();
+            resolvePromise();
+        }
+    };
+
+    animationStates.set(target, state);
+    activeAnimationStates.add(state);
+
     return promise;
 }
 
