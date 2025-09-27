@@ -25,6 +25,12 @@ if (!root || !app) {
 appVisibility.setApp(app);
 appVisibility.show();
 
+executeSoftScripts(app);
+refreshToasts(document, toastsHost);
+if (scriptHost) {
+    executeSoftScripts(scriptHost);
+}
+
 function beginPending() { }
 function endPending() { }
 
