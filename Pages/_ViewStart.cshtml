@@ -1,3 +1,4 @@
-﻿@{
-    Layout = "_Layout";
+@{
+    var softNavRequested = Context?.Request?.Headers?["X-Soft-Nav"] == "1";
+    Layout = softNavRequested ? "_SoftNavLayout" : "_Layout";
 }
