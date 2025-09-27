@@ -11,6 +11,7 @@
     <!-- Tailwind для прототипа -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="~/css/kc.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/app-animations.css" asp-append-version="true" />
 
     @RenderSection("Head", required: false)
 </head>
@@ -83,7 +84,7 @@
                     </div>
                 </aside>
             }
-            <main id="app" class="flex-1">
+            <main id="app" class="flex-1 app-visibility app-visible">
                 @RenderBody()
             </main>
         </div>
