@@ -1,4 +1,9 @@
 (function () {
+    if (window.__softNavInitialized) {
+        return;
+    }
+    window.__softNavInitialized = true;
+
     const body = document.body;
     if (!body) {
         return;
@@ -6,6 +11,7 @@
 
     let app = null;
     let appAnimationState = null;
+    let currentUrl = window.location.href;
 
     function cancelAppAnimation() {
         if (!appAnimationState) {
@@ -30,10 +36,13 @@
     }
 
     function animateAppVisibility(shouldShow) {
-        if (!app || typeof app.animate !== 'function') {
+        if (!app) {
             return null;
         }
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion || typeof app.animate !== 'function') {
+            app.style.opacity = shouldShow ? '1' : '0';
+            app.style.transform = shouldShow ? 'translateY(0px)' : 'translateY(12px)';
             return null;
         }
 
@@ -166,8 +175,90 @@
         return;
     }
 
+    const reduceMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    if (reduceMotionQuery) {
+        const onReduceMotionChange = () => {
+            if (reduceMotionQuery.matches) {
+                cancelAppAnimation();
+                if (app) {
+                    app.style.transition = '';
+                    app.style.opacity = '1';
+                    app.style.transform = 'translateY(0px)';
+                }
+            }
+        };
+        if (typeof reduceMotionQuery.addEventListener === 'function') {
+            reduceMotionQuery.addEventListener('change', onReduceMotionChange);
+        } else if (typeof reduceMotionQuery.addListener === 'function') {
+            reduceMotionQuery.addListener(onReduceMotionChange);
+        }
+    }
+
+    function parseBoolean(value) {
+        if (value == null) {
+            return false;
+        }
+        if (typeof value === 'boolean') {
+            return value;
+        }
+        if (typeof value === 'number') {
+            return value !== 0;
+        }
+        const normalized = String(value).trim().toLowerCase();
+        return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === '';
+    }
+
+    const debugEnabled = parseBoolean(root.dataset.softDebug || body.dataset.softDebug || window.__softNavDebug);
+
+    function debugLog(message, ...details) {
+        if (!debugEnabled) {
+            return;
+        }
+        try {
+            console.debug('[soft-nav]', message, ...details);
+        } catch (_) {
+            // Ignore console errors.
+        }
+    }
+
+    function errorLog(message, error) {
+        try {
+            if (error && debugEnabled) {
+                console.error('[soft-nav]', message, error);
+            } else {
+                console.error('[soft-nav]', message);
+            }
+        } catch (_) {
+            // Ignore console errors.
+        }
+    }
+
+    function fallbackToHardNavigation(targetUrl, reason, error) {
+        const destination = targetUrl || window.location.href;
+        errorLog(`Falling back to full navigation (${reason}) → ${destination}`, error);
+        window.location.href = destination;
+    }
+
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
-    const buttonLoadingCounts = new WeakMap();
+    const buttonLoadingCounts = new Map();
+    const activeLoadingTargets = new Set();
+    const pendingState = { count: 0 };
+    const scrollPositions = new Map();
+    const scrollStoragePrefix = 'soft-nav:scroll:';
+    const sessionStorageAvailable = (() => {
+        try {
+            const key = '__soft_nav_scroll__';
+            sessionStorage.setItem(key, '1');
+            sessionStorage.removeItem(key);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    })();
+
+    if (typeof history.scrollRestoration === 'string') {
+        history.scrollRestoration = 'manual';
+    }
 
     function createTransitionForSelector(selector) {
         if (!selector || !app) {
@@ -284,6 +375,133 @@
         return element.closest(LOADABLE_SELECTOR);
     }
 
+    function emitLoadingState(target, state) {
+        if (!target) {
+            return;
+        }
+        try {
+            const event = new CustomEvent('soft:loading-state', { detail: { target, state } });
+            document.dispatchEvent(event);
+        } catch (error) {
+            debugLog('Failed to dispatch loading state event', error);
+        }
+    }
+
+    function resetAllLoadingStates(reason) {
+        if (!activeLoadingTargets.size) {
+            return;
+        }
+        debugLog('Resetting hanging loading states', reason);
+        const targets = Array.from(activeLoadingTargets);
+        targets.forEach(target => {
+            try {
+                stopButtonLoading(target);
+            } catch (error) {
+                errorLog('Failed to reset loading state', error);
+            }
+        });
+    }
+
+    function getScrollStorageKey(url) {
+        return `${scrollStoragePrefix}${url}`;
+    }
+
+    function storeScrollPosition(url, position) {
+        if (!url) {
+            return;
+        }
+        const normalized = {
+            x: Math.max(0, Math.round(position && typeof position.x === 'number' ? position.x : window.scrollX)),
+            y: Math.max(0, Math.round(position && typeof position.y === 'number' ? position.y : window.scrollY))
+        };
+        scrollPositions.set(url, normalized);
+        if (!sessionStorageAvailable) {
+            return;
+        }
+        try {
+            sessionStorage.setItem(getScrollStorageKey(url), JSON.stringify(normalized));
+        } catch (error) {
+            debugLog('Failed to persist scroll position', error);
+        }
+    }
+
+    function readStoredScrollPosition(url) {
+        if (!url) {
+            return null;
+        }
+        if (scrollPositions.has(url)) {
+            return scrollPositions.get(url);
+        }
+        if (!sessionStorageAvailable) {
+            return null;
+        }
+        try {
+            const raw = sessionStorage.getItem(getScrollStorageKey(url));
+            if (!raw) {
+                return null;
+            }
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                scrollPositions.set(url, parsed);
+                return parsed;
+            }
+        } catch (error) {
+            debugLog('Failed to read stored scroll position', error);
+        }
+        return null;
+    }
+
+    function restoreScrollPosition(url) {
+        const position = readStoredScrollPosition(url);
+        if (!position) {
+            return false;
+        }
+        window.scrollTo({ left: position.x || 0, top: position.y || 0, behavior: 'auto' });
+        return true;
+    }
+
+    function applyScrollBehavior(options, finalUrl) {
+        if (!finalUrl) {
+            return;
+        }
+        if (options && options.scroll === false) {
+            if (!restoreScrollPosition(finalUrl)) {
+                window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            }
+            storeScrollPosition(finalUrl);
+            return;
+        }
+
+        if (options && options.scroll === 'preserve') {
+            storeScrollPosition(finalUrl);
+            return;
+        }
+
+        let target = null;
+        const scrollTarget = options ? options.scrollTarget : null;
+        if (scrollTarget) {
+            try {
+                target = typeof scrollTarget === 'string' ? app.querySelector(scrollTarget) : null;
+            } catch (error) {
+                debugLog('Invalid scroll target selector', error);
+            }
+        }
+        if (!target) {
+            target = app.querySelector('[data-soft-scroll-target]');
+        }
+        if (target instanceof HTMLElement) {
+            try {
+                target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            } catch (error) {
+                debugLog('Failed to scroll to target element', error);
+                window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            }
+        } else {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        }
+        storeScrollPosition(finalUrl);
+    }
+
     function startButtonLoading(element) {
         const target = resolveLoadableElement(element);
         if (!target) {
@@ -310,6 +528,8 @@
             }
         }
         buttonLoadingCounts.set(target, count + 1);
+        activeLoadingTargets.add(target);
+        emitLoadingState(target, 'start');
         return target;
     }
 
@@ -327,6 +547,7 @@
             return;
         }
         buttonLoadingCounts.delete(target);
+        activeLoadingTargets.delete(target);
         target.removeAttribute('aria-busy');
         target.removeAttribute('data-loading');
         if (target instanceof HTMLButtonElement || target instanceof HTMLInputElement) {
@@ -357,6 +578,7 @@
             delete target.dataset.prevPointerEvents;
             delete target.dataset.prevTabindex;
         }
+        emitLoadingState(target, 'stop');
     }
 
     function updateAdminNavActive(url) {
@@ -450,9 +672,36 @@
         });
     }
 
-    function beginPending() { }
+    function dispatchPendingEvent() {
+        try {
+            const event = new CustomEvent('soft:pending-state', { detail: { count: pendingState.count } });
+            document.dispatchEvent(event);
+        } catch (error) {
+            debugLog('Failed to dispatch pending event', error);
+        }
+    }
 
-    function endPending() { }
+    function beginPending(source) {
+        pendingState.count += 1;
+        if (pendingState.count === 1) {
+            body.classList.add('soft-nav-pending');
+        }
+        debugLog('Pending started', { source, count: pendingState.count });
+        dispatchPendingEvent();
+    }
+
+    function endPending(source) {
+        if (pendingState.count <= 0) {
+            pendingState.count = 0;
+            return;
+        }
+        pendingState.count -= 1;
+        if (pendingState.count === 0) {
+            body.classList.remove('soft-nav-pending');
+        }
+        debugLog('Pending finished', { source, count: pendingState.count });
+        dispatchPendingEvent();
+    }
 
     function executeSoftScripts(container) {
         if (!container) {
@@ -598,47 +847,85 @@
             Object.assign(fetchInit.headers, options.headers);
         }
 
-        beginPending();
+        beginPending('fetch');
         let response;
         try {
             response = await fetch(requestUrl, fetchInit);
-        } catch (_) {
-            window.location.href = requestUrl;
-            return false;
+        } catch (error) {
+            debugLog('Soft navigation request failed', error);
+            fallbackToHardNavigation(requestUrl, 'request-error', error);
+            return { success: false, finalUrl: requestUrl };
         } finally {
-            endPending();
+            endPending('fetch');
         }
 
-        if (!response || response.status === 204) {
-            window.location.href = requestUrl;
-            return false;
+        if (!response) {
+            debugLog('Soft navigation received empty response');
+            fallbackToHardNavigation(requestUrl, 'empty-response');
+            return { success: false, finalUrl: requestUrl };
         }
 
+        if (response.status === 204) {
+            debugLog('Soft navigation received 204 response');
+            fallbackToHardNavigation(requestUrl, 'no-content');
+            return { success: false, finalUrl: requestUrl };
+        }
+
+        const finalUrlFromResponse = response.url || requestUrl;
         const contentType = response.headers.get('Content-Type') || '';
         if (!contentType.includes('text/html')) {
-            window.location.href = response.url || requestUrl;
-            return false;
+            debugLog('Soft navigation received unsupported content type', contentType);
+            fallbackToHardNavigation(finalUrlFromResponse, 'unsupported-content');
+            return { success: false, finalUrl: finalUrlFromResponse };
         }
 
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
+        let text;
+        try {
+            text = await response.text();
+        } catch (error) {
+            debugLog('Failed to read response text', error);
+            fallbackToHardNavigation(finalUrlFromResponse, 'read-error', error);
+            return { success: false, finalUrl: finalUrlFromResponse };
+        }
+
+        let doc;
+        try {
+            const parser = new DOMParser();
+            doc = parser.parseFromString(text, 'text/html');
+        } catch (error) {
+            debugLog('DOMParser failed to parse response', error);
+            fallbackToHardNavigation(finalUrlFromResponse, 'parse-error', error);
+            return { success: false, finalUrl: finalUrlFromResponse };
+        }
+
+        if (!doc || doc.querySelector('parsererror')) {
+            debugLog('Parsed document does not look valid');
+            fallbackToHardNavigation(finalUrlFromResponse, 'invalid-document');
+            return { success: false, finalUrl: finalUrlFromResponse };
+        }
+
         const newMain = doc.getElementById('app');
         if (!newMain) {
-            window.location.href = response.url || requestUrl;
-            return false;
+            debugLog('Parsed document does not contain #app');
+            fallbackToHardNavigation(finalUrlFromResponse, 'missing-app');
+            return { success: false, finalUrl: finalUrlFromResponse };
         }
 
         const importedMain = document.importNode(newMain, true);
         if (transition && typeof transition.prepare === 'function') {
-            transition.prepare(importedMain);
+            try {
+                transition.prepare(importedMain);
+            } catch (error) {
+                debugLog('Transition prepare failed', error);
+            }
         }
 
         let hidePromise = null;
         if (transition && typeof transition.hide === 'function') {
             try {
                 hidePromise = transition.hide();
-            } catch (_) {
+            } catch (error) {
+                debugLog('Transition hide threw synchronously', error);
                 hidePromise = null;
             }
         } else {
@@ -648,8 +935,8 @@
         if (hidePromise) {
             try {
                 await hidePromise;
-            } catch (_) {
-                // Ignore transition wait failures and continue swapping.
+            } catch (error) {
+                debugLog('Transition hide promise rejected', error);
             }
         }
         cancelAppAnimation();
@@ -660,8 +947,8 @@
         if (transition && typeof transition.show === 'function') {
             try {
                 await transition.show();
-            } catch (_) {
-                // Ignore scoped transition failures and continue.
+            } catch (error) {
+                debugLog('Transition show promise rejected', error);
             }
         }
 
@@ -673,20 +960,18 @@
             document.title = newTitle.textContent || document.title;
         }
 
-        //if (options.scroll !== false) {
-        //    window.scrollTo({ top: 0, behavior: 'auto' });
-        //}
-
-        const finalUrl = response.url || requestUrl;
+        const finalUrl = finalUrlFromResponse;
         if (options.pushState) {
             history.pushState({ url: finalUrl }, '', finalUrl);
         } else if (options.replaceState) {
             history.replaceState({ url: finalUrl }, '', finalUrl);
         }
 
+        applyScrollBehavior(options, finalUrl);
         updateAdminNavActive(finalUrl);
+        debugLog('Soft navigation completed', { url: finalUrl, method });
 
-        return true;
+        return { success: true, finalUrl };
     }
 
     async function handleNavigation(url, opts) {
@@ -697,22 +982,37 @@
         const trigger = options.trigger;
         delete options.trigger;
         const loadingTarget = trigger ? startButtonLoading(trigger) : null;
+
+        storeScrollPosition(currentUrl);
+
         if (!sameOrigin(url)) {
+            resetAllLoadingStates('cross-origin');
             if (loadingTarget) {
                 stopButtonLoading(loadingTarget);
             }
             hideApp();
-            window.location.href = url;
-            return;
+            fallbackToHardNavigation(url, 'cross-origin');
+            return false;
         }
-        let success;
+
+        let result = { success: false, finalUrl: url };
         try {
-            success = await fetchAndSwap(url, options, transition);
-            return success;
+            result = await fetchAndSwap(url, options, transition);
+            if (result && result.success && result.finalUrl) {
+                currentUrl = result.finalUrl;
+            }
+            return result ? !!result.success : false;
+        } catch (error) {
+            errorLog('Unexpected navigation error', error);
+            fallbackToHardNavigation(url, 'unexpected-error', error);
+            return false;
         } finally {
             showApp();
             if (loadingTarget) {
                 stopButtonLoading(loadingTarget);
+            }
+            if (!result || !result.success) {
+                resetAllLoadingStates('navigation-failed');
             }
         }
     }
@@ -754,69 +1054,16 @@
     }
 
     function onPopState(event) {
+        resetAllLoadingStates('popstate');
         const url = event.state && event.state.url ? event.state.url : window.location.href;
         handleNavigation(url, { method: 'GET', pushState: false, replaceState: true, scroll: false });
     }
 
-    function hookXmlHttpRequest() {
-        if (!window.XMLHttpRequest) {
-            return;
-        }
-        const origOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function () {
-            this.addEventListener('loadstart', beginPending);
-            this.addEventListener('loadend', endPending);
-            return origOpen.apply(this, arguments);
-        };
-    }
-
-    function hookFetch() {
-        if (!window.fetch) {
-            return;
-        }
-        const original = window.fetch.bind(window);
-        window.fetch = function (input, init) {
-            let headers = init && init.headers;
-            let skip = false;
-            if (headers) {
-                if (headers instanceof Headers) {
-                    skip = headers.get('X-Soft-Nav') === '1';
-                } else if (Array.isArray(headers)) {
-                    skip = headers.some(([name, value]) => name === 'X-Soft-Nav' && value === '1');
-                } else if (typeof headers === 'object') {
-                    skip = headers['X-Soft-Nav'] === '1';
-                }
-            }
-
-            if (!skip) {
-                beginPending();
-            }
-
-            const promise = original(input, init);
-            if (promise && typeof promise.finally === 'function') {
-                return promise.finally(() => {
-                    if (!skip) {
-                        endPending();
-                    }
-                });
-            }
-
-            promise.then(() => {
-                if (!skip) {
-                    endPending();
-                }
-            }, () => {
-                if (!skip) {
-                    endPending();
-                }
-            });
-            return promise;
-        };
-    }
-
-    hookXmlHttpRequest();
-    hookFetch();
-    history.replaceState({ url: window.location.href }, '', window.location.href);
+    history.replaceState({ url: currentUrl }, '', currentUrl);
+    storeScrollPosition(currentUrl);
+    window.addEventListener('beforeunload', () => {
+        storeScrollPosition(currentUrl);
+    });
 
     updateAdminNavActive(window.location.href);
 
