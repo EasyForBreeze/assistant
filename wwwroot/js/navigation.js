@@ -229,7 +229,17 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
             return false;
         }
 
-        const importedMain = document.importNode(newMain, true);
+        let importedMain = null;
+        if (typeof document.adoptNode === 'function') {
+            try {
+                importedMain = document.adoptNode(newMain);
+            } catch (_) {
+                importedMain = null;
+            }
+        }
+        if (!importedMain) {
+            importedMain = document.importNode(newMain, true);
+        }
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
         }
