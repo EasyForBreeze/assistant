@@ -108,7 +108,28 @@ export function animateAppVisibility(target, shouldShow) {
     } else {
         target.classList.add(CLASSNAMES.hiding);
     }
+        return null;
+    }
 
+    ensureBaseClass(target);
+    cancelAppAnimation(target);
+    clearAnimationClasses(target);
+
+    const prefersReducedMotion = motionPreference && motionPreference.matches;
+    const supportsCssAnimations = typeof target.getAnimations === 'function';
+
+    if (!supportsCssAnimations || prefersReducedMotion) {
+        applyVisibility(target, shouldShow);
+        return null;
+    }
+
+    target.classList.add(CLASSNAMES.animating);
+    if (shouldShow) {
+        target.classList.remove(CLASSNAMES.visible);
+        target.classList.add(CLASSNAMES.showing);
+    } else {
+        target.classList.add(CLASSNAMES.hiding);
+    }
     const expectedName = shouldShow ? 'app-visibility-show' : 'app-visibility-hide';
     let animations = [];
     try {
@@ -165,7 +186,7 @@ export function animateAppVisibility(target, shouldShow) {
                 try {
                     animation.cancel();
                 } catch (_) {
-                    // Ignore cancellation errors.
+                    // Ignore cancellation errors
                 }
             });
             finalize();
