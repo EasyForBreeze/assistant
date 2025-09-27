@@ -1,18 +1,18 @@
 :root {
-    --app-visibility-show-duration: 460ms;
-    --app-visibility-hide-duration: 360ms;
-    --app-visibility-show-easing: cubic-bezier(0.33, 1, 0.68, 1);
+    --app-visibility-show-duration: 260ms;
+    --app-visibility-hide-duration: 220ms;
+    --app-visibility-show-easing: cubic-bezier(0.22, 1, 0.36, 1);
     --app-visibility-hide-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-visibility {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translate3d(0, 6px, 0);
 }
 
 .app-visibility.app-visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
 }
 
 .app-visibility.app-animating {
@@ -30,29 +30,21 @@
 @keyframes app-visibility-show {
     0% {
         opacity: 0;
-        transform: translateY(12px);
-    }
-    70% {
-        opacity: 0.85;
-        transform: translateY(-4px);
+        transform: translate3d(0, 6px, 0);
     }
     100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
     }
 }
 
 @keyframes app-visibility-hide {
     0% {
         opacity: 1;
-        transform: translateY(0);
-    }
-    35% {
-        opacity: 0.85;
-        transform: translateY(6px);
+        transform: translate3d(0, 0, 0);
     }
     100% {
         opacity: 0;
-        transform: translateY(12px);
+        transform: translate3d(0, 6px, 0);
     }
 }

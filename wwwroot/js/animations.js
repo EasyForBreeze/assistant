@@ -98,7 +98,14 @@ export function animateAppVisibility(target, shouldShow) {
     }
 
     const expectedName = shouldShow ? 'app-visibility-show' : 'app-visibility-hide';
-    const animations = target.getAnimations().filter(animation => animation.animationName === expectedName);
+    let animations = [];
+    try {
+        animations = target.getAnimations({ subtree: false });
+    } catch (_) {
+        animations = target.getAnimations();
+    }
+
+    animations = animations.filter(animation => animation.animationName === expectedName);
 
     if (animations.length === 0) {
         clearAnimationClasses(target);
