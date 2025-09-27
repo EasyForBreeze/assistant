@@ -28,6 +28,20 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         });
     }
 
+    function createFragmentContent(html) {
+        const template = document.createElement('template');
+        template.innerHTML = html || '';
+        return template.content;
+    }
+
+    function setContainerHtml(target, html) {
+        if (!target) {
+            return;
+        }
+        target.innerHTML = html || '';
+        executeSoftScripts(target);
+    }
+
     function refreshScriptHost(doc) {
         if (!scriptHost) {
             return;
@@ -144,7 +158,7 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
             credentials: 'include',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'text/html,application/xhtml+xml',
+                'Accept': 'application/json,text/html,application/xhtml+xml',
                 'X-Soft-Nav': '1'
             }
         };
@@ -172,9 +186,118 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         }
 
         const contentType = response.headers.get('Content-Type') || '';
-        if (!contentType.includes('text/html')) {
+        if (!contentType.includes('text/html') && !contentType.includes('application/json')) {
             window.location.href = response.url || requestUrl;
             return false;
+        }
+
+        if (contentType.includes('application/json')) {
+            let payload;
+            try {
+                payload = await response.json();
+            } catch (_) {
+                window.location.href = response.url || requestUrl;
+                return false;
+            }
+
+            const fragments = Array.isArray(payload?.fragments) ? payload.fragments : [];
+            const fragmentMap = new Map();
+            for (const fragment of fragments) {
+                if (!fragment || typeof fragment.target !== 'string') {
+                    continue;
+                }
+                fragmentMap.set(fragment.target, fragment);
+            }
+
+            const appFragment = fragmentMap.get('#app');
+            if (!appFragment) {
+                window.location.href = response.url || requestUrl;
+                return false;
+            }
+
+            const appContent = createFragmentContent(appFragment.html || '');
+            if (transition && typeof transition.prepare === 'function') {
+                transition.prepare(appContent);
+            }
+            const appNodes = Array.from(appContent.childNodes);
+
+            let hidePromise = null;
+            if (transition && typeof transition.hide === 'function') {
+                try {
+                    hidePromise = transition.hide();
+                } catch (_) {
+                    hidePromise = null;
+                }
+            } else {
+                hidePromise = hideAppAnimation(body, currentApp);
+            }
+
+            if (hidePromise) {
+                try {
+                    await hidePromise;
+                } catch (_) {
+                    // Ignore transition wait failures and continue swapping.
+                }
+            }
+            cancelAppAnimation(currentApp);
+            currentApp.replaceChildren(...appNodes);
+            executeSoftScripts(currentApp);
+
+            fragmentMap.delete('#app');
+            for (const [selector, fragment] of fragmentMap.entries()) {
+                let targetElement = null;
+                try {
+                    targetElement = root.querySelector(selector);
+                } catch (_) {
+                    targetElement = null;
+                }
+
+                if (!targetElement) {
+                    continue;
+                }
+
+                const mode = fragment?.mode || 'inner';
+                const html = fragment?.html || '';
+                if (mode === 'replace') {
+                    const content = createFragmentContent(html);
+                    const first = content.firstElementChild;
+                    if (first) {
+                        targetElement.replaceWith(first);
+                        if (targetElement === currentApp) {
+                            currentApp = first;
+                        }
+                        executeSoftScripts(first);
+                    } else {
+                        targetElement.replaceWith(document.createComment(''));
+                    }
+                } else {
+                    setContainerHtml(targetElement, html);
+                }
+            }
+
+            if (transition && typeof transition.show === 'function') {
+                try {
+                    await transition.show();
+                } catch (_) {
+                    // Ignore scoped transition failures and continue.
+                }
+            }
+
+            const newTitle = typeof payload?.title === 'string' ? payload.title.trim() : '';
+            if (newTitle) {
+                document.title = newTitle;
+            }
+
+            const finalUrl = response.url || requestUrl;
+            if (options.pushState) {
+                history.pushState({ url: finalUrl }, '', finalUrl);
+            } else if (options.replaceState) {
+                history.replaceState({ url: finalUrl }, '', finalUrl);
+            }
+
+            updateAdminNavActive(finalUrl);
+
+            return true;
         }
 
         const text = await response.text();

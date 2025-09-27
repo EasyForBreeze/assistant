@@ -1,0 +1,42 @@
+@using System.Collections.Generic
+@using System.Text.Encodings.Web
+@using System.Text.Json
+@using Microsoft.AspNetCore.Html
+@{
+    Response.ContentType = "application/json";
+
+    string? ToHtml(IHtmlContent? content)
+    {
+        if (content is null)
+        {
+            return string.Empty;
+        }
+
+        using var writer = new System.IO.StringWriter();
+        content.WriteTo(writer, HtmlEncoder.Default);
+        return writer.ToString();
+    }
+
+    var fragments = new List<object>();
+    var bodyContent = RenderBody();
+    fragments.Add(new { target = "#app", html = ToHtml(bodyContent), mode = "inner" });
+
+    var toastsContent = RenderSection("Toasts", required: false);
+    fragments.Add(new { target = "#toastsHost", html = ToHtml(toastsContent), mode = "inner" });
+
+    var scriptsContent = RenderSection("Scripts", required: false);
+    fragments.Add(new { target = "#pageScripts", html = ToHtml(scriptsContent), mode = "inner" });
+
+    var payload = new
+    {
+        title = ViewData["Title"]?.ToString() ?? "Assistant",
+        fragments
+    };
+
+    var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        WriteIndented = false
+    });
+}
+@Html.Raw(json)
