@@ -1,5 +1,4 @@
 import { initNavigation } from './navigation.js';
-import { seedAppVisibility } from './animations.js';
 import { setupLoadingHooks } from './loading.js';
 function bootstrap() {
     const body = document.body;
@@ -26,7 +25,6 @@ function bootstrap() {
 
     setupLoadingHooks();
 
-    seedAppVisibility(app);
     controller.showApp();
     controller.updateAdminNavActive(window.location.href);
     history.replaceState({ url: window.location.href }, '', window.location.href);

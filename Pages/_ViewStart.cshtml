@@ -1,5 +1,3 @@
-@{
-    var softNavHeader = Context?.Request?.Headers["X-Soft-Nav"];
-    var softNavRequested = string.Equals(softNavHeader.ToString(), "1", System.StringComparison.Ordinal);
-    Layout = softNavRequested ? "_SoftNavLayout" : "_Layout";
+﻿@{
+    Layout = "_Layout";
 }
