@@ -414,8 +414,12 @@
             x: Math.max(0, Math.round(position && typeof position.x === 'number' ? position.x : window.scrollX)),
             y: Math.max(0, Math.round(position && typeof position.y === 'number' ? position.y : window.scrollY))
         };
+        const previous = scrollPositions.get(url);
         scrollPositions.set(url, normalized);
         if (!sessionStorageAvailable) {
+            return;
+        }
+        if (previous && previous.x === normalized.x && previous.y === normalized.y) {
             return;
         }
         try {
@@ -465,10 +469,17 @@
             return;
         }
         if (options && options.scroll === false) {
-            if (!restoreScrollPosition(finalUrl)) {
-                window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            const restore = () => {
+                if (!restoreScrollPosition(finalUrl)) {
+                    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                }
+                storeScrollPosition(finalUrl);
+            };
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(restore);
+            } else {
+                restore();
             }
-            storeScrollPosition(finalUrl);
             return;
         }
 
