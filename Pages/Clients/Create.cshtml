@@ -459,6 +459,7 @@
           const panels = $$('[data-step]');
           const heads  = $$('[id^="stepHead"]');
           const stepNum = (el)=> +el.getAttribute('data-step') || +el.id.replace('stepHead','');
+          const sortedStepIds = panels.map(stepNum).sort((a,b)=>a-b);
 
           // Условия включения шагов
           const predicates =
@@ -468,11 +469,7 @@
             8: ()=> isAdmin && (swClientAuth?.checked ?? false),
           };
 
-          const enabledSteps = () =>
-          {
-            const nums = panels.map(stepNum).sort((a,b)=>a-b);
-            return nums.filter(n => (predicates[n] ? predicates[n]() : true));
-          };
+          const enabledSteps = () => sortedStepIds.filter(n => (predicates[n] ? predicates[n]() : true));
 
           // ---- Realm description
           function updateRealmDesc()
