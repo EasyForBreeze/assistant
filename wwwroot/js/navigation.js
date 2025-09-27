@@ -7,6 +7,49 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         return null;
     }
 
+    const teardownCallbacks = new Set();
+
+    function registerTeardown(entry) {
+        if (!entry) {
+            return () => {};
+        }
+        let callback = null;
+        if (typeof entry === 'function') {
+            callback = entry;
+        } else if (entry && typeof entry.abort === 'function') {
+            callback = () => {
+                try {
+                    entry.abort();
+                } catch (error) {
+                    console.error('Soft navigation teardown abort failed:', error);
+                }
+            };
+        } else {
+            return () => {};
+        }
+        teardownCallbacks.add(callback);
+        return () => teardownCallbacks.delete(callback);
+    }
+
+    function runTeardowns() {
+        if (!teardownCallbacks.size) {
+            return;
+        }
+        const entries = Array.from(teardownCallbacks);
+        teardownCallbacks.clear();
+        for (const fn of entries) {
+            try {
+                fn();
+            } catch (error) {
+                console.error('Soft navigation teardown failed:', error);
+            }
+        }
+    }
+
+    if (typeof window !== 'undefined') {
+        window.__softNavRegisterTeardown = registerTeardown;
+    }
+
     let currentApp = app;
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
     const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
@@ -209,6 +252,7 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
                 // Ignore transition wait failures and continue swapping.
             }
         }
+        runTeardowns();
         cancelAppAnimation(currentApp);
         currentApp.replaceWith(importedMain);
         currentApp = importedMain;

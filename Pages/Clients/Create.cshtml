@@ -432,7 +432,6 @@
           // Redirects / Local / Service roles (чипы)
           const redirInput = $('#redirInput'), redirList = $('#redirList');
           const locInput   = $('#locInput'),   locList   = $('#locList');
-          const svcList    = $('#svcList');
 
           // Hidden fields (BindProperty)
           const hidClientId      = $('#hidClientId');
@@ -451,12 +450,10 @@
           const hidCreatioEmail  = $('#hidCreatioSecretEmail');
 
           // ---- Chips data
-          const redirs   = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
-          const locals   = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
-          const svcRoles = @Html.Raw(string.IsNullOrWhiteSpace(Model.ServiceRolesJson) ? "[]" : Model.ServiceRolesJson);
+          const redirs = @Html.Raw(string.IsNullOrWhiteSpace(Model.RedirectUrisJson) ? "[]" : Model.RedirectUrisJson);
+          const locals = @Html.Raw(string.IsNullOrWhiteSpace(Model.LocalRolesJson) ? "[]" : Model.LocalRolesJson);
           renderChips(redirList, redirs);
           renderChips(locList,  locals);
-          renderChips(svcList,  svcRoles);
 
           // ---- Panels & headers
           const panels = $$('[data-step]');
@@ -665,7 +662,6 @@
 
             hidRedirects.value      = JSON.stringify(redirs);
             hidLocalRoles.value     = JSON.stringify(locals);
-            //hidServiceRoles.value   = JSON.stringify(svcRoles);
 
             hidAppName.value        = trim(appNameInput?.value);
             hidAppUrl.value         = trim(appUrlInput?.value);
@@ -923,379 +919,25 @@
           }
         })();
     </script>
+    <!-- Service Roles module -->
+    <script type="module" data-soft-nav>
+        import { initServiceRoles } from '@Url.Content("~/js/service-roles.js")';
 
-    <!-- Изолированный модуль Service Roles -->
-    <script data-soft-nav>
-        (() => {
-          // helpers
-          const $  = (s, r=document)=>r.querySelector(s);
-          const el = (t, cls, html)=>{ const n=document.createElement(t); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
-          const safe = fn => (...a)=>{ try { return fn(...a); } catch(e){ console.error('[ServiceRolesUI]', e); } };
+        const root = document.querySelector('[data-step="7"]');
+        const hiddenInput = document.getElementById('@Html.IdFor(m => m.ServiceRolesJson)')
+            || document.getElementById('hidServiceRoles')
+            || document.querySelector('input[name="ServiceRolesJson"]');
+        const realmSelect = document.getElementById('@Html.IdFor(m => m.Realm)')
+            || document.getElementById('realmSelect')
+            || document.querySelector('select[name="Realm"]');
 
-          // scope: только шаг 7
-          const step = document.querySelector('[data-step="7"]');
-          if (!step) return;
-
-          const realmEl  = document.getElementById("@Html.IdFor(m => m.Realm)") || $('#realmSelect') || $('select[name="Realm"]');
-          const hidRoles = document.getElementById("@Html.IdFor(m => m.ServiceRolesJson)") || $('#hidServiceRoles') || $('input[name="ServiceRolesJson"]');
-
-          const svcList        = $('#svcList', step);
-          const svcSearchInput = $('#svcSearchInput', step);
-          const svcSearchBtn   = $('#svcSearchBtn', step);
-          const svcSearchDd    = $('#svcSearchDd', step);
-
-          const svcChosen      = $('#svcChosen', step);
-          const svcChosenTag   = $('#svcChosenTag', step);
-          const svcChangeBtn   = $('#svcChange', step);
-
-          const svcRoleList    = $('#svcRoleList', step);
-          const btnMoreRoles   = $('#btnMoreRoles', step);
-          const svcErr         = $('#svcErr', step);
-
-          const PAGE_URL = '@Url.Page(null)';
-          const realm = ()=> (realmEl?.value ?? '').trim();
-
-          // --- MIN LEN
-          const MIN_LEN = 3;
-
-          // state
-          const state = {
-            chips: [],
-            currentClient: null,           // { id, clientId, realm }
-            page: 0, size: 50, more: false,
-            cacheClients: new Map(),       // realm|q → [{id,clientId}]
-            cacheClientRoles: new Map(),   // realm|clientId|page → ["roleA",...]
-            lastQuery: '',
-            lastRealm: (realmEl?.value ?? '').trim(),
-            roleScanCursor: 0,
-            roleScanHasMore: false,
-            pendingEmpty: false
-          };
-
-          // utils
-          async function fetchJson(url, opts){
-            const r = await fetch(url, {headers:{'Accept':'application/json'}, ...opts});
-            if(!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-          }
-          function hideDd(){ if(!svcSearchDd) return; svcSearchDd.classList.add('hidden'); svcSearchDd.innerHTML=''; svcSearchDd.style.minHeight=''; }
-          function showDd(){ if(!svcSearchDd) return; svcSearchDd.classList.remove('hidden'); }
-          function showInfo(message){
-            if (!svcSearchDd) return;
-            svcSearchDd.innerHTML = '';
-            svcSearchDd.appendChild(el('div', 'px-2 py-1 text-slate-400', message));
-            showDd();
-          }
-          function showError(message, { append = false } = {}){
-            if (!svcSearchDd) return;
-            const node = el('div', 'px-2 py-1 text-rose-400', message);
-            if (append){
-              svcSearchDd.appendChild(node);
-            } else {
-              svcSearchDd.innerHTML = '';
-              svcSearchDd.appendChild(node);
-            }
-            showDd();
-          }
-          function showLoading(){
-            if (!svcSearchDd) return;
-            svcSearchDd.innerHTML = `<div class="px-3 py-2 text-slate-400">Ищем...</div>`;
-            svcSearchDd.style.minHeight = '56px';
-            showDd();
-          }
-
-          // chips persist/restore
-          function persist(){ if(hidRoles) hidRoles.value = JSON.stringify(state.chips); }
-          function renderChips(){
-            if(!svcList) return;
-            svcList.innerHTML = '';
-            for (const s of state.chips){
-              const chip = el('div','kc-chip'); chip.textContent = s;
-              const x = el('button','kc-chip-x','×'); x.type='button'; x.title='Удалить';
-              x.addEventListener('click', safe(()=>{
-                const i = state.chips.indexOf(s);
-                if(i>=0){ state.chips.splice(i,1); renderChips(); persist(); }
-              }));
-              chip.appendChild(x);
-              svcList.appendChild(chip);
-            }
-          }
-          safe(()=>{
-            const raw = hidRoles?.value || '[]';
-            const arr = JSON.parse(raw);
-            if (Array.isArray(arr)) for (const v of arr) if (typeof v === 'string' && !state.chips.includes(v)) state.chips.push(v);
-            renderChips();
-          })();
-
-          // ------- SEARCH: clients + roles (когда клиента не знаем)
-          const cacheClientsKey = (rlm, q) => `${rlm}::${q}`;
-          const cacheClientRolesKey = (rlm, clientId, page) => `${rlm}::${clientId}::${page}`;
-
-          async function searchClients(q, currentRealm){
-            const key = cacheClientsKey(currentRealm, q);
-            if (state.cacheClients.has(key)) return state.cacheClients.get(key);
-            const url = `${PAGE_URL}?handler=ClientsSearch&realm=${encodeURIComponent(currentRealm)}&q=${encodeURIComponent(q)}&first=0&max=12`;
-            const clients = await fetchJson(url); // [{id, clientId}]
-            state.cacheClients.set(key, clients || []);
-            return clients || [];
-          }
-
-          async function searchRolesAcrossClients(q, append=false, isFirst=false, realmOverride){
-            const currentRealm = (realmOverride ?? state.lastRealm ?? realm()) || '';
-            if (!currentRealm){
-              if (isFirst){
-                showInfo('Сначала выберите Realm.');
-              }
-              return;
-            }
-            const url = `${PAGE_URL}?handler=RoleLookup&realm=${encodeURIComponent(currentRealm)}`
-                      + `&q=${encodeURIComponent(q)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
-            let res;
-            try {
-              res = await fetchJson(url); // { hits:[{clientUuid,clientId,role}], nextClientFirst }
-            } catch (e){
-              console.error('[ServiceRolesUI] role lookup failed', e);
-              if (isFirst){
-                const msg = `Не удалось загрузить роли: ${e?.message ?? e}`;
-                if (state.pendingEmpty){
-                  showError(msg);
-                } else {
-                  showError(msg, { append: true });
-                }
-                state.pendingEmpty = false;
-              }
-              return;
-            }
-            const hits = res.hits || [];
-
-            renderRoleHits(hits, append);
-
-            if (typeof res.nextClientFirst === 'number' && res.nextClientFirst >= 0){
-              state.roleScanCursor = res.nextClientFirst;
-              state.roleScanHasMore = true;
-              ensureMoreHitsButton();
-            } else {
-              state.roleScanHasMore = false;
-              removeMoreHitsButton();
-            }
-
-            if (isFirst){
-              if (state.pendingEmpty && hits.length === 0){
-                svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Совпадений не найдено</div>`;
-                showDd();
-              }
-              state.pendingEmpty = false;
-            }
-          }
-
-          function ensureMoreHitsButton(){
-            if (!svcSearchDd) return;
-            if (svcSearchDd.querySelector('#roleHitsMoreBtn')) return;
-            const btn = el('button','w-full text-center px-3 py-2 mt-2 hover:bg-slate-700 rounded-md','Показать ещё совпадения');
-            btn.type='button';
-            btn.id='roleHitsMoreBtn';
-            btn.addEventListener('click', safe(()=> searchRolesAcrossClients(state.lastQuery, true, false)));
-            svcSearchDd.appendChild(btn);
-          }
-          function removeMoreHitsButton(){
-            document.getElementById('roleHitsMoreBtn')?.remove();
-          }
-
-          function renderRoleHits(hits, append){
-            if (!svcSearchDd || !hits.length) return;
-            let roleSec = svcSearchDd.querySelector('#roleHitsSection');
-            if (!append){
-              roleSec?.remove();
-              roleSec = el('div', null, '');
-              roleSec.id = 'roleHitsSection';
-              roleSec.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Роли (совпадения)'));
-              svcSearchDd.appendChild(roleSec);
-            }
-            for (const m of hits){
-              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
-              line.type='button';
-              line.textContent = `${m.clientId}: ${m.role}`;
-              line.title = 'Добавить роль';
-              line.addEventListener('click', safe(()=>{
-                const val = `${m.clientId}: ${m.role}`;
-                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
-                hideDd();
-              }));
-              roleSec.appendChild(line);
-            }
-          }
-
-          // clients list: ТОЛЬКО clientId
-          function renderClientList(clients){
-            if (!svcSearchDd) return;
-            if (!clients.length){
-              showInfo('Совпадений не найдено');
-              return;
-            }
-            const wrap = el('div', null, '');
-            wrap.appendChild(el('div','kc-mini text-slate-400 px-2 pb-1','Клиенты'));
-            clients.forEach(it=>{
-              const line = el('button','w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
-              line.type='button';
-              line.textContent = it.clientId;
-              line.addEventListener('click', safe(()=> selectClient(it)));
-              wrap.appendChild(line);
+        if (root && hiddenInput) {
+            initServiceRoles(root, {
+                pageUrl: '@Url.Page(null)',
+                hiddenInput,
+                realmInput: realmSelect,
+                getRealm: () => (realmSelect?.value || '').trim()
             });
-            svcSearchDd.innerHTML = '';               // заменяем лоадер
-            svcSearchDd.appendChild(wrap);
-            svcSearchDd.appendChild(el('div','divider my-2',''));
-            showDd();
-          }
-
-          async function unifiedSearch(qRaw){
-            const q = (qRaw||'').trim();
-            if (q.length < MIN_LEN){
-              svcSearchDd.innerHTML = `<div class="px-2 py-1 text-slate-400">Введите минимум ${MIN_LEN} символа</div>`;
-              showDd();
-              return;
-            }
-
-            const currentRealm = realm();
-            if (!currentRealm){
-              showInfo('Сначала выберите Realm.');
-              return;
-            }
-
-            state.lastQuery = q;
-            state.lastRealm = currentRealm;
-            state.roleScanCursor = 0;
-            state.roleScanHasMore = false;
-            state.pendingEmpty = true;
-            removeMoreHitsButton();
-
-            showLoading();
-
-            // 1) Клиенты — ждём и рисуем
-            let clients = [];
-            try {
-              clients = await searchClients(q, currentRealm);
-            } catch (e){
-              console.error('[ServiceRolesUI] client search failed', e);
-              showError(`Не удалось выполнить поиск: ${e?.message ?? e}`);
-              state.pendingEmpty = false;
-              return;
-            }
-            if (clients.length){
-              renderClientList(clients);
-              state.pendingEmpty = false;
-            }
-
-            // 2) Роли — фоном
-            searchRolesAcrossClients(q, false, true, currentRealm).catch(()=>{});
-          }
-
-          // выбор клиента
-          function selectClient(it){
-            const currentRealm = state.lastRealm || realm();
-            state.currentClient = { id: it.id, clientId: it.clientId, realm: currentRealm };
-            if (svcChosenTag) svcChosenTag.textContent = it.clientId;
-            svcChosen?.classList.remove('hidden');
-            hideDd();
-            if (svcSearchInput) svcSearchInput.value = it.clientId;
-
-            state.page = 0;
-            svcRoleList && (svcRoleList.innerHTML = '');
-            loadRoles({append:false});
-          }
-          svcChangeBtn?.addEventListener('click', safe(()=>{
-            state.currentClient = null;
-            svcChosen?.classList.add('hidden');
-            svcSearchInput?.focus();
-          }));
-
-          // роли клиента, пагинация
-          async function loadRoles({append}){
-            if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
-            if (!state.currentClient) return;
-
-            const currentRealm = state.currentClient.realm || realm();
-            if (!currentRealm){
-              svcErr?.classList.add('show');
-              if (svcErr) svcErr.textContent = 'Сначала выберите Realm.';
-              return;
-            }
-
-            const key = cacheClientRolesKey(currentRealm, state.currentClient.clientId, state.page);
-            try{
-              let roles = state.cacheClientRoles.get(key);
-              if (!roles){
-                const url = `${PAGE_URL}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(currentRealm)}&first=${state.page*state.size}&max=${state.size}`;
-                roles = await fetchJson(url);
-                state.cacheClientRoles.set(key, roles || []);
-              }
-              renderRoles(roles || [], {append});
-              state.more = (roles?.length || 0) === state.size;
-              btnMoreRoles?.classList.toggle('hidden', !state.more);
-            }catch(e){
-              if (svcErr){ svcErr.textContent = `Не удалось загрузить роли: ${e.message}`; svcErr.classList.add('show'); }
-            }
-          }
-          function renderRoles(roles, {append}){
-            if (!svcRoleList) return;
-            if (!append) svcRoleList.innerHTML = '';
-            if (!roles.length){
-              if (!append) svcRoleList.innerHTML = `<div class="px-2 py-1 text-slate-400">Ролей не найдено</div>`;
-              return;
-            }
-            roles.forEach(name=>{
-              const item = el('button','kc-card px-3 py-2 hover:bg-slate-700 text-left');
-              item.type = 'button';
-              item.textContent = name;
-              item.title = 'Добавить роль';
-              item.addEventListener('click', safe(()=>{
-                if (!state.currentClient) return;
-                const val = `${state.currentClient.clientId}: ${name}`;
-                if (!state.chips.includes(val)){ state.chips.push(val); renderChips(); persist(); }
-              }));
-              svcRoleList.appendChild(item);
-            });
-          }
-          btnMoreRoles?.addEventListener('click', safe(()=>{
-            state.page += 1;
-            loadRoles({append:true});
-          }));
-
-          // events: дизейблим кнопку до MIN_LEN, мгновенный лоадер + rAF, блок Enter, клик вне
-          const updateBtnState = ()=> { if (svcSearchBtn && svcSearchInput) svcSearchBtn.disabled = (svcSearchInput.value.trim().length < MIN_LEN); };
-          updateBtnState();
-          svcSearchInput?.addEventListener('input', updateBtnState);
-
-          svcSearchBtn?.addEventListener('click', safe(()=>{
-            const q = svcSearchInput?.value || '';
-            showLoading();
-            requestAnimationFrame(()=> unifiedSearch(q));
-          }));
-
-          svcSearchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
-          document.addEventListener('click', safe((e)=>{
-            if (!svcSearchDd) return;
-            if (!svcSearchDd.contains(e.target) && e.target !== svcSearchInput && e.target !== svcSearchBtn) hideDd();
-          }));
-
-          function resetForRealmChange(){
-            state.cacheClients.clear();
-            state.cacheClientRoles.clear();
-            state.currentClient = null;
-            state.page = 0;
-            state.more = false;
-            state.lastQuery = '';
-            state.lastRealm = (realmEl?.value ?? '').trim();
-            state.roleScanCursor = 0;
-            state.roleScanHasMore = false;
-            state.pendingEmpty = false;
-            hideDd();
-            svcChosen?.classList.add('hidden');
-            svcRoleList && (svcRoleList.innerHTML = '');
-            if (svcErr){ svcErr.classList.remove('show'); svcErr.textContent=''; }
-            if (svcSearchInput){ svcSearchInput.value=''; updateBtnState(); }
-          }
-
-          realmEl?.addEventListener('change', safe(resetForRealmChange));
-        })();
+        }
     </script>
 }
