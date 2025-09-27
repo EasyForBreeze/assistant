@@ -1,5 +1,5 @@
 import { createScopedTransition } from './transitions.js';
-import { showApp as showAppAnimation, hideApp as hideAppAnimation, cancelAppAnimation } from './animations.js';
+import { showApp as showAppAnimation, hideApp as hideAppAnimation, cancelAppAnimation, seedAppVisibility } from './animations.js';
 import { startButtonLoading, stopButtonLoading, beginPending, endPending } from './loading.js';
 
 export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
@@ -265,6 +265,7 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
                         targetElement.replaceWith(first);
                         if (targetElement === currentApp) {
                             currentApp = first;
+                            seedAppVisibility(currentApp);
                         }
                         executeSoftScripts(first);
                     } else {
@@ -336,6 +337,7 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         currentApp.replaceWith(importedMain);
         currentApp = importedMain;
         executeSoftScripts(currentApp);
+        seedAppVisibility(currentApp);
 
         if (transition && typeof transition.show === 'function') {
             try {
