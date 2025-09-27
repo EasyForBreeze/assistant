@@ -247,6 +247,7 @@
     const pendingState = { count: 0 };
     const scrollPositions = new Map();
     const pendingScrollWrites = new Map();
+    const transitionCache = new Map();
     const scrollStoragePrefix = 'soft-nav:scroll:';
     const sessionStorageAvailable = (() => {
         try {
@@ -267,23 +268,40 @@
         if (!selector || !app) {
             return null;
         }
-        let currentElement;
-        try {
-            currentElement = app.querySelector(selector);
-        } catch (_) {
+        let currentElement = null;
+        let nextElement = null;
+
+        function resolveCurrentElement() {
+            if (currentElement && currentElement.isConnected) {
+                return currentElement;
+            }
+            if (!app) {
+                currentElement = null;
+                return null;
+            }
+            try {
+                currentElement = app.querySelector(selector);
+            } catch (_) {
+                currentElement = null;
+            }
+            return currentElement;
+        }
+
+        currentElement = resolveCurrentElement();
+        if (!currentElement) {
             return null;
         }
-        let nextElement = null;
         return {
             hide() {
-                if (!currentElement) {
+                const element = resolveCurrentElement();
+                if (!element) {
                     return Promise.resolve();
                 }
-                currentElement.classList.remove('fade-enter', 'fade-enter-active');
-                currentElement.classList.add('fade-leave');
-                void currentElement.offsetWidth;
-                currentElement.classList.add('fade-leave-active');
-                return waitForTransition(currentElement, 'opacity');
+                element.classList.remove('fade-enter', 'fade-enter-active');
+                element.classList.add('fade-leave');
+                void element.offsetWidth;
+                element.classList.add('fade-leave-active');
+                return waitForTransition(element, 'opacity');
             },
             prepare(incomingRoot) {
                 nextElement = null;
@@ -314,13 +332,18 @@
                     await waitForTransition(nextElement, 'opacity');
                 } finally {
                     nextElement.classList.remove('fade-enter', 'fade-enter-active');
+                    currentElement = nextElement && nextElement.isConnected ? nextElement : null;
                     nextElement = null;
                 }
+            },
+            reset() {
+                currentElement = null;
+                nextElement = null;
             }
         };
     }
 
-    function createScopedTransition(selector) {
+    function buildScopedTransition(selector) {
         if (!selector || !app) {
             return null;
         }
@@ -344,8 +367,46 @@
             },
             show() {
                 return Promise.all(transitions.map(transition => Promise.resolve(transition.show()))).then(() => undefined);
+            },
+            reset() {
+                transitions.forEach(transition => {
+                    if (transition && typeof transition.reset === 'function') {
+                        transition.reset();
+                    }
+                });
             }
         };
+    }
+
+    function createScopedTransition(selector) {
+        if (!selector || !app) {
+            return null;
+        }
+        const cacheKey = selector.trim();
+        if (!cacheKey) {
+            return null;
+        }
+        let transition = transitionCache.get(cacheKey);
+        if (transition) {
+            return transition;
+        }
+        transition = buildScopedTransition(cacheKey);
+        if (transition) {
+            transitionCache.set(cacheKey, transition);
+        }
+        return transition;
+    }
+
+    function invalidateTransitionCache() {
+        transitionCache.forEach(transition => {
+            if (transition && typeof transition.reset === 'function') {
+                try {
+                    transition.reset();
+                } catch (error) {
+                    debugLog('Failed to reset cached transition', error);
+                }
+            }
+        });
     }
 
     function resolveTransitionTarget(form, submitter) {
@@ -1017,6 +1078,7 @@
         cancelAppAnimation();
         app.replaceWith(importedMain);
         app = importedMain;
+        invalidateTransitionCache();
         executeSoftScripts(app);
 
         if (transition && typeof transition.show === 'function') {
