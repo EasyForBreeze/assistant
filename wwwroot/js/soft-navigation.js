@@ -531,10 +531,17 @@
             return;
         }
         if (options && options.scroll === false) {
-            if (!restoreScrollPosition(finalUrl)) {
-                window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            const restore = () => {
+                if (!restoreScrollPosition(finalUrl)) {
+                    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                }
+                storeScrollPosition(finalUrl);
+            };
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(restore);
+            } else {
+                restore();
             }
-            storeScrollPosition(finalUrl);
             return;
         }
 
