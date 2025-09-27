@@ -240,10 +240,13 @@
     }
 
     const LOADABLE_SELECTOR = '.btn-primary, .btn-danger, .btn-subtle';
-    const buttonLoadingCounts = new Map();
+    const buttonLoadingCounts = new WeakMap();
+    const buttonLoadingTimeouts = new WeakMap();
+    const LOADING_TIMEOUT_MS = 15000;
     const activeLoadingTargets = new Set();
     const pendingState = { count: 0 };
     const scrollPositions = new Map();
+    const pendingScrollWrites = new Map();
     const scrollStoragePrefix = 'soft-nav:scroll:';
     const sessionStorageAvailable = (() => {
         try {
@@ -375,16 +378,40 @@
         return element.closest(LOADABLE_SELECTOR);
     }
 
-    function emitLoadingState(target, state) {
+    function emitLoadingState(target, state, reason) {
         if (!target) {
             return;
         }
         try {
-            const event = new CustomEvent('soft:loading-state', { detail: { target, state } });
+            const event = new CustomEvent('soft:loading-state', { detail: { target, state, reason } });
             document.dispatchEvent(event);
         } catch (error) {
             debugLog('Failed to dispatch loading state event', error);
         }
+    }
+
+    function clearLoadingTimeout(target) {
+        const timeoutId = buttonLoadingTimeouts.get(target);
+        if (timeoutId) {
+            window.clearTimeout(timeoutId);
+            buttonLoadingTimeouts.delete(target);
+        }
+    }
+
+    function scheduleLoadingTimeout(target) {
+        if (!target || buttonLoadingTimeouts.has(target)) {
+            return;
+        }
+        const timeoutId = window.setTimeout(() => {
+            buttonLoadingTimeouts.delete(target);
+            if (!activeLoadingTargets.has(target)) {
+                return;
+            }
+            debugLog('Loading state timed out, forcing stop');
+            emitLoadingState(target, 'timeout', 'timeout');
+            stopButtonLoading(target, 'timeout');
+        }, LOADING_TIMEOUT_MS);
+        buttonLoadingTimeouts.set(target, timeoutId);
     }
 
     function resetAllLoadingStates(reason) {
@@ -395,7 +422,7 @@
         const targets = Array.from(activeLoadingTargets);
         targets.forEach(target => {
             try {
-                stopButtonLoading(target);
+                stopButtonLoading(target, reason || 'reset');
             } catch (error) {
                 errorLog('Failed to reset loading state', error);
             }
@@ -406,6 +433,36 @@
         return `${scrollStoragePrefix}${url}`;
     }
 
+    function persistScrollPosition(url, position) {
+        if (!sessionStorageAvailable) {
+            return;
+        }
+        let entry = pendingScrollWrites.get(url);
+        if (entry) {
+            entry.position = position;
+            return;
+        }
+        entry = { position };
+        const flush = () => {
+            pendingScrollWrites.delete(url);
+            try {
+                sessionStorage.setItem(getScrollStorageKey(url), JSON.stringify(entry.position));
+            } catch (error) {
+                try {
+                    console.warn('[soft-nav]', 'Failed to persist scroll position', error);
+                } catch (_) {
+                    // Ignore console errors.
+                }
+            }
+        };
+        if (typeof window.requestAnimationFrame === 'function') {
+            entry.handle = window.requestAnimationFrame(flush);
+        } else {
+            entry.handle = window.setTimeout(flush, 0);
+        }
+        pendingScrollWrites.set(url, entry);
+    }
+
     function storeScrollPosition(url, position) {
         if (!url) {
             return;
@@ -414,15 +471,13 @@
             x: Math.max(0, Math.round(position && typeof position.x === 'number' ? position.x : window.scrollX)),
             y: Math.max(0, Math.round(position && typeof position.y === 'number' ? position.y : window.scrollY))
         };
+        const previous = scrollPositions.get(url);
+        const unchanged = previous && previous.x === normalized.x && previous.y === normalized.y;
         scrollPositions.set(url, normalized);
-        if (!sessionStorageAvailable) {
+        if (!sessionStorageAvailable || unchanged) {
             return;
         }
-        try {
-            sessionStorage.setItem(getScrollStorageKey(url), JSON.stringify(normalized));
-        } catch (error) {
-            debugLog('Failed to persist scroll position', error);
-        }
+        persistScrollPosition(url, normalized);
     }
 
     function readStoredScrollPosition(url) {
@@ -446,7 +501,11 @@
                 return parsed;
             }
         } catch (error) {
-            debugLog('Failed to read stored scroll position', error);
+            try {
+                console.warn('[soft-nav]', 'Failed to read stored scroll position', error);
+            } catch (_) {
+                // Ignore console errors.
+            }
         }
         return null;
     }
@@ -456,7 +515,14 @@
         if (!position) {
             return false;
         }
-        window.scrollTo({ left: position.x || 0, top: position.y || 0, behavior: 'auto' });
+        const applyScroll = () => {
+            window.scrollTo({ left: position.x || 0, top: position.y || 0, behavior: 'auto' });
+        };
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(applyScroll);
+        } else {
+            applyScroll();
+        }
         return true;
     }
 
@@ -529,11 +595,12 @@
         }
         buttonLoadingCounts.set(target, count + 1);
         activeLoadingTargets.add(target);
-        emitLoadingState(target, 'start');
+        emitLoadingState(target, 'start', 'interaction');
+        scheduleLoadingTimeout(target);
         return target;
     }
 
-    function stopButtonLoading(element) {
+    function stopButtonLoading(element, reason) {
         const target = resolveLoadableElement(element);
         if (!target) {
             return;
@@ -548,6 +615,7 @@
         }
         buttonLoadingCounts.delete(target);
         activeLoadingTargets.delete(target);
+        clearLoadingTimeout(target);
         target.removeAttribute('aria-busy');
         target.removeAttribute('data-loading');
         if (target instanceof HTMLButtonElement || target instanceof HTMLInputElement) {
@@ -578,7 +646,7 @@
             delete target.dataset.prevPointerEvents;
             delete target.dataset.prevTabindex;
         }
-        emitLoadingState(target, 'stop');
+        emitLoadingState(target, 'stop', reason || 'stop');
     }
 
     function updateAdminNavActive(url) {
@@ -1009,11 +1077,9 @@
         } finally {
             showApp();
             if (loadingTarget) {
-                stopButtonLoading(loadingTarget);
+                stopButtonLoading(loadingTarget, result && result.success ? 'completed' : 'failed');
             }
-            if (!result || !result.success) {
-                resetAllLoadingStates('navigation-failed');
-            }
+            resetAllLoadingStates(result && result.success ? 'navigation-completed' : 'navigation-failed');
         }
     }
 
