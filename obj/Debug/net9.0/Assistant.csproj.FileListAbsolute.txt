@@ -1214,14 +1214,8 @@ C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\Assistant.sourcelin
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\rjimswa.dswa.cache.json
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\scopedcss\Pages\Shared\_Layout.cshtml.rz.scp.css
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\scopedcss\bundle\Assistant.styles.css
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\scopedcss\projectbundle\Assistant.bundle.scp.css
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-jz9z8a5mal.gz
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\xamxxra285-b9sayid5wm.gz
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\dmbbmlp6mg-61n19gt1b8.gz
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\bp0o3wd32a-xtxxf3hu2r.gz
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\495dkwcspf-5yvw775nza.gz
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\g7izqqfvru-t1cqhe9u97.gz
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\2drrz1ahq2-c2jlpeoesf.gz
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\wjzv8n83zz-sejl45xvog.gz
@@ -1281,8 +1275,6 @@ C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\xq1lvesx
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\vf1xsa4k6z-9vr69e8ynj.gz
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\8yiryd376n-87fc7y1x7t.gz
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\48tdj07xe0-mlv21k5csn.gz
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\wrsqvux25z-kwlcvsr382.gz
-C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\2cmoqyqgg8-kwlcvsr382.gz
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\staticwebassets.build.json
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\staticwebassets.build.json.cache
 C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\staticwebassets.development.json
@@ -3026,3 +3018,7 @@ C:\Users\bream\source\repos\qwe28\Assistant\obj\Debug\net9.0\compressed\495dkwcs
 C:\Users\bream\source\repos\qwe30\Assistant\bin\Debug\net9.0\link_realms.json
 C:\Users\bream\source\repos\qwe30\Assistant\bin\Debug\net9.0\ICSharpCode.SharpZipLib.dll
 C:\Users\bream\source\repos\qwe30\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-3c9ewv71e8.gz
+C:\Users\bream\source\repos\qwe39\Assistant\bin\Debug\net9.0\link_realms.json
+C:\Users\bream\source\repos\qwe39\Assistant\bin\Debug\net9.0\ICSharpCode.SharpZipLib.dll
+C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-3c9ewv71e8.gz
+C:\Users\bream\source\repos\qwe39\Assistant\obj\Debug\net9.0\compressed\495dkwcspf-fqeipny14c.gz
