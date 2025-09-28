@@ -149,7 +149,9 @@ export function initServiceRoles(root, options = {}) {
         lastRealm: (getRealm() || ''),
         roleScanCursor: 0,
         roleScanHasMore: false,
-        pendingEmpty: false
+        pendingEmpty: false,
+        searchToken: 0,
+        searchAbortController: null
     };
 
     const persist = () => {
@@ -299,17 +301,29 @@ export function initServiceRoles(root, options = {}) {
         return response.json();
     };
 
-    const ensureMoreHitsButton = () => {
+    const ensureMoreHitsButton = (token) => {
+        if (token !== state.searchToken) {
+            return;
+        }
         if (!svcSearchDd) {
             return;
         }
         if (svcSearchDd.querySelector('#roleHitsMoreBtn')) {
+            const btn = svcSearchDd.querySelector('#roleHitsMoreBtn');
+            if (btn) {
+                btn.dataset.searchToken = String(token);
+            }
             return;
         }
         const btn = createElement('button', 'w-full text-center px-3 py-2 mt-2 hover:bg-slate-700 rounded-md', 'Показать ещё совпадения');
         btn.type = 'button';
         btn.id = 'roleHitsMoreBtn';
-        addEvent(btn, 'click', () => searchRolesAcrossClients(state.lastQuery, true, false));
+        btn.dataset.searchToken = String(token);
+        addEvent(btn, 'click', (event) => {
+            const btnToken = Number(event?.currentTarget?.dataset?.searchToken || event?.target?.dataset?.searchToken || 0);
+            const requestSignal = state.searchAbortController ? state.searchAbortController.signal : undefined;
+            searchRolesAcrossClients(state.lastQuery, true, false, undefined, btnToken, requestSignal).catch(() => { /* ignored */ });
+        });
         svcSearchDd.appendChild(btn);
     };
 
@@ -337,7 +351,10 @@ export function initServiceRoles(root, options = {}) {
         return line;
     };
 
-    const renderRoleHits = (hits, append) => {
+    const renderRoleHits = (hits, append, token) => {
+        if (token !== state.searchToken) {
+            return;
+        }
         if (!svcSearchDd || !hits.length) {
             return;
         }
@@ -366,7 +383,10 @@ export function initServiceRoles(root, options = {}) {
         }
     };
 
-    const renderClientList = (clients) => {
+    const renderClientList = (clients, token) => {
+        if (token !== state.searchToken) {
+            return;
+        }
         if (!svcSearchDd) {
             return;
         }
@@ -389,20 +409,29 @@ export function initServiceRoles(root, options = {}) {
         showDd();
     };
 
-    const searchClients = async (queryText, realmValue) => {
+    const searchClients = async (queryText, realmValue, token, requestSignal) => {
+        if (token !== state.searchToken) {
+            return null;
+        }
         const key = cacheClientsKey(realmValue, queryText);
         const cachedClients = cacheGet(state.cacheClients, key);
         if (cachedClients) {
-            return cachedClients;
+            return token === state.searchToken ? cachedClients : null;
         }
         const url = `${pageUrl}?handler=ClientsSearch&realm=${encodeURIComponent(realmValue)}&q=${encodeURIComponent(queryText)}&first=0&max=12`;
-        const clients = await fetchJson(url);
+        const clients = await fetchJson(url, { signal: requestSignal });
         const finalClients = Array.isArray(clients) ? clients : [];
+        if (token !== state.searchToken) {
+            return null;
+        }
         cacheSet(state.cacheClients, key, finalClients, CACHE_CLIENTS_LIMIT);
         return finalClients;
     };
 
-    const searchRolesAcrossClients = async (queryText, append = false, isFirst = false, realmOverride) => {
+    const searchRolesAcrossClients = async (queryText, append = false, isFirst = false, realmOverride, token, requestSignal) => {
+        if (token !== state.searchToken) {
+            return;
+        }
         const currentRealm = (realmOverride ?? state.lastRealm ?? getRealm() ?? '').trim();
         if (!currentRealm) {
             if (isFirst) {
@@ -414,7 +443,7 @@ export function initServiceRoles(root, options = {}) {
             + `&q=${encodeURIComponent(queryText)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
         let response;
         try {
-            response = await fetchJson(url);
+            response = await fetchJson(url, { signal: requestSignal });
         } catch (error) {
             if (error && error.name === 'AbortError') {
                 return;
@@ -422,22 +451,31 @@ export function initServiceRoles(root, options = {}) {
             console.error('[ServiceRolesUI] role lookup failed', error);
             if (isFirst) {
                 const message = `Не удалось загрузить роли: ${error?.message ?? error}`;
-                if (state.pendingEmpty) {
+                if (token === state.searchToken && state.pendingEmpty) {
                     showError(message);
-                } else {
+                } else if (token === state.searchToken) {
                     showError(message, { append: true });
                 }
-                state.pendingEmpty = false;
+                if (token === state.searchToken) {
+                    state.pendingEmpty = false;
+                }
             }
             return;
         }
+        if (token !== state.searchToken) {
+            return;
+        }
         const hits = Array.isArray(response?.hits) ? response.hits : [];
-        renderRoleHits(hits, append);
+        renderRoleHits(hits, append, token);
+
+        if (token !== state.searchToken) {
+            return;
+        }
 
         if (typeof response?.nextClientFirst === 'number' && response.nextClientFirst >= 0) {
             state.roleScanCursor = response.nextClientFirst;
             state.roleScanHasMore = true;
-            ensureMoreHitsButton();
+            ensureMoreHitsButton(token);
         } else {
             state.roleScanHasMore = false;
             removeMoreHitsButton();
@@ -564,6 +602,16 @@ export function initServiceRoles(root, options = {}) {
             showInfo('Сначала выберите Realm.');
             return;
         }
+        if (state.searchAbortController) {
+            try {
+                state.searchAbortController.abort();
+            } catch (abortError) {
+                console.warn('[ServiceRolesUI] Failed to abort previous search', abortError);
+            }
+        }
+        state.searchAbortController = new AbortController();
+        state.searchToken += 1;
+        const currentToken = state.searchToken;
         state.lastQuery = queryText;
         state.lastRealm = currentRealm;
         state.roleScanCursor = 0;
@@ -573,7 +621,7 @@ export function initServiceRoles(root, options = {}) {
         showLoading();
         let clients = [];
         try {
-            clients = await searchClients(queryText, currentRealm);
+            clients = await searchClients(queryText, currentRealm, currentToken, state.searchAbortController.signal);
         } catch (error) {
             if (error && error.name === 'AbortError') {
                 return;
@@ -583,11 +631,14 @@ export function initServiceRoles(root, options = {}) {
             state.pendingEmpty = false;
             return;
         }
-        if (clients.length) {
-            renderClientList(clients);
+        if (currentToken !== state.searchToken) {
+            return;
+        }
+        if (clients && clients.length) {
+            renderClientList(clients, currentToken);
             state.pendingEmpty = false;
         }
-        searchRolesAcrossClients(queryText, false, true, currentRealm).catch(() => { /* ignored */ });
+        searchRolesAcrossClients(queryText, false, true, currentRealm, currentToken, state.searchAbortController.signal).catch(() => { /* ignored */ });
     };
 
     const updateBtnState = () => {
