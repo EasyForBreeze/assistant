@@ -589,8 +589,18 @@
             arr.forEach((v, idx)=>{
               const chip = document.createElement('span');
               chip.className = 'kc-chip';
-              chip.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
-              chip.querySelector('button').addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr); });
+              chip.textContent = v;
+
+              const space = document.createTextNode(' ');
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.title = 'Remove';
+              button.textContent = '×';
+
+              button.addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(el, arr); });
+
+              chip.appendChild(space);
+              chip.appendChild(button);
               el.appendChild(chip);
             });
           }

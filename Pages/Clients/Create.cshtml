@@ -611,9 +611,18 @@
             arr.forEach((v, idx) => {
               const span = document.createElement('span');
               span.className = 'chip';
-              span.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
-              span.querySelector('button')
-                  .addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(listEl, arr); });
+              span.textContent = v;
+
+              const space = document.createTextNode(' ');
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.title = 'Remove';
+              button.textContent = '×';
+
+              button.addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(listEl, arr); });
+
+              span.appendChild(space);
+              span.appendChild(button);
               listEl.appendChild(span);
             });
           }
@@ -691,9 +700,18 @@
             arr.forEach((v, idx) => {
               const span = document.createElement('span');
               span.className = 'chip';
-              span.innerHTML = `${v} <button type="button" title="Remove">×</button>`;
-              span.querySelector('button')
-                  .addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(listEl, arr); });
+              span.textContent = v;
+
+              const space = document.createTextNode(' ');
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.title = 'Remove';
+              button.textContent = '×';
+
+              button.addEventListener('click', ()=>{ arr.splice(idx,1); renderChips(listEl, arr); });
+
+              span.appendChild(space);
+              span.appendChild(button);
               listEl.appendChild(span);
             });
           }
