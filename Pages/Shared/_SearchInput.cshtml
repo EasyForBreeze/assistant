@@ -1,0 +1,72 @@
+@model Assistant.Pages.Shared.SearchInputModel
+@{
+    var id = string.IsNullOrWhiteSpace(Model.Id)
+        ? (string.IsNullOrWhiteSpace(Model.Name) ? null : Model.Name)
+        : Model.Id;
+    var widthClasses = string.IsNullOrWhiteSpace(Model.WidthClasses)
+        ? "w-full"
+        : Model.WidthClasses;
+    var containerClasses = Model.IconAbsolute
+        ? $"relative {widthClasses} {Model.ContainerClasses}".Trim()
+        : $"kc-input rounded-xl px-3 py-2 text-sm focus-within:border-white/20 flex items-center gap-2 {widthClasses} {Model.ContainerClasses}".Trim();
+    var inputClasses = string.IsNullOrWhiteSpace(Model.InputClasses)
+        ? (Model.IconAbsolute
+            ? "w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-400 focus:border-white/20 focus:outline-none focus:ring-0"
+            : "bg-transparent outline-none placeholder:text-slate-400 w-full")
+        : Model.InputClasses;
+}
+@if (!string.IsNullOrWhiteSpace(Model.Label) && !string.IsNullOrWhiteSpace(id))
+{
+    <label for="@id" class="@Model.LabelCssClass">@Model.Label</label>
+}
+@if (Model.IconAbsolute)
+{
+    <div class="@containerClasses">
+        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400/70">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.35-4.65a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
+            </svg>
+        </span>
+        <input type="@Model.InputType"
+               @if (!string.IsNullOrWhiteSpace(id))
+               {
+                   <text>id="@id"</text>
+               }
+               @if (!string.IsNullOrWhiteSpace(Model.Name))
+               {
+                   <text> name="@Model.Name"</text>
+               }
+               value="@(Model.Value ?? string.Empty)"
+               placeholder="@Model.Placeholder"
+               class="@inputClasses"
+               @if (Model.MinLength.HasValue)
+               {
+                   <text> minlength="@Model.MinLength.Value"</text>
+               } />
+    </div>
+}
+else
+{
+    <div class="@containerClasses">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+        </svg>
+        <input type="@Model.InputType"
+               @if (!string.IsNullOrWhiteSpace(id))
+               {
+                   <text>id="@id"</text>
+               }
+               @if (!string.IsNullOrWhiteSpace(Model.Name))
+               {
+                   <text> name="@Model.Name"</text>
+               }
+               value="@(Model.Value ?? string.Empty)"
+               placeholder="@Model.Placeholder"
+               class="@inputClasses"
+               @if (Model.MinLength.HasValue)
+               {
+                   <text> minlength="@Model.MinLength.Value"</text>
+               } />
+    </div>
+}
