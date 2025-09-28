@@ -539,11 +539,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\bream\\source\\repos\\qwe69\\Assistant\\Assistant.csproj",
+      "projectUniqueName": "C:\\Users\\bream\\source\\repos\\qwe74\\Assistant\\Assistant.csproj",
       "projectName": "Assistant",
-      "projectPath": "C:\\Users\\bream\\source\\repos\\qwe69\\Assistant\\Assistant.csproj",
+      "projectPath": "C:\\Users\\bream\\source\\repos\\qwe74\\Assistant\\Assistant.csproj",
       "packagesPath": "C:\\Users\\bream\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\bream\\source\\repos\\qwe69\\Assistant\\obj\\",
+      "outputPath": "C:\\Users\\bream\\source\\repos\\qwe74\\Assistant\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
