@@ -189,6 +189,27 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const shouldPreserveScroll = options && options.scroll === false;
+        let hideStarted = false;
+        let hidePromise = null;
+
+        const startHide = () => {
+            if (hideStarted) {
+                return hidePromise;
+            }
+            hideStarted = true;
+            if (transition && typeof transition.hide === 'function') {
+                try {
+                    hidePromise = Promise.resolve(transition.hide());
+                } catch (_) {
+                    hidePromise = Promise.resolve();
+                }
+            } else {
+                const result = hideAppAnimation(body, currentApp);
+                hidePromise = result ? Promise.resolve(result) : Promise.resolve();
+            }
+            return hidePromise;
+        };
+
         const fetchInit = {
             method,
             credentials: 'include',
@@ -205,11 +226,24 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
             Object.assign(fetchInit.headers, options.headers);
         }
 
+        const revertHide = () => {
+            if (!hideStarted) {
+                return;
+            }
+            try {
+                showAppAnimation(body, currentApp);
+            } catch (error) {
+                console.error('Soft navigation revert failed:', error);
+            }
+        };
+
         beginPending();
         let response;
         try {
+            hidePromise = startHide();
             response = await fetch(requestUrl, fetchInit);
         } catch (_) {
+            revertHide();
             window.location.href = requestUrl;
             return false;
         } finally {
@@ -217,14 +251,20 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         }
 
         if (!response || response.status === 204) {
+            revertHide();
             window.location.href = requestUrl;
             return false;
         }
 
         const contentType = response.headers.get('Content-Type') || '';
         if (!contentType.includes('text/html')) {
+            revertHide();
             window.location.href = response.url || requestUrl;
             return false;
+        }
+
+        if (!hideStarted) {
+            hidePromise = startHide();
         }
 
         const text = await response.text();
@@ -232,6 +272,7 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         const doc = parser.parseFromString(text, 'text/html');
         const newMain = doc.getElementById('app');
         if (!newMain) {
+            revertHide();
             window.location.href = response.url || requestUrl;
             return false;
         }
@@ -249,17 +290,6 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         }
         if (transition && typeof transition.prepare === 'function') {
             transition.prepare(importedMain);
-        }
-
-        let hidePromise = null;
-        if (transition && typeof transition.hide === 'function') {
-            try {
-                hidePromise = transition.hide();
-            } catch (_) {
-                hidePromise = null;
-            }
-        } else {
-            hidePromise = hideAppAnimation(body, currentApp);
         }
 
         if (hidePromise) {
