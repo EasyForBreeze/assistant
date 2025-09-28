@@ -161,27 +161,47 @@ export function initServiceRoles(root, options = {}) {
         }
     };
 
+    const chipElements = [];
+
+    const createChipElement = (chipValue) => {
+        const chip = createElement('div', 'kc-chip');
+        chip.textContent = chipValue;
+        const closeBtn = createElement('button', 'kc-chip-x', '×');
+        closeBtn.type = 'button';
+        closeBtn.title = 'Удалить';
+        addEvent(closeBtn, 'click', () => {
+            const idx = chipElements.indexOf(chip);
+            if (idx >= 0) {
+                state.chips.splice(idx, 1);
+                chipElements.splice(idx, 1);
+                chip.remove();
+                persist();
+            }
+        });
+        chip.appendChild(closeBtn);
+        return chip;
+    };
+
     const renderChips = () => {
         if (!svcList) {
             return;
         }
-        svcList.innerHTML = '';
-        for (const chipValue of state.chips) {
-            const chip = createElement('div', 'kc-chip');
-            chip.textContent = chipValue;
-            const closeBtn = createElement('button', 'kc-chip-x', '×');
-            closeBtn.type = 'button';
-            closeBtn.title = 'Удалить';
-            addEvent(closeBtn, 'click', () => {
-                const idx = state.chips.indexOf(chipValue);
-                if (idx >= 0) {
-                    state.chips.splice(idx, 1);
-                    renderChips();
-                    persist();
-                }
-            });
-            chip.appendChild(closeBtn);
-            svcList.appendChild(chip);
+
+        const startIdx = chipElements.length;
+        if (startIdx >= state.chips.length) {
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        for (let i = startIdx; i < state.chips.length; i++) {
+            const chipValue = state.chips[i];
+            const chip = createChipElement(chipValue);
+            chipElements.push(chip);
+            fragment.appendChild(chip);
+        }
+
+        if (fragment.childNodes.length) {
+            svcList.appendChild(fragment);
         }
     };
 
