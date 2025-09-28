@@ -682,9 +682,26 @@ public sealed class ClientsService
         using var resp = await http.PutJsonWithLegacyFallbackAsync(putNew, putLegacy, body, JsonOpts, ct);
         resp.EnsureAdminSuccess();
 
-        if (spec.LocalRoles.Count > 0)
+        var desiredLocalRoles = spec.LocalRoles
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => r.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var existingLocalRoles = await RemoveMissingLocalRolesAsync(
+            spec.Realm,
+            existingDetails.Id,
+            desiredLocalRoles,
+            ct);
+
+        var existingLocalSet = new HashSet<string>(existingLocalRoles, StringComparer.OrdinalIgnoreCase);
+        var localRolesToAdd = desiredLocalRoles
+            .Where(role => !existingLocalSet.Contains(role))
+            .ToList();
+
+        if (localRolesToAdd.Count > 0)
         {
-            await EnsureLocalRolesAsync(spec.Realm, existingDetails.Id, spec.LocalRoles, ct);
+            await EnsureLocalRolesAsync(spec.Realm, existingDetails.Id, localRolesToAdd, ct);
         }
 
         if (rolesToRemove.Count > 0)
@@ -752,6 +769,65 @@ public sealed class ClientsService
         {
             InvalidateClientRolesCache(realm, clientUuid);
         }
+    }
+
+    private async Task<List<string>> RemoveMissingLocalRolesAsync(
+        string realm,
+        string clientUuid,
+        IReadOnlyCollection<string> desiredRoles,
+        CancellationToken ct)
+    {
+        var http = CreateAdminClient();
+
+        var desiredSet = new HashSet<string>(
+            desiredRoles
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Select(r => r.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+
+        var existingRoleMap = await GetClientRoleMapAsync(http, realm, clientUuid, ct);
+        var existingRoles = existingRoleMap.Values
+            .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+            .Select(r => r.Name!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var rolesToRemove = existingRoles
+            .Where(role => !desiredSet.Contains(role))
+            .ToList();
+
+        var attemptedRemoval = false;
+
+        foreach (var roleName in rolesToRemove)
+        {
+            attemptedRemoval = true;
+
+            try
+            {
+                var (urlNew, urlLegacy) = BuildAdminUrls(
+                    realm,
+                    $"clients/{UR(clientUuid)}/roles/{UR(roleName)}");
+
+                using var resp = await http.DeleteWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
+                if (resp.StatusCode == HttpStatusCode.NotFound)
+                {
+                    continue;
+                }
+
+                resp.EnsureAdminSuccess();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Локальная роль '{roleName}' не удалена: {ex.Message}", ex);
+            }
+        }
+
+        if (attemptedRemoval)
+        {
+            InvalidateClientRolesCache(realm, clientUuid);
+        }
+
+        return existingRoles;
     }
 
     private async Task AssignServiceRolesToServiceAccountAsync(string realm, string newClientUuid, IReadOnlyList<(string ClientId, string Role)> pairs, CancellationToken ct)
