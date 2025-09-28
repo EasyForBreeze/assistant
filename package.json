@@ -1,0 +1,13 @@
+{
+  "name": "assistant",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "tailwind:build": "tailwindcss -c tailwind.config.js -i ./Styles/tailwind.css -o ./wwwroot/css/tailwind.css --minify",
+    "tailwind:watch": "tailwindcss -c tailwind.config.js -i ./Styles/tailwind.css -o ./wwwroot/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "tailwindcss": "^3.4.13"
+  }
+}
