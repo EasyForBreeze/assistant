@@ -38,10 +38,16 @@ public class UserClientsRepository
         await using (var cmd = new NpgsqlCommand(sql, conn))
             await cmd.ExecuteNonQueryAsync(ct);
 
-        const string indexSql =
+        const string identityIndexSql =
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_clients_identity ON user_clients(username, client_id, realm);";
 
-        await using (var idx = new NpgsqlCommand(indexSql, conn))
+        await using (var idx = new NpgsqlCommand(identityIndexSql, conn))
+            await idx.ExecuteNonQueryAsync(ct);
+
+        const string clientRealmIndexSql =
+            "CREATE INDEX IF NOT EXISTS ix_user_clients_client_realm ON user_clients(client_id, realm);";
+
+        await using (var idx = new NpgsqlCommand(clientRealmIndexSql, conn))
             await idx.ExecuteNonQueryAsync(ct);
 
         _initialized = true;
