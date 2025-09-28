@@ -46,6 +46,24 @@ public sealed class ApiLogRepository
         await using (var alterCmd = new NpgsqlCommand(alterSql, conn))
             await alterCmd.ExecuteNonQueryAsync(ct);
 
+        const string indexSql =
+            "create index if not exists idx_api_audit_logs_created_at_id on api_audit_logs (created_at desc, id desc)";
+
+        await using (var indexCmd = new NpgsqlCommand(indexSql, conn))
+            await indexCmd.ExecuteNonQueryAsync(ct);
+
+        const string usernameIndexSql =
+            "create index if not exists idx_api_audit_logs_username on api_audit_logs (username)";
+
+        await using (var usernameIndexCmd = new NpgsqlCommand(usernameIndexSql, conn))
+            await usernameIndexCmd.ExecuteNonQueryAsync(ct);
+
+        const string operationTypeIndexSql =
+            "create index if not exists idx_api_audit_logs_operation_type_normalized on api_audit_logs (upper(coalesce(nullif(split_part(operation_type, ':', 2), ''), operation_type)))";
+
+        await using (var operationTypeIndexCmd = new NpgsqlCommand(operationTypeIndexSql, conn))
+            await operationTypeIndexCmd.ExecuteNonQueryAsync(ct);
+
         _initialized = true;
     }
 
