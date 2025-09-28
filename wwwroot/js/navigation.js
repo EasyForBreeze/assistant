@@ -172,9 +172,14 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
             const submitValue = submitter.value != null ? submitter.value : '';
             formData.append(submitter.name, submitValue);
         }
+        const processedKeys = new Set();
         for (const [key, value] of formData.entries()) {
             if (typeof value === 'string') {
-                url.searchParams.set(key, value);
+                if (!processedKeys.has(key)) {
+                    url.searchParams.delete(key);
+                    processedKeys.add(key);
+                }
+                url.searchParams.append(key, value);
             }
         }
         return url.toString();
