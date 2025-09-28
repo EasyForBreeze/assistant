@@ -51,6 +51,9 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
     }
 
     let currentApp = app;
+    let navigationTokenCounter = 0;
+    let activeNavigationToken = 0;
+    let activeNavigationController = null;
     const ADMIN_ACTIVE_CLASSES = ['bg-white/10', 'text-white', 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'];
     const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
 
@@ -185,12 +188,37 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         return url.toString();
     }
 
-    async function fetchAndSwap(url, options, transition) {
+    async function fetchAndSwap(url, options, transition, navigationToken, controller) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
         const shouldPreserveScroll = options && options.scroll === false;
         let hideStarted = false;
         let hidePromise = null;
+        let animationsFinalized = false;
+
+        const isActiveNavigation = () => navigationToken === activeNavigationToken;
+
+        const finalizeAnimations = async () => {
+            if (animationsFinalized) {
+                return;
+            }
+            animationsFinalized = true;
+            if (hidePromise) {
+                try {
+                    await hidePromise;
+                } catch (_) {
+                    // Ignore transition wait failures during stale navigation cleanup.
+                }
+            }
+        };
+
+        const ensureActiveNavigation = async () => {
+            if (isActiveNavigation()) {
+                return true;
+            }
+            await finalizeAnimations();
+            return false;
+        };
 
         const startHide = () => {
             if (hideStarted) {
@@ -225,6 +253,9 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         if (options.headers) {
             Object.assign(fetchInit.headers, options.headers);
         }
+        if (controller && typeof controller === 'object' && 'signal' in controller && controller.signal) {
+            fetchInit.signal = controller.signal;
+        }
 
         const revertHide = () => {
             if (!hideStarted) {
@@ -242,7 +273,11 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         try {
             hidePromise = startHide();
             response = await fetch(requestUrl, fetchInit);
-        } catch (_) {
+        } catch (error) {
+            if (controller && controller.signal && controller.signal.aborted) {
+                await finalizeAnimations();
+                return false;
+            }
             revertHide();
             window.location.href = requestUrl;
             return false;
@@ -251,6 +286,10 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         }
 
         if (!response || response.status === 204) {
+            if (!isActiveNavigation()) {
+                await finalizeAnimations();
+                return false;
+            }
             revertHide();
             window.location.href = requestUrl;
             return false;
@@ -258,6 +297,10 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
 
         const contentType = response.headers.get('Content-Type') || '';
         if (!contentType.includes('text/html')) {
+            if (!isActiveNavigation()) {
+                await finalizeAnimations();
+                return false;
+            }
             revertHide();
             window.location.href = response.url || requestUrl;
             return false;
@@ -272,6 +315,10 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         const doc = parser.parseFromString(text, 'text/html');
         const newMain = doc.getElementById('app');
         if (!newMain) {
+            if (!isActiveNavigation()) {
+                await finalizeAnimations();
+                return false;
+            }
             revertHide();
             window.location.href = response.url || requestUrl;
             return false;
@@ -298,6 +345,9 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
             } catch (_) {
                 // Ignore transition wait failures and continue swapping.
             }
+        }
+        if (!(await ensureActiveNavigation())) {
+            return false;
         }
         runTeardowns();
         cancelAppAnimation(currentApp);
@@ -349,6 +399,10 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
             }
         }
 
+        if (!(await ensureActiveNavigation())) {
+            return false;
+        }
+
         refreshToasts(doc);
         refreshScriptHost(doc);
 
@@ -358,10 +412,18 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         }
 
         const finalUrl = response.url || requestUrl;
+        if (!(await ensureActiveNavigation())) {
+            return false;
+        }
+
         if (options.pushState) {
             history.pushState({ url: finalUrl }, '', finalUrl);
         } else if (options.replaceState) {
             history.replaceState({ url: finalUrl }, '', finalUrl);
+        }
+
+        if (!(await ensureActiveNavigation())) {
+            return false;
         }
 
         updateAdminNavActive(finalUrl);
@@ -385,12 +447,28 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
             window.location.href = url;
             return;
         }
+        const token = ++navigationTokenCounter;
+        activeNavigationToken = token;
+        if (activeNavigationController && typeof activeNavigationController.abort === 'function') {
+            try {
+                activeNavigationController.abort();
+            } catch (error) {
+                console.error('Soft navigation abort failed:', error);
+            }
+        }
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        activeNavigationController = controller;
         let success;
         try {
-            success = await fetchAndSwap(url, options, transition);
+            success = await fetchAndSwap(url, options, transition, token, controller);
             return success;
         } finally {
-            showAppAnimation(body, currentApp);
+            if (token === activeNavigationToken && activeNavigationController === controller) {
+                activeNavigationController = null;
+            }
+            if (token === activeNavigationToken) {
+                showAppAnimation(body, currentApp);
+            }
             if (loadingTarget) {
                 stopButtonLoading(loadingTarget);
             }
