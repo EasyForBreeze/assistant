@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <None Include="$(TailwindInput)" />
-    <Content Include="$(TailwindOutput)" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(TailwindOutput)" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="TailwindBuild" BeforeTargets="Build;Publish" Inputs="$(TailwindInput);tailwind.config.js;package.json" Outputs="$(TailwindOutput)">
