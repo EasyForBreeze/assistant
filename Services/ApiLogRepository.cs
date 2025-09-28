@@ -192,10 +192,29 @@ public sealed class ApiLogRepository
 
         if (!string.IsNullOrWhiteSpace(operationType))
         {
-            var normalizedOperationType = operationType;
-            if (!string.IsNullOrEmpty(normalizedOperationType))
+            var trimmed = operationType.Trim();
+            if (trimmed.Length > 0)
             {
-                cmd.Parameters.AddWithValue("op", normalizedOperationType);
+                var colonIndex = trimmed.IndexOf(':');
+                string normalized = trimmed;
+
+                if (colonIndex >= 0 && colonIndex + 1 < trimmed.Length)
+                {
+                    var suffixStart = colonIndex + 1;
+                    var nextColonIndex = trimmed.IndexOf(':', suffixStart);
+                    var suffix = nextColonIndex >= 0
+                        ? trimmed[suffixStart..nextColonIndex]
+                        : trimmed[suffixStart..];
+                    suffix = suffix.Trim();
+                    if (suffix.Length > 0)
+                    {
+                        normalized = suffix;
+                    }
+                }
+
+                var normalizedUpper = normalized.ToUpperInvariant();
+
+                cmd.Parameters.AddWithValue("op", normalizedUpper);
                 conditions.Add("upper(coalesce(nullif(split_part(operation_type, ':', 2), ''), operation_type)) = @op");
             }
         }
