@@ -9,7 +9,7 @@ namespace Assistant.Services;
 /// <summary>
 /// Хранение клиентов пользователей в PostgreSQL.
 /// </summary>
-public class UserClientsRepository
+public class UserClientsRepository : IUserClientsRepository
 {
     private readonly string _connString;
     private bool _initialized;
