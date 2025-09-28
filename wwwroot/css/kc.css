@@ -66,6 +66,27 @@
     }
 }
 
+
+.aurora-blob {
+    background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35));
+}
+
+.kc-header.aurora-green-indigo .aurora-blob-primary {
+    background: radial-gradient(60% 60% at 50% 50%, rgba(16,185,129,.6), rgba(59,130,246,.4));
+}
+
+.kc-header.aurora-green-indigo .aurora-blob-secondary {
+    background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35));
+}
+
+.kc-header.aurora-sky-teal .aurora-blob-primary {
+    background: radial-gradient(60% 60% at 50% 50%, rgba(14,165,233,.55), rgba(59,130,246,.35));
+}
+
+.kc-header.aurora-sky-teal .aurora-blob-secondary {
+    background: radial-gradient(60% 60% at 50% 50%, rgba(45,212,191,.6), rgba(99,102,241,.35));
+}
+
 .glow-blob {
     animation: kc-floatGlow 6s ease-in-out infinite;
 }

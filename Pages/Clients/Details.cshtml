@@ -15,36 +15,34 @@
 }
 
 
-<!-- Хедер -->
-<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-5">
-    <div class="flex items-center">
+@{
+    Func<dynamic, Microsoft.AspNetCore.Html.IHtmlContent> detailsHeaderLead = @<div class="flex items-center">
         <a href="@Model.BackUrl" class="text-slate-400 text-sm hover:text-slate-200">&larr; Back to Clients</a>
         <div class="ml-auto text-slate-400 text-sm">Realm: <span class="text-slate-200">@realm</span></div>
-    </div>
-    <div class="absolute inset-0 pointer-events-none">
-        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(16,185,129,.6), rgba(59,130,246,.4))"></div>
-        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.65), rgba(45,212,191,.35))"></div>
-    </div>
-
-    <div class="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(99,102,241,0.25)]">@clientId</h1>
-        </div>
-        <div class="flex items-center gap-2">
-            <span class="text-md text-slate-200">Status</span>
-            <label class="kc-switch inline-flex items-center">
-                <input type="checkbox" id="swEnabled" @(enabled ? "checked" : "") />
-                <span class="track"><span class="dot"></span></span>
-            </label>
-            <span id="lblEnabled"
-                  class="inline-flex items-center rounded-full px-2 py-1 text-xs border border-white/10 @(enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")">
-                @((enabled) ? "Enabled" : "Disabled")
-            </span>
-        </div>
-    </div>
-</div>
+    </div>;
+    Func<dynamic, Microsoft.AspNetCore.Html.IHtmlContent> detailsHeaderRight = @<text>
+        <span class="text-md text-slate-200">Status</span>
+        <label class="kc-switch inline-flex items-center">
+            <input type="checkbox" id="swEnabled" @(enabled ? "checked" : "") />
+            <span class="track"><span class="dot"></span></span>
+        </label>
+        <span id="lblEnabled"
+              class="inline-flex items-center rounded-full px-2 py-1 text-xs border border-white/10 @(enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")">
+            @((enabled) ? "Enabled" : "Disabled")
+        </span>
+    </text>;
+}
+@await Html.PartialAsync("_AuroraHeader", new AuroraHeaderModel
+{
+    Title = clientId,
+    HeadingTag = "h1",
+    ThemeClass = "aurora-green-indigo",
+    ContentClasses = "relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between",
+    TitleCssClass = "text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(99,102,241,0.25)]",
+    LeadContent = detailsHeaderLead,
+    RightContent = detailsHeaderRight,
+    RightContainerClasses = "flex items-center gap-2"
+})
 
 <!-- Вкладки -->
 <div class="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Client tabs">

@@ -1,0 +1,85 @@
+@model AuroraHeaderModel
+@using Assistant.Pages.Shared
+@using System
+@{
+    var themeClass = string.IsNullOrWhiteSpace(Model.ThemeClass) ? "aurora-green-indigo" : Model.ThemeClass;
+    var rootClasses = string.IsNullOrWhiteSpace(Model.Classes)
+        ? "p-5 md:p-6 relative overflow-hidden mb-5"
+        : Model.Classes;
+    var contentClasses = string.IsNullOrWhiteSpace(Model.ContentClasses)
+        ? "relative flex flex-col gap-4 md:flex-row md:items-center"
+        : Model.ContentClasses;
+    if (Model.RightContent != null && !contentClasses.Contains("md:justify-between", StringComparison.Ordinal))
+    {
+        contentClasses += " md:justify-between";
+    }
+
+    var titleCss = string.IsNullOrWhiteSpace(Model.TitleCssClass)
+        ? "text-3xl md:text-4xl text-white tracking-tight"
+        : Model.TitleCssClass;
+    var headingTag = string.IsNullOrWhiteSpace(Model.HeadingTag) ? "h3" : Model.HeadingTag.ToLowerInvariant();
+    var subtitleCss = string.IsNullOrWhiteSpace(Model.SubtitleCssClass)
+        ? "text-slate-200/80 mt-2 text-sm max-w-xl"
+        : Model.SubtitleCssClass;
+    var rightContainerClasses = string.IsNullOrWhiteSpace(Model.RightContainerClasses)
+        ? "flex items-center gap-3 w-full md:w-auto"
+        : Model.RightContainerClasses;
+}
+<div class="kc-header @themeClass @rootClasses">
+    @if (Model.LeadContent != null)
+    {
+        <div class="relative mb-3">
+            @Model.LeadContent.Invoke(null)
+        </div>
+    }
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="glow-blob aurora-blob aurora-blob-primary absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"></div>
+        <div class="glow-blob aurora-blob aurora-blob-secondary absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"></div>
+    </div>
+
+    <div class="@contentClasses">
+        <div>
+            @if (Model.TitleLeadContent != null)
+            {
+                @Model.TitleLeadContent.Invoke(null)
+            }
+
+            @switch (headingTag)
+            {
+                case "h1":
+                    <h1 class="@titleCss">@Model.Title</h1>
+                    break;
+                case "h2":
+                    <h2 class="@titleCss">@Model.Title</h2>
+                    break;
+                case "h4":
+                    <h4 class="@titleCss">@Model.Title</h4>
+                    break;
+                default:
+                    <h3 class="@titleCss">@Model.Title</h3>
+                    break;
+            }
+
+            @if (Model.HasSubtitle)
+            {
+                if (Model.SubtitleContent != null)
+                {
+                    <div class="@subtitleCss">
+                        @Model.SubtitleContent.Invoke(null)
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+                {
+                    <p class="@subtitleCss">@Model.Subtitle</p>
+                }
+            }
+        </div>
+
+        @if (Model.RightContent != null)
+        {
+            <div class="@rightContainerClasses">
+                @Model.RightContent.Invoke(null)
+            </div>
+        }
+    </div>
+</div>
