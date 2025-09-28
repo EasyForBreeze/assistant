@@ -37,6 +37,7 @@ builder.Services.AddScoped<Assistant.KeyCloak.ClientsService>();
 builder.Services.AddScoped<Assistant.KeyCloak.UsersService>();
 builder.Services.AddScoped<Assistant.KeyCloak.EventsService>();
 builder.Services.AddSingleton<UserClientsRepository>();
+builder.Services.AddSingleton<IUserClientsRepository>(sp => sp.GetRequiredService<UserClientsRepository>());
 builder.Services.AddSingleton<ServiceRoleExclusionsRepository>();
 builder.Services.AddSingleton<ApiLogRepository>();
 builder.Services.AddSingleton<ClientWikiRepository>();
@@ -163,22 +164,36 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 app.MapStaticAssets();
 app.MapGet("/api/client-secret", async (
+    ClaimsPrincipal user,
     string realm,
     string clientId,
     ClientsService clients,
+    IUserClientsRepository userClients,
     CancellationToken ct) =>
 {
-    var secret = await clients.GetClientSecretAsync(realm, clientId, ct);
-    return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
+    return await ClientSecretEndpointHandler.HandleAsync(
+        user,
+        realm,
+        clientId,
+        userClients,
+        cancellationToken => clients.GetClientSecretAsync(realm, clientId, cancellationToken),
+        ct);
 }).RequireAuthorization();
 app.MapPost("/api/client-secret", async (
+    ClaimsPrincipal user,
     string realm,
     string clientId,
     ClientsService clients,
+    IUserClientsRepository userClients,
     CancellationToken ct) =>
 {
-    var secret = await clients.RegenerateClientSecretAsync(realm, clientId, ct);
-    return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
+    return await ClientSecretEndpointHandler.HandleAsync(
+        user,
+        realm,
+        clientId,
+        userClients,
+        cancellationToken => clients.RegenerateClientSecretAsync(realm, clientId, cancellationToken),
+        ct);
 }).RequireAuthorization();
 app.MapPost("/api/access-request", async (
     HttpContext context,
