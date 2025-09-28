@@ -319,11 +319,7 @@ export function initServiceRoles(root, options = {}) {
         btn.type = 'button';
         btn.id = 'roleHitsMoreBtn';
         btn.dataset.searchToken = String(token);
-        addEvent(btn, 'click', (event) => {
-            const btnToken = Number(event?.currentTarget?.dataset?.searchToken || event?.target?.dataset?.searchToken || 0);
-            const requestSignal = state.searchAbortController ? state.searchAbortController.signal : undefined;
-            searchRolesAcrossClients(state.lastQuery, true, false, undefined, btnToken, requestSignal).catch(() => { /* ignored */ });
-        });
+        btn.dataset.action = 'moreRoleHits';
         svcSearchDd.appendChild(btn);
     };
 
@@ -339,15 +335,9 @@ export function initServiceRoles(root, options = {}) {
         line.type = 'button';
         line.textContent = `${match.clientId}: ${match.role}`;
         line.title = 'Добавить роль';
-        addEvent(line, 'click', () => {
-            const value = `${match.clientId}: ${match.role}`;
-            if (!state.chips.includes(value)) {
-                state.chips.push(value);
-                renderChips();
-                persist();
-            }
-            hideDd();
-        });
+        line.dataset.action = 'addRoleHit';
+        line.dataset.hitClientId = match.clientId;
+        line.dataset.hitRole = match.role;
         return line;
     };
 
@@ -400,7 +390,9 @@ export function initServiceRoles(root, options = {}) {
             const line = createElement('button', 'w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
             line.type = 'button';
             line.textContent = client.clientId;
-            addEvent(line, 'click', () => selectClient(client));
+            line.dataset.action = 'selectClient';
+            line.dataset.clientId = client.clientId;
+            line.dataset.clientInternalId = client.id;
             wrap.appendChild(line);
         });
         svcSearchDd.innerHTML = '';
@@ -495,17 +487,8 @@ export function initServiceRoles(root, options = {}) {
         item.type = 'button';
         item.textContent = roleName;
         item.title = 'Добавить роль';
-        addEvent(item, 'click', () => {
-            if (!state.currentClient) {
-                return;
-            }
-            const value = `${state.currentClient.clientId}: ${roleName}`;
-            if (!state.chips.includes(value)) {
-                state.chips.push(value);
-                renderChips();
-                persist();
-            }
-        });
+        item.dataset.action = 'addRoleItem';
+        item.dataset.roleName = roleName;
         return item;
     };
 
@@ -691,6 +674,49 @@ export function initServiceRoles(root, options = {}) {
         });
     });
 
+    addEvent(svcSearchDd, 'click', (event) => {
+        if (!svcSearchDd) {
+            return;
+        }
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        const button = target.closest('button');
+        if (!button || !svcSearchDd.contains(button)) {
+            return;
+        }
+        const action = button.dataset.action;
+        if (action === 'addRoleHit') {
+            const clientId = button.dataset.hitClientId || '';
+            const roleName = button.dataset.hitRole || '';
+            if (!clientId || !roleName) {
+                return;
+            }
+            const value = `${clientId}: ${roleName}`;
+            if (!state.chips.includes(value)) {
+                state.chips.push(value);
+                renderChips();
+                persist();
+            }
+            hideDd();
+        } else if (action === 'selectClient') {
+            const clientId = button.dataset.clientId;
+            const internalId = button.dataset.clientInternalId;
+            if (!clientId || !internalId) {
+                return;
+            }
+            selectClient({ clientId, id: internalId });
+        } else if (action === 'moreRoleHits') {
+            const btnToken = Number(button.dataset.searchToken || '0');
+            if (!btnToken) {
+                return;
+            }
+            const requestSignal = state.searchAbortController ? state.searchAbortController.signal : undefined;
+            searchRolesAcrossClients(state.lastQuery, true, false, undefined, btnToken, requestSignal).catch(() => { /* ignored */ });
+        }
+    });
+
     addEvent(svcSearchInput, 'keydown', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -713,6 +739,33 @@ export function initServiceRoles(root, options = {}) {
     addEvent(btnMoreRoles, 'click', () => {
         state.page += 1;
         loadRoles({ append: true });
+    });
+
+    addEvent(svcRoleList, 'click', (event) => {
+        if (!svcRoleList) {
+            return;
+        }
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        const button = target.closest('button');
+        if (!button || !svcRoleList.contains(button)) {
+            return;
+        }
+        if (button.dataset.action !== 'addRoleItem') {
+            return;
+        }
+        const roleName = button.dataset.roleName || '';
+        if (!roleName || !state.currentClient) {
+            return;
+        }
+        const value = `${state.currentClient.clientId}: ${roleName}`;
+        if (!state.chips.includes(value)) {
+            state.chips.push(value);
+            renderChips();
+            persist();
+        }
     });
 
     addEvent(svcChangeBtn, 'click', () => {
