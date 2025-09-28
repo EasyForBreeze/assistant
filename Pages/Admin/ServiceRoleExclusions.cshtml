@@ -214,24 +214,20 @@
 @section Toasts {
     @if (TempData["FlashOk"] is string ok)
     {
-        <div class="kc-toast kc-toast-success" id="flashToastOk" role="alert">
-            <div class="kc-toast-icon">✓</div>
-            <div class="kc-toast-body">
-                <div class="kc-toast-title">@Html.Raw(ok)</div>
-            </div>
-            <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
-        </div>
-        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastOk')?.remove(), 10000);</script>
+        @await Html.PartialAsync("_FlashToast", new FlashToastModel
+        {
+            Type = FlashToastType.Success,
+            MessageHtml = Html.Raw(ok),
+            Id = "flashToastOk"
+        })
     }
     @if (TempData["FlashError"] is string err)
     {
-        <div class="kc-toast kc-toast-error" id="flashToastError" role="alert">
-            <div class="kc-toast-icon">!</div>
-            <div class="kc-toast-body">
-                <div class="kc-toast-title">@err</div>
-            </div>
-            <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast').remove()">×</button>
-        </div>
-        <script data-soft-nav>setTimeout(() => document.getElementById('flashToastError')?.remove(), 10000);</script>
+        @await Html.PartialAsync("_FlashToast", new FlashToastModel
+        {
+            Type = FlashToastType.Error,
+            Message = err,
+            Id = "flashToastError"
+        })
     }
 }

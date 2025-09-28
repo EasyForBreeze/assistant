@@ -1,0 +1,57 @@
+@model FlashToastModel
+@using System
+
+@{
+    var toastId = string.IsNullOrWhiteSpace(Model.Id)
+        ? $"toast_{Guid.NewGuid():N}"
+        : Model.Id!;
+    var hasTimeout = Model.TimeoutMs > 0;
+    var toastClass = Model.Type == FlashToastType.Success ? "kc-toast-success" : "kc-toast-error";
+    var icon = Model.Type == FlashToastType.Success ? "✓" : "!";
+}
+
+<div class="kc-toast @toastClass" id="@toastId" role="alert"@(hasTimeout ? $" data-timeout=\"{Model.TimeoutMs}\"" : null)>
+    <div class="kc-toast-icon">@icon</div>
+    <div class="kc-toast-body">
+        <div class="kc-toast-title">
+            @if (Model.MessageHtml is not null)
+            {
+                @Model.MessageHtml
+            }
+            else if (!string.IsNullOrEmpty(Model.Message))
+            {
+                @Model.Message
+            }
+        </div>
+        @if (Model.IncludeValidationSummary)
+        {
+            <div asp-validation-summary="All" class="validation-summary-errors"></div>
+        }
+    </div>
+    <button type="button" class="kc-toast-close" aria-label="Закрыть" onclick="this.closest('.kc-toast')?.remove()">×</button>
+</div>
+
+@if (!ViewContext.HttpContext.Items.ContainsKey("__FlashToastScriptAdded"))
+{
+    ViewContext.HttpContext.Items["__FlashToastScriptAdded"] = true;
+    <script data-soft-nav>
+        (() => {
+            const selector = '.kc-toast[data-timeout]';
+            const processedAttr = 'data-timeout-initialized';
+            const applyTimeout = toast => {
+                if (!toast || toast.hasAttribute(processedAttr)) return;
+                toast.setAttribute(processedAttr, 'true');
+                const timeout = parseInt(toast.getAttribute('data-timeout'), 10);
+                if (!Number.isFinite(timeout) || timeout <= 0) return;
+                window.setTimeout(() => toast.remove(), timeout);
+            };
+
+            const processAll = () => {
+                document.querySelectorAll(selector).forEach(applyTimeout);
+            };
+
+            processAll();
+            document.addEventListener('DOMContentLoaded', processAll);
+        })();
+    </script>
+}
