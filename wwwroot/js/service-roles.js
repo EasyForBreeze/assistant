@@ -320,35 +320,49 @@ export function initServiceRoles(root, options = {}) {
         }
     };
 
+    const createRoleHitLine = (match) => {
+        const line = createElement('button', 'w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
+        line.type = 'button';
+        line.textContent = `${match.clientId}: ${match.role}`;
+        line.title = 'Добавить роль';
+        addEvent(line, 'click', () => {
+            const value = `${match.clientId}: ${match.role}`;
+            if (!state.chips.includes(value)) {
+                state.chips.push(value);
+                renderChips();
+                persist();
+            }
+            hideDd();
+        });
+        return line;
+    };
+
     const renderRoleHits = (hits, append) => {
         if (!svcSearchDd || !hits.length) {
             return;
         }
         let roleSection = svcSearchDd.querySelector('#roleHitsSection');
-        if (!append) {
+        let shouldAppend = append;
+        if (!roleSection) {
+            shouldAppend = false;
+        }
+        if (!shouldAppend) {
             if (roleSection) {
                 roleSection.remove();
             }
             roleSection = createElement('div', null, '');
             roleSection.id = 'roleHitsSection';
-            roleSection.appendChild(createElement('div', 'kc-mini text-slate-400 px-2 pb-1', 'Роли (совпадения)'));
-            svcSearchDd.appendChild(roleSection);
+        }
+        const fragment = document.createDocumentFragment();
+        if (!shouldAppend) {
+            fragment.appendChild(createElement('div', 'kc-mini text-slate-400 px-2 pb-1', 'Роли (совпадения)'));
         }
         for (const match of hits) {
-            const line = createElement('button', 'w-full text-left px-3 py-2 hover:bg-slate-700 rounded-md');
-            line.type = 'button';
-            line.textContent = `${match.clientId}: ${match.role}`;
-            line.title = 'Добавить роль';
-            addEvent(line, 'click', () => {
-                const value = `${match.clientId}: ${match.role}`;
-                if (!state.chips.includes(value)) {
-                    state.chips.push(value);
-                    renderChips();
-                    persist();
-                }
-                hideDd();
-            });
-            roleSection.appendChild(line);
+            fragment.appendChild(createRoleHitLine(match));
+        }
+        roleSection.appendChild(fragment);
+        if (!shouldAppend) {
+            svcSearchDd.appendChild(roleSection);
         }
     };
 
@@ -438,6 +452,25 @@ export function initServiceRoles(root, options = {}) {
         }
     };
 
+    const createRoleItem = (roleName) => {
+        const item = createElement('button', 'kc-card px-3 py-2 hover:bg-slate-700 text-left');
+        item.type = 'button';
+        item.textContent = roleName;
+        item.title = 'Добавить роль';
+        addEvent(item, 'click', () => {
+            if (!state.currentClient) {
+                return;
+            }
+            const value = `${state.currentClient.clientId}: ${roleName}`;
+            if (!state.chips.includes(value)) {
+                state.chips.push(value);
+                renderChips();
+                persist();
+            }
+        });
+        return item;
+    };
+
     const renderRoles = (roles, { append }) => {
         if (!svcRoleList) {
             return;
@@ -451,24 +484,11 @@ export function initServiceRoles(root, options = {}) {
             }
             return;
         }
+        const fragment = document.createDocumentFragment();
         roles.forEach(roleName => {
-            const item = createElement('button', 'kc-card px-3 py-2 hover:bg-slate-700 text-left');
-            item.type = 'button';
-            item.textContent = roleName;
-            item.title = 'Добавить роль';
-            addEvent(item, 'click', () => {
-                if (!state.currentClient) {
-                    return;
-                }
-                const value = `${state.currentClient.clientId}: ${roleName}`;
-                if (!state.chips.includes(value)) {
-                    state.chips.push(value);
-                    renderChips();
-                    persist();
-                }
-            });
-            svcRoleList.appendChild(item);
+            fragment.appendChild(createRoleItem(roleName));
         });
+        svcRoleList.appendChild(fragment);
     };
 
     const loadRoles = async ({ append }) => {
