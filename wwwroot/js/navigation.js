@@ -188,6 +188,7 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
     async function fetchAndSwap(url, options, transition) {
         const requestUrl = url;
         const method = (options.method || 'GET').toUpperCase();
+        const shouldPreserveScroll = options && options.scroll === false;
         const fetchInit = {
             method,
             credentials: 'include',
@@ -279,6 +280,37 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         currentApp = importedMain;
         executeSoftScripts(currentApp);
 
+        const hadTabIndex = currentApp.hasAttribute('tabindex');
+        const previousTabIndex = currentApp.getAttribute('tabindex');
+        currentApp.setAttribute('tabindex', '-1');
+        try {
+            if (shouldPreserveScroll) {
+                currentApp.focus({ preventScroll: true });
+            } else {
+                currentApp.focus();
+            }
+        } catch (error) {
+            console.error('Soft navigation focus failed:', error);
+        } finally {
+            if (hadTabIndex) {
+                if (previousTabIndex === null) {
+                    currentApp.removeAttribute('tabindex');
+                } else {
+                    currentApp.setAttribute('tabindex', previousTabIndex);
+                }
+            } else {
+                currentApp.removeAttribute('tabindex');
+            }
+        }
+
+        if (!shouldPreserveScroll) {
+            try {
+                window.scrollTo(0, 0);
+            } catch (error) {
+                console.error('Soft navigation scroll reset failed:', error);
+            }
+        }
+
         if (transition && typeof transition.show === 'function') {
             try {
                 await transition.show();
@@ -308,7 +340,7 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
     }
 
     async function handleNavigation(url, opts) {
-        const options = Object.assign({ method: 'GET', pushState: true }, opts || {});
+        const options = Object.assign({ method: 'GET', pushState: true, scroll: true }, opts || {});
         const transitionSelector = options.transition;
         delete options.transition;
         const transition = transitionSelector ? createScopedTransition(currentApp, transitionSelector) : null;
