@@ -64,14 +64,11 @@
 @section Toasts {
     @if (TempData["FlashOk"] is string flash)
     {
-        <div class="kc-toast kc-toast-success" id="flashToast" role="alert">
-            <div class="kc-toast-icon">✓</div>
-            <div class="kc-toast-body">
-                <div class="kc-toast-title">@Html.Raw(flash)</div>
-            </div>
-            <button type="button" class="kc-toast-close" aria-label="Закрыть"
-                    onclick="this.closest('.kc-toast').remove()">×</button>
-        </div>
-        <script data-soft-nav>setTimeout(() => document.getElementById('flashToast')?.remove(), 10000);</script>
+        @await Html.PartialAsync("_FlashToast", new FlashToastModel
+        {
+            Type = FlashToastType.Success,
+            MessageHtml = Html.Raw(flash),
+            Id = "flashToast"
+        })
     }
 }

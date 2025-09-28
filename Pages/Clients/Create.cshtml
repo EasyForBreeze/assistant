@@ -355,18 +355,13 @@
 @section Toasts {
     @if (!ViewContext.ViewData.ModelState.IsValid)
     {
-        <div class="kc-toast kc-toast-error" id="formErrorToast" role="alert">
-            <div class="kc-toast-icon">!</div>
-            <div class="kc-toast-body">
-                <div class="kc-toast-title">Не удалось создать клиента</div>
-                <div asp-validation-summary="All" class="validation-summary-errors"></div>
-            </div>
-            <button type="button" class="kc-toast-close" aria-label="Закрыть"
-                    onclick="this.closest('.kc-toast').remove()">×</button>
-        </div>
-        <script data-soft-nav>
-            setTimeout(() => document.getElementById('formErrorToast')?.remove(), 10000);
-        </script>
+        @await Html.PartialAsync("_FlashToast", new FlashToastModel
+        {
+            Type = FlashToastType.Error,
+            Message = "Не удалось создать клиента",
+            Id = "formErrorToast",
+            IncludeValidationSummary = true
+        })
     }
 }
 
