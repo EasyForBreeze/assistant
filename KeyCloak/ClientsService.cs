@@ -23,6 +23,7 @@ public sealed class ClientsService
     private const int ClientDetailsRolePreviewLimit = 50;
     private static readonly TimeSpan ClientRolesCacheDuration = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan ServiceRolesCacheDuration = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan ClientSearchCacheDuration = TimeSpan.FromMinutes(5);
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -238,6 +239,12 @@ public sealed class ClientsService
         first = Math.Max(0, first);
         max = Math.Clamp(max <= 0 ? 20 : max, 1, 200);
 
+        var cacheKey = BuildClientSearchCacheKey(realm, query, first, max);
+        if (_cache.TryGetValue(cacheKey, out ClientShort[] cachedClients))
+        {
+            return new List<ClientShort>(cachedClients);
+        }
+
         var http = CreateAdminClient();
         var excluded = await _exclusions.GetAllAsync(ct);
 
@@ -261,7 +268,7 @@ public sealed class ClientsService
             var filteredExact = FilterExcluded(mappedExact, excluded);
             if (filteredExact.Count > 0)
             {
-                return filteredExact;
+                return CacheSearchResult(cacheKey, filteredExact);
             }
         }
 
@@ -279,10 +286,25 @@ public sealed class ClientsService
             .Where(c => c.ClientId.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
             .ToList();
 
-        return FilterExcluded(mapped, excluded);
+        var filtered = FilterExcluded(mapped, excluded);
+        return CacheSearchResult(cacheKey, filtered);
 
         static ClientShort MapClient(ClientRep c) => new(c.Id ?? string.Empty, c.ClientId ?? string.Empty);
+
+        List<ClientShort> CacheSearchResult(string key, List<ClientShort> result)
+        {
+            var snapshot = result.ToArray();
+            _cache.Set(key, snapshot, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration
+            });
+
+            return new List<ClientShort>(snapshot);
+        }
     }
+
+    private static string BuildClientSearchCacheKey(string realm, string query, int first, int max)
+        => $"kc:clients:search:{realm}:{first}:{max}:{query}";
 
     private async Task<ClientShort?> GetClientShortByClientIdAsync(string realm, string clientId, CancellationToken ct)
     {
