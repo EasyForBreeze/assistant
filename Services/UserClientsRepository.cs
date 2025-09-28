@@ -79,7 +79,7 @@ public class UserClientsRepository
         await using var conn = new NpgsqlConnection(_connString);
         await conn.OpenAsync(ct);
 
-        var cmd = new NpgsqlCommand(@"insert into user_clients
+        await using var cmd = new NpgsqlCommand(@"insert into user_clients
                 (username, name, client_id, realm, enabled, flow_standard, flow_service)
                 values (@u, @n, @cid, @r, @en, @std, @svc)
                 on conflict (username, client_id, realm) do update set
@@ -106,7 +106,7 @@ public class UserClientsRepository
         await using var conn = new NpgsqlConnection(_connString);
         await conn.OpenAsync(ct);
 
-        var cmd = new NpgsqlCommand("delete from user_clients where client_id=@cid and realm=@r", conn);
+        await using var cmd = new NpgsqlCommand("delete from user_clients where client_id=@cid and realm=@r", conn);
         cmd.Parameters.AddWithValue("cid", clientId);
         cmd.Parameters.AddWithValue("r", realm);
 
@@ -120,7 +120,7 @@ public class UserClientsRepository
         await using var conn = new NpgsqlConnection(_connString);
         await conn.OpenAsync(ct);
 
-        var cmd = new NpgsqlCommand(
+        await using var cmd = new NpgsqlCommand(
             "delete from user_clients where username=@u and client_id=@cid and realm=@r",
             conn);
         cmd.Parameters.AddWithValue("u", username);
