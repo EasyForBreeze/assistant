@@ -23,6 +23,7 @@ public sealed class ClientsService
     private const int ClientDetailsRolePreviewLimit = 50;
     private static readonly TimeSpan ClientRolesCacheDuration = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan ServiceRolesCacheDuration = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan ClientRoleMapCacheDuration = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan ClientSearchCacheDuration = TimeSpan.FromMinutes(5);
 
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -802,7 +803,7 @@ public sealed class ClientsService
 
         var roleMaps = await Task.WhenAll(clients.Select(async kvp =>
         {
-            var map = await GetClientRoleMapAsync(http, realm, kvp.Value.Id, ct);
+            var map = await GetClientRoleMapCachedAsync(http, realm, kvp.Value.Id, ct);
             return (kvp.Key, Roles: map);
         }));
 
@@ -838,6 +839,11 @@ public sealed class ClientsService
         }
 
         InvalidateServiceRolesCache(realm, newClientUuid);
+
+        foreach (var client in clients.Values)
+        {
+            InvalidateClientRoleMapCache(realm, client.Id);
+        }
     }
 
     private async Task RemoveServiceRolesFromServiceAccountAsync(string realm, string clientUuid, IReadOnlyList<(string ClientId, string Role)> pairs, CancellationToken ct)
@@ -892,7 +898,7 @@ public sealed class ClientsService
 
         var roleMaps = await Task.WhenAll(clients.Select(async kvp =>
         {
-            var map = await GetClientRoleMapAsync(http, realm, kvp.Value.Id, ct);
+            var map = await GetClientRoleMapCachedAsync(http, realm, kvp.Value.Id, ct);
             return (kvp.Key, Roles: map);
         }));
 
@@ -937,6 +943,11 @@ public sealed class ClientsService
         }
 
         InvalidateServiceRolesCache(realm, clientUuid);
+
+        foreach (var client in clients.Values)
+        {
+            InvalidateClientRoleMapCache(realm, client.Id);
+        }
     }
 
     private async Task<List<(string ClientId, string Role)>> GetServiceAccountRolesAsync(string realm, string clientUuid, CancellationToken ct)
@@ -1008,14 +1019,33 @@ public sealed class ClientsService
     private static string BuildClientRolesCacheKey(string realm, string clientUuid)
         => $"client-roles:{realm}:{clientUuid}:{ClientDetailsRolePreviewLimit}";
 
+    private static string BuildClientRoleMapCacheKey(string realm, string clientUuid)
+        => $"client-role-map:{realm}:{clientUuid}";
+
     private static string BuildServiceRolesCacheKey(string realm, string clientUuid)
         => $"service-roles:{realm}:{clientUuid}";
 
     private void InvalidateClientRolesCache(string realm, string clientUuid)
-        => _cache.Remove(BuildClientRolesCacheKey(realm, clientUuid));
+    {
+        _cache.Remove(BuildClientRolesCacheKey(realm, clientUuid));
+        InvalidateClientRoleMapCache(realm, clientUuid);
+    }
 
     private void InvalidateServiceRolesCache(string realm, string clientUuid)
         => _cache.Remove(BuildServiceRolesCacheKey(realm, clientUuid));
+
+    private void InvalidateClientRoleMapCache(string realm, string clientUuid)
+        => _cache.Remove(BuildClientRoleMapCacheKey(realm, clientUuid));
+
+    private Task<Dictionary<string, KcRoleRep>> GetClientRoleMapCachedAsync(HttpClient http, string realm, string clientUuid, CancellationToken ct)
+    {
+        var cacheKey = BuildClientRoleMapCacheKey(realm, clientUuid);
+        return _cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = ClientRoleMapCacheDuration;
+            return await GetClientRoleMapAsync(http, realm, clientUuid, ct);
+        }) ?? Task.FromResult(new Dictionary<string, KcRoleRep>(StringComparer.OrdinalIgnoreCase));
+    }
 
     private async Task<Dictionary<string, KcRoleRep>> GetClientRoleMapAsync(HttpClient http, string realm, string clientUuid, CancellationToken ct)
     {
