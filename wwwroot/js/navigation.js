@@ -99,10 +99,11 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         }
         const incoming = doc.getElementById('toastsHost');
         if (!incoming) {
-            toastsHost.innerHTML = '';
+            toastsHost.replaceChildren();
             return;
         }
-        toastsHost.innerHTML = incoming.innerHTML;
+        const nodes = Array.from(incoming.childNodes, node => document.importNode(node, true));
+        toastsHost.replaceChildren(...nodes);
         executeSoftScripts(toastsHost);
     }
 
