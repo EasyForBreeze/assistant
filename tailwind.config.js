@@ -2,6 +2,7 @@
 module.exports = {
     content: [
         "./Pages/**/*.{cshtml,razor}",
+        "./Pages/**/*.cs",
         "./wwwroot/js/**/*.js",
         "./Services/**/*.cs",
         "./KeyCloak/**/*.cs",
