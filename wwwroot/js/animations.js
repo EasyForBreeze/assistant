@@ -36,9 +36,9 @@ export function animateAppVisibility(target, shouldShow) {
         return null;
     }
 
-    cancelAppAnimation(target);
-
     const computed = window.getComputedStyle(target);
+
+    cancelAppAnimation(target);
     const currentOpacity = parseFloat(computed.opacity);
     const startOpacity = isNaN(currentOpacity) ? (shouldShow ? 0 : 1) : currentOpacity;
     const startTransform = computed.transform && computed.transform !== 'none'
