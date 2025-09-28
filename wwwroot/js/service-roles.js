@@ -1,5 +1,30 @@
 const DEFAULT_MIN_QUERY = 3;
 const DEFAULT_PAGE_SIZE = 50;
+const CACHE_CLIENTS_LIMIT = 30;
+const CACHE_ROLES_LIMIT = 30;
+
+function cacheGet(cache, key) {
+    if (!cache.has(key)) {
+        return undefined;
+    }
+    const value = cache.get(key);
+    cache.delete(key);
+    cache.set(key, value);
+    return value;
+}
+
+function cacheSet(cache, key, value, limit) {
+    if (cache.has(key)) {
+        cache.delete(key);
+    }
+    cache.set(key, value);
+    if (cache.size > limit) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey !== undefined) {
+            cache.delete(oldestKey);
+        }
+    }
+}
 
 function createElement(tag, className, html) {
     const node = document.createElement(tag);
@@ -332,13 +357,15 @@ export function initServiceRoles(root, options = {}) {
 
     const searchClients = async (queryText, realmValue) => {
         const key = cacheClientsKey(realmValue, queryText);
-        if (state.cacheClients.has(key)) {
-            return state.cacheClients.get(key);
+        const cachedClients = cacheGet(state.cacheClients, key);
+        if (cachedClients) {
+            return cachedClients;
         }
         const url = `${pageUrl}?handler=ClientsSearch&realm=${encodeURIComponent(realmValue)}&q=${encodeURIComponent(queryText)}&first=0&max=12`;
         const clients = await fetchJson(url);
-        state.cacheClients.set(key, Array.isArray(clients) ? clients : []);
-        return state.cacheClients.get(key);
+        const finalClients = Array.isArray(clients) ? clients : [];
+        cacheSet(state.cacheClients, key, finalClients, CACHE_CLIENTS_LIMIT);
+        return finalClients;
     };
 
     const searchRolesAcrossClients = async (queryText, append = false, isFirst = false, realmOverride) => {
@@ -442,14 +469,15 @@ export function initServiceRoles(root, options = {}) {
         }
         const cacheKey = cacheClientRolesKey(currentRealm, state.currentClient.clientId, state.page);
         try {
-            let roles = state.cacheClientRoles.get(cacheKey);
+            let roles = cacheGet(state.cacheClientRoles, cacheKey);
             if (!roles) {
                 const url = `${pageUrl}?handler=ClientRoles&id=${encodeURIComponent(state.currentClient.id)}&realm=${encodeURIComponent(currentRealm)}&first=${state.page * state.size}&max=${state.size}`;
                 roles = await fetchJson(url);
-                state.cacheClientRoles.set(cacheKey, Array.isArray(roles) ? roles : []);
+                roles = Array.isArray(roles) ? roles : [];
+                cacheSet(state.cacheClientRoles, cacheKey, roles, CACHE_ROLES_LIMIT);
             }
-            renderRoles(state.cacheClientRoles.get(cacheKey), { append });
-            state.more = (state.cacheClientRoles.get(cacheKey)?.length || 0) === state.size;
+            renderRoles(roles, { append });
+            state.more = roles.length === state.size;
             if (btnMoreRoles) {
                 btnMoreRoles.classList.toggle('hidden', !state.more);
             }
@@ -611,6 +639,8 @@ export function initServiceRoles(root, options = {}) {
     }
 
     const abortCleanup = () => {
+        state.cacheClients.clear();
+        state.cacheClientRoles.clear();
         removeMoreHitsButton();
         hideDd();
     };
