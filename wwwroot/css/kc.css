@@ -138,6 +138,13 @@
     color: var(--kc-ink);
 }
 
+.kc-select-dark
+{
+    background-color: #0a0f18;
+    color: var(--kc-ink);
+    border: 1px solid var(--kc-border-strong);
+}
+
 
 /* inp-with-prefix */
 .prefix-wrap {
