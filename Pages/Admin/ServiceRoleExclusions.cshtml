@@ -4,25 +4,17 @@
     ViewData["Title"] = "Список исключений";
 }
 
-<div class="kc-header p-5 md:p-6 relative overflow-hidden mb-6">
-    <div class="absolute inset-0 pointer-events-none">
-        <div class="glow-blob absolute -top-12 left-8 h-40 w-40 rounded-full blur-[70px] opacity-60"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(14,165,233,.55), rgba(59,130,246,.35))"></div>
-        <div class="glow-blob absolute -bottom-16 right-10 h-44 w-44 rounded-full blur-[80px] opacity-40"
-             style="background: radial-gradient(60% 60% at 50% 50%, rgba(45,212,191,.6), rgba(99,102,241,.35))"></div>
-    </div>
-
-    <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h3 class="text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(59,130,246,0.25)]">
-                Список исключений
-            </h3>
-            <p class="text-slate-200/80 mt-2 text-sm max-w-2xl">
-                Управляйте клиентами Keycloak, для которых запрещено назначать сервисные роли в Assistant.
-            </p>
-        </div>
-    </div>
-</div>
+@await Html.PartialAsync("_AuroraHeader", new AuroraHeaderModel
+{
+    Title = "Список исключений",
+    HeadingTag = "h3",
+    ThemeClass = "aurora-sky-teal",
+    Classes = "p-5 md:p-6 relative overflow-hidden mb-6",
+    ContentClasses = "relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
+    TitleCssClass = "text-3xl md:text-4xl text-white tracking-tight drop-shadow-[0_6px_18px_rgba(59,130,246,0.25)]",
+    Subtitle = "Управляйте клиентами Keycloak, для которых запрещено назначать сервисные роли в Assistant.",
+    SubtitleCssClass = "text-slate-200/80 mt-2 text-sm max-w-2xl"
+})
 
 <section class="kc-card p-6 mb-6 space-y-5">
     <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
