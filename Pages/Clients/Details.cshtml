@@ -483,6 +483,7 @@
 }
 
 @section Scripts {
+    <script src="~/js/client-secret.js" data-soft-nav></script>
     <script data-soft-nav>
         (() => {
           (function(){
@@ -735,13 +736,26 @@
           const secretMask = '••••••••••••••';
           let secretVisible = false;
 
-          async function fetchSecret(method = 'GET') {
-            const resp = await fetch(`/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`, { method });
-            if (resp.ok) {
-              const data = await resp.json();
-              return data.secret || '';
+          const secretUtils = window.ClientSecret || {};
+          const toastHost = document.getElementById('toastsHost');
+          const secretEndpoint = `/api/client-secret?realm=${encodeURIComponent(realm)}&clientId=${encodeURIComponent(clientId)}`;
+
+          const showSecretError = (message, error) => {
+            console.error(message, error);
+            if (typeof secretUtils.showErrorToast === 'function') {
+              secretUtils.showErrorToast(message, { host: toastHost });
             }
-            return '';
+          };
+
+          async function fetchSecret(method = 'GET') {
+            if (typeof secretUtils.fetchClientSecret !== 'function') {
+              throw new Error('Client secret utilities are not available.');
+            }
+            return await secretUtils.fetchClientSecret({
+              url: secretEndpoint,
+              method,
+              fetchImpl: (...args) => fetch(...args)
+            });
           }
 
           const btnShowSecret = document.getElementById('btnShowSecret');
@@ -754,34 +768,50 @@
               btnShowSecret.title = 'Показать';
               btnShowSecret.setAttribute('aria-label','Показать');
             } else {
-              const secret = await fetchSecret('GET');
-              input.value = secret;
-              secretVisible = true;
-              btnShowSecret.title = 'Скрыть';
-              btnShowSecret.setAttribute('aria-label','Скрыть');
+              try {
+                const secret = await fetchSecret('GET');
+                input.value = secret;
+                secretVisible = true;
+                btnShowSecret.title = 'Скрыть';
+                btnShowSecret.setAttribute('aria-label','Скрыть');
+              } catch (error) {
+                showSecretError('Не удалось получить секрет клиента.', error);
+              }
             }
           });
 
           const btnCopySecret = document.getElementById('btnCopySecret');
           btnCopySecret?.addEventListener('click', async () => {
             if (!ensureClipboardSupport(btnCopySecret)) return;
-            const secret = secretVisible
-              ? (document.getElementById('credSecret')?.value || '')
-              : await fetchSecret('GET');
+            let secretValue;
+            if (secretVisible) {
+              secretValue = document.getElementById('credSecret')?.value || '';
+            } else {
+              try {
+                secretValue = await fetchSecret('GET');
+              } catch (error) {
+                showSecretError('Не удалось получить секрет клиента для копирования.', error);
+                return;
+              }
+            }
             const input = document.getElementById('credSecret');
             if (input && !secretVisible) input.value = secretMask;
             if (!secretVisible) {
               btnShowSecret && (btnShowSecret.title = 'Показать', btnShowSecret.setAttribute('aria-label','Показать'));
             }
-            await copyToClipboard(secret, btnCopySecret);
+            await copyToClipboard(secretValue, btnCopySecret);
           });
 
           document.getElementById('btnRegenSecret')?.addEventListener('click', async () => {
-            const secret = await fetchSecret('POST');
-            const input = document.getElementById('credSecret');
-            if (input) input.value = secret;
-            secretVisible = true;
-            btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
+            try {
+              const secret = await fetchSecret('POST');
+              const input = document.getElementById('credSecret');
+              if (input) input.value = secret;
+              secretVisible = true;
+              btnShowSecret && (btnShowSecret.title = 'Скрыть', btnShowSecret.setAttribute('aria-label','Скрыть'));
+            } catch (error) {
+              showSecretError('Не удалось сгенерировать новый секрет клиента.', error);
+            }
           });
 
           function initTokenTab(){
