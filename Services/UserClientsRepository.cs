@@ -1,6 +1,8 @@
 using Assistant.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Assistant.Services;
 
@@ -11,6 +13,7 @@ public class UserClientsRepository
 {
     private readonly string _connString;
     private bool _initialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public UserClientsRepository(IConfiguration configuration)
     {
@@ -20,37 +23,53 @@ public class UserClientsRepository
 
     private async Task EnsureCreatedAsync(CancellationToken ct)
     {
-        if (_initialized) return;
+        if (_initialized)
+        {
+            return;
+        }
 
-        await using var conn = new NpgsqlConnection(_connString);
-        await conn.OpenAsync(ct);
+        await _initLock.WaitAsync(ct);
+        try
+        {
+            if (_initialized)
+            {
+                return;
+            }
 
-        var sql = @"CREATE TABLE IF NOT EXISTS user_clients (
-                        username       text    NOT NULL,
-                        name           text    NOT NULL,
-                        client_id      text    NOT NULL,
-                        realm          text    NOT NULL,
-                        enabled        boolean NOT NULL,
-                        flow_standard  boolean NOT NULL,
-                        flow_service   boolean NOT NULL
-                    );";
+            await using var conn = new NpgsqlConnection(_connString);
+            await conn.OpenAsync(ct);
 
-        await using (var cmd = new NpgsqlCommand(sql, conn))
-            await cmd.ExecuteNonQueryAsync(ct);
+            var sql = @"CREATE TABLE IF NOT EXISTS user_clients (
+                            username       text    NOT NULL,
+                            name           text    NOT NULL,
+                            client_id      text    NOT NULL,
+                            realm          text    NOT NULL,
+                            enabled        boolean NOT NULL,
+                            flow_standard  boolean NOT NULL,
+                            flow_service   boolean NOT NULL
+                        );";
 
-        const string identityIndexSql =
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_clients_identity ON user_clients(username, client_id, realm);";
+            await using (var cmd = new NpgsqlCommand(sql, conn))
+                await cmd.ExecuteNonQueryAsync(ct);
 
-        await using (var idx = new NpgsqlCommand(identityIndexSql, conn))
-            await idx.ExecuteNonQueryAsync(ct);
+            const string identityIndexSql =
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_clients_identity ON user_clients(username, client_id, realm);";
 
-        const string clientRealmIndexSql =
-            "CREATE INDEX IF NOT EXISTS ix_user_clients_client_realm ON user_clients(client_id, realm);";
+            await using (var idx = new NpgsqlCommand(identityIndexSql, conn))
+                await idx.ExecuteNonQueryAsync(ct);
 
-        await using (var idx = new NpgsqlCommand(clientRealmIndexSql, conn))
-            await idx.ExecuteNonQueryAsync(ct);
+            const string clientRealmIndexSql =
+                "CREATE INDEX IF NOT EXISTS ix_user_clients_client_realm ON user_clients(client_id, realm);";
 
-        _initialized = true;
+            await using (var idx = new NpgsqlCommand(clientRealmIndexSql, conn))
+                await idx.ExecuteNonQueryAsync(ct);
+
+            _initialized = true;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     public async Task AddAsync(string username, ClientSummary client, CancellationToken ct = default)

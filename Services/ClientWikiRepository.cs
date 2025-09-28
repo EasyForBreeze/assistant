@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Npgsql;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Assistant.Services;
 
@@ -10,6 +12,7 @@ public sealed class ClientWikiRepository
 {
     private readonly string _connectionString;
     private bool _initialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public ClientWikiRepository(IConfiguration configuration)
     {
@@ -24,34 +27,47 @@ public sealed class ClientWikiRepository
             return;
         }
 
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
-
-        const string tableSql = @"CREATE TABLE IF NOT EXISTS client_wiki_pages (
-                                    realm            text        NOT NULL,
-                                    client_id        text        NOT NULL,
-                                    page_id          text        NOT NULL,
-                                    app_name         text        NULL,
-                                    app_url          text        NULL,
-                                    service_owner    text        NULL,
-                                    service_manager  text        NULL,
-                                    updated_at       timestamptz NOT NULL DEFAULT now()
-                                );";
-
-        await using (var cmd = new NpgsqlCommand(tableSql, conn))
+        await _initLock.WaitAsync(ct);
+        try
         {
-            await cmd.ExecuteNonQueryAsync(ct);
+            if (_initialized)
+            {
+                return;
+            }
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(ct);
+
+            const string tableSql = @"CREATE TABLE IF NOT EXISTS client_wiki_pages (
+                                        realm            text        NOT NULL,
+                                        client_id        text        NOT NULL,
+                                        page_id          text        NOT NULL,
+                                        app_name         text        NULL,
+                                        app_url          text        NULL,
+                                        service_owner    text        NULL,
+                                        service_manager  text        NULL,
+                                        updated_at       timestamptz NOT NULL DEFAULT now()
+                                    );";
+
+            await using (var cmd = new NpgsqlCommand(tableSql, conn))
+            {
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+
+            const string indexSql =
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_client_wiki_pages_identity ON client_wiki_pages(realm, client_id);";
+
+            await using (var index = new NpgsqlCommand(indexSql, conn))
+            {
+                await index.ExecuteNonQueryAsync(ct);
+            }
+
+            _initialized = true;
         }
-
-        const string indexSql =
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_client_wiki_pages_identity ON client_wiki_pages(realm, client_id);";
-
-        await using (var index = new NpgsqlCommand(indexSql, conn))
+        finally
         {
-            await index.ExecuteNonQueryAsync(ct);
+            _initLock.Release();
         }
-
-        _initialized = true;
     }
 
     public async Task<ClientWikiInfo?> GetAsync(string realm, string clientId, CancellationToken ct = default)

@@ -15,6 +15,7 @@ public sealed class ApiLogRepository
 {
     private readonly string _connString;
     private bool _initialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public ApiLogRepository(IConfiguration configuration)
     {
@@ -23,48 +24,64 @@ public sealed class ApiLogRepository
     }
     private async Task EnsureCreatedAsync(CancellationToken ct)
     {
-        if (_initialized) return;
+        if (_initialized)
+        {
+            return;
+        }
 
-        await using var conn = new NpgsqlConnection(_connString);
-        await conn.OpenAsync(ct);
+        await _initLock.WaitAsync(ct);
+        try
+        {
+            if (_initialized)
+            {
+                return;
+            }
 
-        const string sql = @"CREATE TABLE IF NOT EXISTS api_audit_logs (
-                                id            bigserial    PRIMARY KEY,
-                                created_at    timestamptz  NOT NULL DEFAULT now(),
-                                operation_type text        NOT NULL,
-                                username      text         NOT NULL,
-                                realm         text         NOT NULL,
-                                target_id     text         NOT NULL,
-                                details       text         NULL
-                            );";
+            await using var conn = new NpgsqlConnection(_connString);
+            await conn.OpenAsync(ct);
 
-        await using (var cmd = new NpgsqlCommand(sql, conn))
-            await cmd.ExecuteNonQueryAsync(ct);
+            const string sql = @"CREATE TABLE IF NOT EXISTS api_audit_logs (
+                                    id            bigserial    PRIMARY KEY,
+                                    created_at    timestamptz  NOT NULL DEFAULT now(),
+                                    operation_type text        NOT NULL,
+                                    username      text         NOT NULL,
+                                    realm         text         NOT NULL,
+                                    target_id     text         NOT NULL,
+                                    details       text         NULL
+                                );";
 
-        const string alterSql = "alter table api_audit_logs add column if not exists details text null";
+            await using (var cmd = new NpgsqlCommand(sql, conn))
+                await cmd.ExecuteNonQueryAsync(ct);
 
-        await using (var alterCmd = new NpgsqlCommand(alterSql, conn))
-            await alterCmd.ExecuteNonQueryAsync(ct);
+            const string alterSql = "alter table api_audit_logs add column if not exists details text null";
 
-        const string indexSql =
-            "create index if not exists idx_api_audit_logs_created_at_id on api_audit_logs (created_at desc, id desc)";
+            await using (var alterCmd = new NpgsqlCommand(alterSql, conn))
+                await alterCmd.ExecuteNonQueryAsync(ct);
 
-        await using (var indexCmd = new NpgsqlCommand(indexSql, conn))
-            await indexCmd.ExecuteNonQueryAsync(ct);
+            const string indexSql =
+                "create index if not exists idx_api_audit_logs_created_at_id on api_audit_logs (created_at desc, id desc)";
 
-        const string usernameIndexSql =
-            "create index if not exists idx_api_audit_logs_username on api_audit_logs (username)";
+            await using (var indexCmd = new NpgsqlCommand(indexSql, conn))
+                await indexCmd.ExecuteNonQueryAsync(ct);
 
-        await using (var usernameIndexCmd = new NpgsqlCommand(usernameIndexSql, conn))
-            await usernameIndexCmd.ExecuteNonQueryAsync(ct);
+            const string usernameIndexSql =
+                "create index if not exists idx_api_audit_logs_username on api_audit_logs (username)";
 
-        const string operationTypeIndexSql =
-            "create index if not exists idx_api_audit_logs_operation_type_normalized on api_audit_logs (upper(coalesce(nullif(split_part(operation_type, ':', 2), ''), operation_type)))";
+            await using (var usernameIndexCmd = new NpgsqlCommand(usernameIndexSql, conn))
+                await usernameIndexCmd.ExecuteNonQueryAsync(ct);
 
-        await using (var operationTypeIndexCmd = new NpgsqlCommand(operationTypeIndexSql, conn))
-            await operationTypeIndexCmd.ExecuteNonQueryAsync(ct);
+            const string operationTypeIndexSql =
+                "create index if not exists idx_api_audit_logs_operation_type_normalized on api_audit_logs (upper(coalesce(nullif(split_part(operation_type, ':', 2), ''), operation_type)))";
 
-        _initialized = true;
+            await using (var operationTypeIndexCmd = new NpgsqlCommand(operationTypeIndexSql, conn))
+                await operationTypeIndexCmd.ExecuteNonQueryAsync(ct);
+
+            _initialized = true;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     public async Task LogAsync(
