@@ -872,7 +872,14 @@
             }
 
             let closing = false;
-            const detachKeydown = handler => document.removeEventListener('keydown', handler);
+            const keydownController = new AbortController();
+            const detachKeydown = () =>
+            {
+              if (!keydownController.signal.aborted)
+              {
+                keydownController.abort();
+              }
+            };
             const close = () =>
             {
               if (closing)
@@ -880,7 +887,7 @@
                 return;
               }
               closing = true;
-              detachKeydown(onKeydown);
+              detachKeydown();
 
               const exit = panel ? animateSoftVisibility(panel, false) : null;
               if (exit && typeof exit.then === 'function')
@@ -902,7 +909,18 @@
               }
             };
 
-            document.addEventListener('keydown', onKeydown);
+            document.addEventListener('keydown', onKeydown, { signal: keydownController.signal });
+
+            const appRoot = document.getElementById('app');
+            if (appRoot)
+            {
+              const handleSoftTeardown = () =>
+              {
+                detachKeydown();
+                close();
+              };
+              appRoot.addEventListener('soft:teardown', handleSoftTeardown, { once: true });
+            }
 
             modal.querySelectorAll('[data-close-modal]')
                  .forEach(btn => btn.addEventListener('click', close));

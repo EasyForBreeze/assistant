@@ -497,8 +497,23 @@
           const panes = document.querySelectorAll('.tab-pane');
 
           const prevEventsDocClick = window.__eventsDocClick;
-          if (typeof prevEventsDocClick === 'function') {
-            document.removeEventListener('click', prevEventsDocClick);
+          if (prevEventsDocClick)
+          {
+            try
+            {
+              if (typeof prevEventsDocClick.abort === 'function')
+              {
+                prevEventsDocClick.abort();
+              }
+              else if (typeof prevEventsDocClick === 'function')
+              {
+                document.removeEventListener('click', prevEventsDocClick);
+              }
+            }
+            catch (error)
+            {
+              console.error('Failed to detach previous events click handler:', error);
+            }
             delete window.__eventsDocClick;
           }
 
@@ -949,8 +964,30 @@
                 ddType.classList.add('hidden');
               }
             };
-            document.addEventListener('click', onDocumentClick);
-            window.__eventsDocClick = onDocumentClick;
+            const docClickController = new AbortController();
+            const docClickSignal = docClickController.signal;
+
+            document.addEventListener('click', onDocumentClick, { signal: docClickSignal });
+
+            const teardownRef = {
+              abort: () =>
+              {
+                docClickController.abort();
+                ddType?.classList.add('hidden');
+                if (window.__eventsDocClick === teardownRef)
+                {
+                  delete window.__eventsDocClick;
+                }
+              }
+            };
+
+            window.__eventsDocClick = teardownRef;
+
+            const appRoot = document.getElementById('app');
+            if (appRoot)
+            {
+              appRoot.addEventListener('soft:teardown', teardownRef.abort, { once: true });
+            }
 
             [inType,inFrom,inTo,inUser,inIp].forEach(el=> el?.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); load(); }}));
 

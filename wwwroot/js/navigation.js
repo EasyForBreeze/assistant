@@ -265,6 +265,11 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         }
         runTeardowns();
         cancelAppAnimation(currentApp);
+        try {
+            currentApp.dispatchEvent(new CustomEvent('soft:teardown'));
+        } catch (error) {
+            console.error('Soft navigation teardown event failed:', error);
+        }
         currentApp.replaceWith(importedMain);
         currentApp = importedMain;
         executeSoftScripts(currentApp);
