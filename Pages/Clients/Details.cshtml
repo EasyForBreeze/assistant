@@ -593,7 +593,6 @@
           function updateServiceState(){
             const authOn = swClientAuth?.checked;
             if (!authOn && swService){ swService.checked = false; }
-            if (swService) swService.disabled = !authOn;
             updateServiceRolesTab();
           }
 
@@ -607,7 +606,12 @@
 
           swEnabled?.addEventListener('change', updateEnabledLabel);
           swClientAuth?.addEventListener('change', updateServiceState);
-          swService?.addEventListener('change', updateServiceRolesTab);
+          swService?.addEventListener('change', () => {
+            if (swService?.checked && swClientAuth && !swClientAuth.checked){
+              swClientAuth.checked = true;
+            }
+            updateServiceState();
+          });
           updateServiceState();
           updateEnabledLabel();
 
