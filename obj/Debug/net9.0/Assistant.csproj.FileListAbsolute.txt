@@ -2558,8 +2558,6 @@ C:\Users\bream\source\repos\qwe42-base\Assistant\obj\Debug\net9.0\refint\Assista
 C:\Users\bream\source\repos\qwe42-base\Assistant\obj\Debug\net9.0\Assistant.pdb
 C:\Users\bream\source\repos\qwe42-base\Assistant\obj\Debug\net9.0\Assistant.genruntimeconfig.cache
 C:\Users\bream\source\repos\qwe42-base\Assistant\obj\Debug\net9.0\ref\Assistant.dll
-C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-xy9ulylw2e.gz
-C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\495dkwcspf-enthjy8xtc.gz
 C:\Users\bream\source\repos\qwe13\Assistant\bin\Debug\net9.0\appsettings.Development.json
 C:\Users\bream\source\repos\qwe13\Assistant\bin\Debug\net9.0\appsettings.json
 C:\Users\bream\source\repos\qwe13\Assistant\bin\Debug\net9.0\Assistant.staticwebassets.runtime.json
@@ -3371,3 +3369,16 @@ C:\Users\bream\source\repos\qwe2\Assistant\obj\Debug\net9.0\refint\Assistant.dll
 C:\Users\bream\source\repos\qwe2\Assistant\obj\Debug\net9.0\Assistant.pdb
 C:\Users\bream\source\repos\qwe2\Assistant\obj\Debug\net9.0\Assistant.genruntimeconfig.cache
 C:\Users\bream\source\repos\qwe2\Assistant\obj\Debug\net9.0\ref\Assistant.dll
+C:\Users\bream\source\repos\qwe5\Assistant\bin\Debug\net9.0\link_realms.json
+C:\Users\bream\source\repos\qwe5\Assistant\bin\Debug\net9.0\package-lock.json
+C:\Users\bream\source\repos\qwe5\Assistant\bin\Debug\net9.0\package.json
+C:\Users\bream\source\repos\qwe5\Assistant\bin\Debug\net9.0\ICSharpCode.SharpZipLib.dll
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\iv0eh2g5i3-0c87xl172c.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\wjzfhkamza-yhknfal234.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\albq4l899d-qli80s91ov.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\facald70ne-xwz7h3vd5z.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\mrben2cbl7-v04noxn5nu.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\8fb0glteyt-0d95r7dxty.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\j49jvo4qj1-6jwl3yte9c.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\495dkwcspf-bq5hum7730.gz
+C:\Users\bream\source\repos\qwe5\Assistant\obj\Debug\net9.0\compressed\d22wqxmmqq-cqizz52zjv.gz

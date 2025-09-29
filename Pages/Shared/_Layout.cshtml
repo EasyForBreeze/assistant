@@ -13,74 +13,43 @@
 
     @RenderSection("Head", required: false)
 </head>
-<body class="min-h-screen bg-dark-pattern text-slate-100 relative overflow-x-hidden">
-    <div class="app-glows" aria-hidden="true">
-        <div class="app-glow app-glow--emerald"></div>
-        <div class="app-glow app-glow--violet"></div>
-        <div class="app-glow app-glow--bottom"></div>
-    </div>
+<body class="min-h-screen bg-dark-pattern text-slate-100 relative">
+    <!-- ЧИСТАЯ шапка без блюра-фона -->
+    <header class="mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+        <a asp-page="/Index" class="font-semibold tracking-wider text-slate-200">ASSISTANT</a>
 
-    <div class="relative z-10 flex min-h-screen flex-col">
-        <header class="mx-auto w-full max-w-6xl px-4 md:px-8 pt-8 pb-6">
-            <div class="header-panel">
-                <div class="header-panel__glow"></div>
-                <div class="header-panel__content">
-                    <div class="flex flex-col gap-2">
-                        <a asp-page="/Index" class="header-brand">
-                            Assistant
-                        </a>
-                        <p class="header-subtitle">Единая панель для управления клиентами и правами доступа</p>
-                    </div>
+        <div class="flex items-center gap-2">
+            <span class="text-lg text-slate-300">Hello, @User.Identity!.Name</span>
+            <form method="post" asp-page="/Account/Logout" data-soft-ignore>
+                <button class="rounded-xl px-3 py-1.5 text-sm bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10">
+                    Sign out
+                </button>
+            </form>
+        </div>
+    </header>
 
-                    <div class="flex items-center gap-3">
-                        <div class="text-right leading-tight hidden sm:block">
-                            <div class="text-xs uppercase tracking-[0.28em] text-slate-400">Добро пожаловать</div>
-                            <div class="text-base font-medium text-slate-100">@User.Identity!.Name</div>
-                        </div>
-                        <form method="post" asp-page="/Account/Logout" data-soft-ignore>
-                            <button class="btn-ghost" type="submit">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                                    <polyline points="10 17 15 12 10 7" />
-                                    <line x1="15" x2="3" y1="12" y2="12" />
-                                </svg>
-                                <span>Выйти</span>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        @{
-            var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? string.Empty;
-            var isAdmin = User.IsInRole("assistant-admin");
-        var linkBase = "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition";
+    @{
+        var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? string.Empty;
+        var isAdmin = User.IsInRole("assistant-admin");
+        var linkBase = "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition";
         string LinkClass(string target)
             => string.Equals(currentPage, target, System.StringComparison.OrdinalIgnoreCase)
-                ? $"{linkBase} nav-link--active"
-                : $"{linkBase} nav-link";
-        }
-        <div class="flex-1 w-full">
-            <div class="mx-auto w-full max-w-6xl px-4 md:px-8 pb-10" data-soft-root>
-                <div class="flex flex-col gap-6 lg:flex-row">
-                    @if (isAdmin)
-                    {
-                        <aside class="lg:w-72 lg:flex-shrink-0">
-                            <div class="nav-panel md:sticky md:top-24">
-                                <div class="nav-panel__header">
-                                    <div class="nav-panel__pulse"></div>
-                                    <div>
-                                        <div class="nav-panel__caption">Администрирование</div>
-                                        <div class="nav-panel__title">Управление доступом</div>
-                                    </div>
-                                </div>
-                                <nav class="nav-panel__list" data-admin-nav>
-                                    <a asp-page="/Clients/Search" class='@LinkClass("/Clients/Search")'>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <circle cx="11" cy="11" r="8" />
-                                            <path d="m21 21-4.3-4.3" />
-                                        </svg>
+                ? $"{linkBase} bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                : $"{linkBase} text-slate-300 hover:bg-white/5";
+    }
+    <div class="container mx-auto px-4 md:px-6 py-6" data-soft-root>
+        <div class="flex flex-col md:flex-row gap-6">
+            @if (isAdmin)
+            {
+                <aside class="md:w-64 md:flex-shrink-0">
+                    <div class="kc-card p-4 mb-4 md:mb-0 md:sticky md:top-0">
+                        <div class="text-xs uppercase tracking-wide text-slate-400 mb-3">Администрирование</div>
+                        <nav class="flex flex-col gap-1" data-admin-nav>
+                            <a asp-page="/Clients/Search" class='@LinkClass("/Clients/Search")'>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="m21 21-4.3-4.3" />
+                                </svg>
                                 <span>Поиск клиентов</span>
                             </a>
                             <a asp-page="/Admin/UserClients" class='@LinkClass("/Admin/UserClients")'>
@@ -98,26 +67,24 @@
                                 <span>Список исключений</span>
                             </a>
                             <a asp-page="/Admin/Events" class='@LinkClass("/Admin/Events")'>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M21 7H3" />
-                                            <path d="M21 11H3" />
-                                            <path d="M15 15H3" />
-                                            <path d="M9 19H3" />
-                                            <path d="M17 2v3" />
-                                            <path d="M7 2v3" />
-                                            <rect width="18" height="18" x="3" y="4" rx="2" />
-                                        </svg>
-                                        <span>События</span>
-                                    </a>
-                                </nav>
-                            </div>
-                        </aside>
-                    }
-                    <main id="app" class="flex-1">
-                        @RenderBody()
-                    </main>
-                </div>
-            </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 7H3" />
+                                    <path d="M21 11H3" />
+                                    <path d="M15 15H3" />
+                                    <path d="M9 19H3" />
+                                    <path d="M17 2v3" />
+                                    <path d="M7 2v3" />
+                                    <rect width="18" height="18" x="3" y="4" rx="2" />
+                                </svg>
+                                <span>События</span>
+                            </a>
+                        </nav>
+                    </div>
+                </aside>
+            }
+            <main id="app" class="flex-1">
+                @RenderBody()
+            </main>
         </div>
     </div>
     <div id="toastsHost">
