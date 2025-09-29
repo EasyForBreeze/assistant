@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 using System.Collections.Generic;
 using System.Threading;
@@ -10,7 +11,7 @@ namespace Assistant.Services;
 /// <summary>
 /// Хранилище клиентов, которым запрещено выдавать сервисные роли.
 /// </summary>
-public sealed class ServiceRoleExclusionsRepository
+public sealed class ServiceRoleExclusionsRepository : IServiceRoleExclusionsRepository
 {
     private readonly string _connString;
     private readonly IMemoryCache _cache;
@@ -18,6 +19,9 @@ public sealed class ServiceRoleExclusionsRepository
     private bool _initialized;
 
     private const string CacheKey = "service-role-exclusions";
+
+    private long _version;
+    private CancellationTokenSource _changeTokenSource = new();
 
     private static readonly string[] DefaultClientIds =
     {
@@ -104,7 +108,7 @@ public sealed class ServiceRoleExclusionsRepository
         _cache.Set(CacheKey, set, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        });
+        }.AddExpirationToken(CreateChangeToken()));
         return set;
     }
 
@@ -186,5 +190,28 @@ public sealed class ServiceRoleExclusionsRepository
         return null;
     }
 
-    public void InvalidateCache() => _cache.Remove(CacheKey);
+    public long GetVersion() => Interlocked.Read(ref _version);
+
+    public IChangeToken CreateChangeToken()
+    {
+        var source = Volatile.Read(ref _changeTokenSource);
+        return new CancellationChangeToken(source.Token);
+    }
+
+    public void InvalidateCache()
+    {
+        _cache.Remove(CacheKey);
+        Interlocked.Increment(ref _version);
+
+        var newSource = new CancellationTokenSource();
+        var oldSource = Interlocked.Exchange(ref _changeTokenSource, newSource);
+        try
+        {
+            oldSource.Cancel();
+        }
+        finally
+        {
+            oldSource.Dispose();
+        }
+    }
 }

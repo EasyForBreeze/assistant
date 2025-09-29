@@ -38,7 +38,7 @@ builder.Services.AddScoped<Assistant.KeyCloak.UsersService>();
 builder.Services.AddScoped<Assistant.KeyCloak.EventsService>();
 builder.Services.AddSingleton<UserClientsRepository>();
 builder.Services.AddSingleton<IUserClientsRepository>(sp => sp.GetRequiredService<UserClientsRepository>());
-builder.Services.AddSingleton<ServiceRoleExclusionsRepository>();
+builder.Services.AddSingleton<IServiceRoleExclusionsRepository, ServiceRoleExclusionsRepository>();
 builder.Services.AddSingleton<ApiLogRepository>();
 builder.Services.AddSingleton<ClientWikiRepository>();
 builder.Services.AddScoped<IClientsProvider, DbClientsProvider>();

@@ -22,7 +22,7 @@ public class CreateModel : PageModel
     private readonly RealmsService _realms;
     private readonly ClientsService _clients;
     private readonly UserClientsRepository _repo;
-    private readonly ServiceRoleExclusionsRepository _exclusions;
+    private readonly IServiceRoleExclusionsRepository _exclusions;
     private readonly ConfluenceWikiService _wiki;
     private readonly ClientWikiRepository _wikiPages;
     private readonly ClientSecretDistributionService _secretDistribution;
@@ -34,7 +34,7 @@ public class CreateModel : PageModel
         RealmsService realms,
         ClientsService clients,
         UserClientsRepository repo,
-        ServiceRoleExclusionsRepository exclusions,
+        IServiceRoleExclusionsRepository exclusions,
         ConfluenceWikiService wiki,
         ClientWikiRepository wikiPages,
         ClientSecretDistributionService secretDistribution,

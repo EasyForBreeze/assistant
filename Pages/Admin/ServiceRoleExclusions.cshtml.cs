@@ -17,7 +17,7 @@ namespace Assistant.Pages.Admin;
 [Authorize(Roles = "assistant-admin")]
 public sealed class ServiceRoleExclusionsModel : PageModel
 {
-    private readonly ServiceRoleExclusionsRepository _repository;
+    private readonly IServiceRoleExclusionsRepository _repository;
     private readonly ApiLogRepository _logs;
     private readonly RealmsService _realms;
     private readonly ClientsService _clients;
@@ -32,7 +32,7 @@ public sealed class ServiceRoleExclusionsModel : PageModel
     private const int RealmSearchConcurrencyLimit = 4;
 
     public ServiceRoleExclusionsModel(
-        ServiceRoleExclusionsRepository repository,
+        IServiceRoleExclusionsRepository repository,
         ApiLogRepository logs,
         RealmsService realms,
         ClientsService clients,
