@@ -206,8 +206,8 @@ public sealed class ServiceRoleExclusionsModel : PageModel
 
     private async Task LoadExclusionsAsync(CancellationToken ct)
     {
-        var set = await _repository.GetAllAsync(ct);
-        Exclusions = set
+        var snapshot = await _repository.GetAllAsync(ct);
+        Exclusions = snapshot.ClientIds
             .OrderBy(clientId => clientId, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

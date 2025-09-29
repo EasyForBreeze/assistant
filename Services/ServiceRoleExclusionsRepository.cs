@@ -4,6 +4,7 @@ using Npgsql;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 
 namespace Assistant.Services;
 
@@ -16,6 +17,20 @@ public sealed class ServiceRoleExclusionsRepository
     private readonly IMemoryCache _cache;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
+
+    private sealed class ChangeState
+    {
+        public ChangeState(long version, CancellationTokenSource source)
+        {
+            Version = version;
+            Source = source;
+        }
+
+        public long Version { get; }
+        public CancellationTokenSource Source { get; }
+    }
+
+    private ChangeState _changeState = new(0, new CancellationTokenSource());
 
     private const string CacheKey = "service-role-exclusions";
 
@@ -95,17 +110,33 @@ public sealed class ServiceRoleExclusionsRepository
     /// <summary>
     /// Возвращает множество clientId, которым нельзя назначать сервисные роли.
     /// </summary>
-    public async Task<HashSet<string>> GetAllAsync(CancellationToken ct = default)
+    public async Task<ServiceRoleExclusionsSnapshot> GetAllAsync(CancellationToken ct = default)
     {
-        if (_cache.TryGetValue<HashSet<string>>(CacheKey, out var cached))
+        if (_cache.TryGetValue<ServiceRoleExclusionsSnapshot>(CacheKey, out var cached))
             return cached;
 
-        var set = await LoadAllAsync(ct);
-        _cache.Set(CacheKey, set, new MemoryCacheEntryOptions
+        while (true)
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        });
-        return set;
+            var state = Volatile.Read(ref _changeState);
+            var set = await LoadAllAsync(ct);
+
+            if (!ReferenceEquals(state, Volatile.Read(ref _changeState)))
+            {
+                continue;
+            }
+
+            var changeToken = new CancellationChangeToken(state.Source.Token);
+            var snapshot = new ServiceRoleExclusionsSnapshot(set, new ServiceRoleExclusionsChangeToken(state.Version, changeToken));
+
+            var options = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            };
+            options.AddExpirationToken(changeToken);
+
+            _cache.Set(CacheKey, snapshot, options);
+            return snapshot;
+        }
     }
 
     /// <summary>
@@ -114,8 +145,8 @@ public sealed class ServiceRoleExclusionsRepository
     public async Task<bool> IsExcludedAsync(string clientId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(clientId)) return false;
-        var set = await GetAllAsync(ct);
-        return set.Contains(clientId);
+        var snapshot = await GetAllAsync(ct);
+        return snapshot.Contains(clientId);
     }
 
     /// <summary>
@@ -186,5 +217,62 @@ public sealed class ServiceRoleExclusionsRepository
         return null;
     }
 
-    public void InvalidateCache() => _cache.Remove(CacheKey);
+    public ServiceRoleExclusionsChangeToken CreateChangeToken()
+    {
+        var state = Volatile.Read(ref _changeState);
+        return new ServiceRoleExclusionsChangeToken(state.Version, new CancellationChangeToken(state.Source.Token));
+    }
+
+    public long GetVersion()
+    {
+        var state = Volatile.Read(ref _changeState);
+        return state.Version;
+    }
+
+    public void InvalidateCache()
+    {
+        _cache.Remove(CacheKey);
+
+        while (true)
+        {
+            var current = Volatile.Read(ref _changeState);
+            var next = new ChangeState(current.Version + 1, new CancellationTokenSource());
+            if (ReferenceEquals(current, Interlocked.CompareExchange(ref _changeState, next, current)))
+            {
+                try
+                {
+                    current.Source.Cancel();
+                }
+                finally
+                {
+                    current.Source.Dispose();
+                }
+
+                break;
+            }
+        }
+    }
+}
+
+public readonly record struct ServiceRoleExclusionsChangeToken(long Version, IChangeToken Token);
+
+public sealed class ServiceRoleExclusionsSnapshot
+{
+    private readonly HashSet<string> _clientIds;
+
+    public ServiceRoleExclusionsSnapshot(HashSet<string> clientIds, ServiceRoleExclusionsChangeToken changeToken)
+    {
+        _clientIds = clientIds;
+        ChangeToken = changeToken;
+    }
+
+    public IReadOnlySet<string> ClientIds => _clientIds;
+
+    public ServiceRoleExclusionsChangeToken ChangeToken { get; }
+
+    public long Version => ChangeToken.Version;
+
+    public bool Contains(string clientId) => _clientIds.Contains(clientId);
+
+    public int Count => _clientIds.Count;
 }

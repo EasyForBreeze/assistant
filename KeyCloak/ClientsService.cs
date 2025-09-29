@@ -3,6 +3,7 @@ using Assistant.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Net;
 using System.Net.Http.Json;
@@ -245,14 +246,15 @@ public sealed class ClientsService
         first = Math.Max(0, first);
         max = Math.Clamp(max <= 0 ? 20 : max, 1, 200);
 
-        var cacheKey = BuildClientSearchCacheKey(realm, query, first, max);
+        var exclusionsSnapshot = await _exclusions.GetAllAsync(ct);
+
+        var cacheKey = BuildClientSearchCacheKey(realm, query, first, max, exclusionsSnapshot.Version);
         if (!skipCache && _cache.TryGetValue(cacheKey, out ClientShort[] cachedClients))
         {
             return new List<ClientShort>(cachedClients);
         }
 
         var http = CreateAdminClient();
-        var excluded = await _exclusions.GetAllAsync(ct);
 
         var (urlExactNew, urlExactLegacy) =
             BuildAdminUrls(realm, $"clients?clientId={UR(query)}&briefRepresentation=true");
@@ -271,10 +273,10 @@ public sealed class ClientsService
                 .Where(c => ContainsCi(c.ClientId, query))
                 .ToList();
 
-            var filteredExact = FilterExcluded(mappedExact, excluded);
+            var filteredExact = FilterExcluded(mappedExact, exclusionsSnapshot.ClientIds);
             if (filteredExact.Count > 0)
             {
-                return CacheSearchResult(cacheKey, filteredExact);
+                return CacheSearchResult(cacheKey, filteredExact, exclusionsSnapshot.ChangeToken.Token);
             }
         }
 
@@ -292,20 +294,22 @@ public sealed class ClientsService
             .Where(c => c.ClientId.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
             .ToList();
 
-        var filtered = FilterExcluded(mapped, excluded);
-        return CacheSearchResult(cacheKey, filtered);
+        var filtered = FilterExcluded(mapped, exclusionsSnapshot.ClientIds);
+        return CacheSearchResult(cacheKey, filtered, exclusionsSnapshot.ChangeToken.Token);
 
         static ClientShort MapClient(ClientRep c) => new(c.Id ?? string.Empty, c.ClientId ?? string.Empty);
 
-        List<ClientShort> CacheSearchResult(string key, List<ClientShort> result)
+        List<ClientShort> CacheSearchResult(string key, List<ClientShort> result, IChangeToken changeToken)
         {
             if (!skipCache && result.Count > 0)
             {
                 var snapshot = result.ToArray();
-                _cache.Set(key, snapshot, new MemoryCacheEntryOptions
+                var options = new MemoryCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration
-                });
+                };
+                options.AddExpirationToken(changeToken);
+                _cache.Set(key, snapshot, options);
 
                 return new List<ClientShort>(snapshot);
             }
@@ -314,8 +318,8 @@ public sealed class ClientsService
         }
     }
 
-    private static string BuildClientSearchCacheKey(string realm, string query, int first, int max)
-        => $"kc:clients:search:{realm}:{first}:{max}:{query}";
+    private static string BuildClientSearchCacheKey(string realm, string query, int first, int max, long version)
+        => $"kc:clients:search:{realm}:{first}:{max}:{version}:{query}";
 
     private async Task<ClientShort?> GetClientShortByClientIdAsync(string realm, string clientId, CancellationToken ct)
     {
@@ -347,7 +351,7 @@ public sealed class ClientsService
         max = Math.Clamp(max <= 0 ? 50 : max, 1, 200);
 
         var http = CreateAdminClient();
-        var excluded = await _exclusions.GetAllAsync(ct);
+        var exclusionsSnapshot = await _exclusions.GetAllAsync(ct);
 
         var (urlNew, urlLegacy) =
             BuildAdminUrls(realm, $"clients?first={first}&max={max}&briefRepresentation=true");
@@ -361,7 +365,7 @@ public sealed class ClientsService
             .Select(c => new ClientShort(c.Id ?? string.Empty, c.ClientId ?? string.Empty))
             .ToList();
 
-        var filtered = FilterExcluded(mapped, excluded);
+        var filtered = FilterExcluded(mapped, exclusionsSnapshot.ClientIds);
         //await AuditAsync("client:list", realm, $"{first}:{max}", ct);
         return (filtered, mapped.Count);
     }
@@ -1173,7 +1177,7 @@ public sealed class ClientsService
         return roles;
     }
 
-    private static List<ClientShort> FilterExcluded(IEnumerable<ClientShort> source, ISet<string> excluded)
+    private static List<ClientShort> FilterExcluded(IEnumerable<ClientShort> source, IReadOnlySet<string> excluded)
     {
         if (excluded.Count == 0)
         {
