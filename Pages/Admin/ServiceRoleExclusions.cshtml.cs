@@ -373,46 +373,74 @@ public sealed class ServiceRoleExclusionsModel : PageModel
         var query = clientId.Trim();
         var realms = await _realms.GetRealmsAsync(ct);
 
-        foreach (var realm in realms)
-        {
-            if (string.IsNullOrWhiteSpace(realm.Realm))
-            {
-                continue;
-            }
+        var validRealms = realms
+            .Where(r => !string.IsNullOrWhiteSpace(r.Realm))
+            .Select(r => r.Realm!)
+            .ToList();
 
-            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, ValidationFetchLimit, ct);
-            if (hits.Any(hit => string.Equals(hit.ClientId, query, StringComparison.OrdinalIgnoreCase)))
-            {
-                return true;
-            }
+        if (validRealms.Count == 0)
+        {
+            return false;
         }
 
-        return false;
+        var concurrencyLimit = Math.Max(1, RealmSearchConcurrencyLimit);
+        using var semaphore = new SemaphoreSlim(concurrencyLimit, concurrencyLimit);
+
+        var tasks = validRealms.Select(async realmName =>
+        {
+            await semaphore.WaitAsync(ct);
+            try
+            {
+                var hits = await _clients.SearchClientsAsync(realmName, query, 0, ValidationFetchLimit, ct);
+                return hits.Any(hit => string.Equals(hit.ClientId, query, StringComparison.OrdinalIgnoreCase));
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }).ToList();
+
+        var results = await Task.WhenAll(tasks);
+        return results.Any(found => found);
     }
 
     private async Task<List<string>> LookupClientsAsync(string query, CancellationToken ct)
     {
         var realms = await _realms.GetRealmsAsync(ct);
-        var collected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var validRealms = realms
+            .Where(r => !string.IsNullOrWhiteSpace(r.Realm))
+            .Select(r => r.Realm!)
+            .ToList();
 
-        foreach (var realm in realms)
+        if (validRealms.Count == 0)
         {
-            if (string.IsNullOrWhiteSpace(realm.Realm))
-            {
-                continue;
-            }
-
-            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, LookupFetchPerRealm, ct);
-            foreach (var hit in hits)
-            {
-                if (!string.IsNullOrWhiteSpace(hit.ClientId))
-                {
-                    collected.Add(hit.ClientId);
-                }
-            }
+            return new List<string>();
         }
 
-        return collected
+        var concurrencyLimit = Math.Max(1, RealmSearchConcurrencyLimit);
+        using var semaphore = new SemaphoreSlim(concurrencyLimit, concurrencyLimit);
+
+        var searchTasks = validRealms.Select(async realmName =>
+        {
+            await semaphore.WaitAsync(ct);
+            try
+            {
+                var hits = await _clients.SearchClientsAsync(realmName, query, 0, LookupFetchPerRealm, ct);
+                return hits
+                    .Where(h => !string.IsNullOrWhiteSpace(h.ClientId))
+                    .Select(h => h.ClientId)
+                    .ToList();
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }).ToList();
+
+        var results = await Task.WhenAll(searchTasks);
+        return results
+            .SelectMany(x => x)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .Take(LookupMaxResults)
             .ToList();

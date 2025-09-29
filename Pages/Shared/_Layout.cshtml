@@ -14,6 +14,7 @@
     @RenderSection("Head", required: false)
 </head>
 <body class="min-h-screen bg-dark-pattern text-slate-100 relative">
+    <a href="#app" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-white/10 focus:text-white focus:px-3 focus:py-2 focus:rounded-md">Перейти к контенту</a>
     <!-- ЧИСТАЯ шапка без блюра-фона -->
     <header class="mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
         <a asp-page="/Index" class="font-semibold tracking-wider text-slate-200">ASSISTANT</a>
@@ -44,30 +45,30 @@
                 <aside class="md:w-64 md:flex-shrink-0">
                     <div class="kc-card p-4 mb-4 md:mb-0 md:sticky md:top-0">
                         <div class="text-xs uppercase tracking-wide text-slate-400 mb-3">Администрирование</div>
-                        <nav class="flex flex-col gap-1" data-admin-nav>
-                            <a asp-page="/Clients/Search" class='@LinkClass("/Clients/Search")'>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <nav class="flex flex-col gap-1" data-admin-nav aria-label="Администрирование">
+                            <a asp-page="/Clients/Search" class='@LinkClass("/Clients/Search")' aria-current='@(string.Equals(currentPage, "/Clients/Search", System.StringComparison.OrdinalIgnoreCase) ? "page" : null)'>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                                     <circle cx="11" cy="11" r="8" />
                                     <path d="m21 21-4.3-4.3" />
                                 </svg>
                                 <span>Поиск клиентов</span>
                             </a>
-                            <a asp-page="/Admin/UserClients" class='@LinkClass("/Admin/UserClients")'>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <a asp-page="/Admin/UserClients" class='@LinkClass("/Admin/UserClients")' aria-current='@(string.Equals(currentPage, "/Admin/UserClients", System.StringComparison.OrdinalIgnoreCase) ? "page" : null)'>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                                     <path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
                                     <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
                                 </svg>
                                 <span>Доступ пользователей</span>
                             </a>
-                            <a asp-page="/Admin/ServiceRoleExclusions" class='@LinkClass("/Admin/ServiceRoleExclusions")'>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <a asp-page="/Admin/ServiceRoleExclusions" class='@LinkClass("/Admin/ServiceRoleExclusions")' aria-current='@(string.Equals(currentPage, "/Admin/ServiceRoleExclusions", System.StringComparison.OrdinalIgnoreCase) ? "page" : null)'>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                                     <circle cx="12" cy="12" r="9" />
                                     <path d="M8 12h8" />
                                 </svg>
                                 <span>Список исключений</span>
                             </a>
-                            <a asp-page="/Admin/Events" class='@LinkClass("/Admin/Events")'>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <a asp-page="/Admin/Events" class='@LinkClass("/Admin/Events")' aria-current='@(string.Equals(currentPage, "/Admin/Events", System.StringComparison.OrdinalIgnoreCase) ? "page" : null)'>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                                     <path d="M21 7H3" />
                                     <path d="M21 11H3" />
                                     <path d="M15 15H3" />

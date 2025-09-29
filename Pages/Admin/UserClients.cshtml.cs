@@ -134,14 +134,29 @@ public sealed class UserClientsModel : PageModel
         var skip = (ClientPage - 1) * pageSize;
         var fetchLimit = SearchFetchLimit;
 
-        var searchTasks = realms
-            .Where(realm => !string.IsNullOrWhiteSpace(realm.Realm))
-            .Select(async realm =>
+        var validRealms = realms
+            .Where(r => !string.IsNullOrWhiteSpace(r.Realm))
+            .Select(r => r.Realm!)
+            .ToList();
+
+        var concurrencyLimit = 4;
+        using var semaphore = new SemaphoreSlim(concurrencyLimit, concurrencyLimit);
+
+        var searchTasks = validRealms
+            .Select(async realmName =>
             {
-                var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, fetchLimit, ct);
-                return hits
-                    .Select(hit => ClientSummary.ForLookup(realm.Realm!, hit.ClientId))
-                    .ToList();
+                await semaphore.WaitAsync(ct);
+                try
+                {
+                    var hits = await _clients.SearchClientsAsync(realmName, query, 0, fetchLimit, ct);
+                    return hits
+                        .Select(hit => ClientSummary.ForLookup(realmName, hit.ClientId))
+                        .ToList();
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
             })
             .ToList();
 

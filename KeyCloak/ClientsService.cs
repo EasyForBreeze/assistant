@@ -306,7 +306,8 @@ public sealed class ClientsService
                 var snapshot = result.ToArray();
                 var options = new MemoryCacheEntryOptions
                 {
-                    AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration
+                    AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration,
+                    Size = 1 // Set size for cache limit
                 };
                 options.AddExpirationToken(changeToken);
                 _cache.Set(key, snapshot, options);
@@ -1091,6 +1092,7 @@ public sealed class ClientsService
         return _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = ClientRolesCacheDuration;
+            entry.Size = 1; // Set size for cache limit
             return await GetClientRolesAsync(realm, clientUuid, 0, ClientDetailsRolePreviewLimit, null, ct);
         }) ?? Task.FromResult(new List<string>());
     }
@@ -1101,6 +1103,7 @@ public sealed class ClientsService
         return _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = ServiceRolesCacheDuration;
+            entry.Size = 1; // Set size for cache limit
             return await GetServiceAccountRolesAsync(realm, clientUuid, ct);
         }) ?? Task.FromResult(new List<(string, string)>());
     }
@@ -1132,6 +1135,7 @@ public sealed class ClientsService
         return _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = ClientRoleMapCacheDuration;
+            entry.Size = 1; // Set size for cache limit
             return await GetClientRoleMapAsync(http, realm, clientUuid, ct);
         }) ?? Task.FromResult(new Dictionary<string, KcRoleRep>(StringComparer.OrdinalIgnoreCase));
     }

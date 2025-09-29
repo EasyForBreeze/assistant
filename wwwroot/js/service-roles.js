@@ -235,6 +235,7 @@ export function initServiceRoles(root, options = {}) {
 
     const cacheClientsKey = (realm, queryText) => `${realm}::${queryText}`;
     const cacheClientRolesKey = (realm, clientId, page) => `${realm}::${clientId}::${page}`;
+    const inFlight = new Map();
 
     const hideDd = () => {
         if (!svcSearchDd) {
@@ -285,6 +286,9 @@ export function initServiceRoles(root, options = {}) {
     };
 
     const fetchJson = async (url, init) => {
+        if (inFlight.has(url)) {
+            return inFlight.get(url);
+        }
         const finalInit = Object.assign({}, init || {});
         const headers = new Headers(finalInit.headers || {});
         if (!headers.has('Accept')) {
@@ -294,11 +298,19 @@ export function initServiceRoles(root, options = {}) {
         if (signal && !finalInit.signal) {
             finalInit.signal = signal;
         }
-        const response = await fetch(url, finalInit);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        return response.json();
+        const promise = fetch(url, finalInit)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .finally(() => {
+                inFlight.delete(url);
+            });
+        inFlight.set(url, promise);
+        const response = await promise;
+        return response;
     };
 
     const ensureMoreHitsButton = (token) => {
@@ -666,12 +678,24 @@ export function initServiceRoles(root, options = {}) {
 
     addEvent(svcSearchInput, 'input', updateBtnState);
 
-    addEvent(svcSearchBtn, 'click', () => {
-        const queryText = svcSearchInput ? svcSearchInput.value || '' : '';
+    let searchDebounceTimer = null;
+    const triggerSearch = () => {
+        const queryText = svcSearchInput ? (svcSearchInput.value || '') : '';
         showLoading();
-        requestAnimationFrame(() => {
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+        searchDebounceTimer = setTimeout(() => {
             unifiedSearch(queryText);
-        });
+        }, 250);
+    };
+
+    addEvent(svcSearchBtn, 'click', triggerSearch);
+    addEvent(svcSearchInput, 'keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            triggerSearch();
+        }
     });
 
     addEvent(svcSearchDd, 'click', (event) => {
