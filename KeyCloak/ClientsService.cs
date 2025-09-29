@@ -2,7 +2,6 @@ using Assistant.KeyCloak.Models;
 using Assistant.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Options;
 using System;
 using System.Net;
@@ -16,7 +15,7 @@ public sealed class ClientsService
 {
     private readonly IHttpClientFactory _factory;
     private readonly AdminApiOptions _opt;
-    private readonly IServiceRoleExclusionsRepository _exclusions;
+    private readonly ServiceRoleExclusionsRepository _exclusions;
     private readonly ApiLogRepository _logs;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IMemoryCache _cache;
@@ -98,7 +97,7 @@ public sealed class ClientsService
     public ClientsService(
         IHttpClientFactory factory,
         IOptions<AdminApiOptions> opt,
-        IServiceRoleExclusionsRepository exclusions,
+        ServiceRoleExclusionsRepository exclusions,
         ApiLogRepository logs,
         IHttpContextAccessor httpContextAccessor,
         IMemoryCache cache)
@@ -246,17 +245,14 @@ public sealed class ClientsService
         first = Math.Max(0, first);
         max = Math.Clamp(max <= 0 ? 20 : max, 1, 200);
 
-        var excluded = await _exclusions.GetAllAsync(ct);
-        var exclusionsVersion = _exclusions.GetVersion();
-        var exclusionChangeToken = _exclusions.CreateChangeToken();
-
-        var cacheKey = BuildClientSearchCacheKey(realm, query, first, max, exclusionsVersion);
-        if (_cache.TryGetValue(cacheKey, out ClientShort[] cachedClients))
+        var cacheKey = BuildClientSearchCacheKey(realm, query, first, max);
+        if (!skipCache && _cache.TryGetValue(cacheKey, out ClientShort[] cachedClients))
         {
             return new List<ClientShort>(cachedClients);
         }
 
         var http = CreateAdminClient();
+        var excluded = await _exclusions.GetAllAsync(ct);
 
         var (urlExactNew, urlExactLegacy) =
             BuildAdminUrls(realm, $"clients?clientId={UR(query)}&briefRepresentation=true");
@@ -278,7 +274,7 @@ public sealed class ClientsService
             var filteredExact = FilterExcluded(mappedExact, excluded);
             if (filteredExact.Count > 0)
             {
-                return CacheSearchResult(cacheKey, filteredExact, exclusionChangeToken);
+                return CacheSearchResult(cacheKey, filteredExact);
             }
         }
 
@@ -297,23 +293,29 @@ public sealed class ClientsService
             .ToList();
 
         var filtered = FilterExcluded(mapped, excluded);
-        return CacheSearchResult(cacheKey, filtered, exclusionChangeToken);
+        return CacheSearchResult(cacheKey, filtered);
 
         static ClientShort MapClient(ClientRep c) => new(c.Id ?? string.Empty, c.ClientId ?? string.Empty);
 
-        List<ClientShort> CacheSearchResult(string key, List<ClientShort> result, IChangeToken changeToken)
+        List<ClientShort> CacheSearchResult(string key, List<ClientShort> result)
         {
             if (!skipCache && result.Count > 0)
             {
-                AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration
-            }.AddExpirationToken(changeToken));
+                var snapshot = result.ToArray();
+                _cache.Set(key, snapshot, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration
+                });
+
+                return new List<ClientShort>(snapshot);
+            }
 
             return new List<ClientShort>(result);
         }
     }
 
-    private static string BuildClientSearchCacheKey(string realm, string query, int first, int max, long version)
-        => $"kc:clients:search:{realm}:{first}:{max}:{query}:v{version}";
+    private static string BuildClientSearchCacheKey(string realm, string query, int first, int max)
+        => $"kc:clients:search:{realm}:{first}:{max}:{query}";
 
     private async Task<ClientShort?> GetClientShortByClientIdAsync(string realm, string clientId, CancellationToken ct)
     {
