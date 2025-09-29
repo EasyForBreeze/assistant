@@ -230,7 +230,12 @@ public sealed class ClientsService
     private static string UR(string s) => Uri.EscapeDataString(s);
 
     public async Task<List<ClientShort>> SearchClientsAsync(
-        string realm, string query, int first = 0, int max = 20, CancellationToken ct = default)
+        string realm,
+        string query,
+        int first = 0,
+        int max = 20,
+        CancellationToken ct = default,
+        bool skipCache = false)
     {
         query = (query ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(query))
@@ -298,13 +303,12 @@ public sealed class ClientsService
 
         List<ClientShort> CacheSearchResult(string key, List<ClientShort> result, IChangeToken changeToken)
         {
-            var snapshot = result.ToArray();
-            _cache.Set(key, snapshot, new MemoryCacheEntryOptions
+            if (!skipCache && result.Count > 0)
             {
                 AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration
             }.AddExpirationToken(changeToken));
 
-            return new List<ClientShort>(snapshot);
+            return new List<ClientShort>(result);
         }
     }
 
@@ -603,7 +607,7 @@ public sealed class ClientsService
             }
         }
 
-        createdId ??= (await SearchClientsAsync(spec.Realm, spec.ClientId, 0, 1, ct))
+        createdId ??= (await SearchClientsAsync(spec.Realm, spec.ClientId, 0, 1, ct, skipCache: true))
             .FirstOrDefault(c => string.Equals(c.ClientId, spec.ClientId, StringComparison.OrdinalIgnoreCase))?.Id
             ?? throw new InvalidOperationException("Cannot resolve created client id.");
 
@@ -726,8 +730,7 @@ public sealed class ClientsService
     {
         var http = CreateAdminClient();
 
-        var existing = (await SearchClientsAsync(realm, clientId, 0, 1, ct))
-            .FirstOrDefault(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase))
+        var existing = await GetClientShortByClientIdAsync(realm, clientId, ct)
             ?? throw new InvalidOperationException($"Client '{clientId}' not found.");
 
         var (delNew, delLegacy) = BuildAdminUrls(realm, $"clients/{UR(existing.Id)}");
