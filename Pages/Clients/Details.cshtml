@@ -1,7 +1,7 @@
 ﻿@page
 @model Assistant.Pages.Clients.DetailsModel
 @inject IConfiguration Config
-@{
+@{ 
     ViewData["Title"] = "Client details";
     var client = Model.Client;
     string clientId = client.ClientId;
@@ -12,6 +12,7 @@
     bool serviceInit = client.ServiceAccount;
     string description = client.Description ?? "";
     string baseUrl = Config["Keycloak:BaseUrl"]!.TrimEnd('/');
+    bool canManageClient = User.IsInRole("assistant-admin");
 }
 
 
@@ -58,7 +59,14 @@
 
 
     <div class="ml-auto flex items-center gap-2">
-        <button type="submit" class="btn-danger" id="btnDelete" form="deleteForm" title="Удалить клиента" aria-label="Delete">
+        <button type="submit"
+                class="btn-danger @(canManageClient ? string.Empty : "kc-disabled opacity-60 cursor-not-allowed")"
+                id="btnDelete"
+                form="deleteForm"
+                title="@(canManageClient ? "Удалить клиента" : "Удаление доступно только администраторам")"
+                aria-label="Delete"
+                disabled="@(canManageClient ? null : "disabled")"
+                aria-disabled="@(canManageClient ? "false" : "true")">
             <!-- trash icon -->
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6" />
@@ -68,7 +76,14 @@
                 <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
             </svg>
         </button>
-        <button type="submit" class="btn-primary" id="btnSave" form="saveForm" title="Сохранить изменения" aria-label="Save">
+        <button type="submit"
+                class="btn-primary @(canManageClient ? string.Empty : "kc-disabled opacity-60 cursor-not-allowed")"
+                id="btnSave"
+                form="saveForm"
+                title="@(canManageClient ? "Сохранить изменения" : "Редактирование доступно только администраторам")"
+                aria-label="Save"
+                disabled="@(canManageClient ? null : "disabled")"
+                aria-disabled="@(canManageClient ? "false" : "true")">
             <!-- floppy/save icon -->
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7z" />
@@ -227,22 +242,41 @@
                 <div class="form-row_small justify-self-center w-full">
                     <label class="text-sm text-slate-400">Секретный ключ</label>
                     <div class="flex gap-2 items-center">
-                        <input id="credSecret" class="kc-input rounded-xl px-3 py-2 text-sm w-full" value="••••••••••••••" />
-                        <button class="btn-subtle" id="btnCopySecret" title="Копировать" aria-label="Копировать">
+                        <input id="credSecret"
+                               class="kc-input rounded-xl px-3 py-2 text-sm w-full"
+                               value="••••••••••••••"
+                               readonly
+                               aria-readonly="true" />
+                        <button class="btn-subtle @(canManageClient ? string.Empty : "kc-disabled opacity-60 cursor-not-allowed")"
+                                id="btnCopySecret"
+                                title="Копировать"
+                                aria-label="Копировать"
+                                disabled="@(canManageClient ? null : "disabled")"
+                                aria-disabled="@(canManageClient ? "false" : "true")">
                             <!-- copy icon -->
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" />
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                             </svg>
                         </button>
-                        <button class="btn-subtle" id="btnShowSecret" title="Показать" aria-label="Показать">
+                        <button class="btn-subtle @(canManageClient ? string.Empty : "kc-disabled opacity-60 cursor-not-allowed")"
+                                id="btnShowSecret"
+                                title="Показать"
+                                aria-label="Показать"
+                                disabled="@(canManageClient ? null : "disabled")"
+                                aria-disabled="@(canManageClient ? "false" : "true")">
                             <!-- eye icon -->
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                                 <circle cx="12" cy="12" r="3" />
                             </svg>
                         </button>
-                        <button class="btn-danger" id="btnRegenSecret" title="Перегенерировать" aria-label="Перегенерировать">
+                        <button class="btn-danger @(canManageClient ? string.Empty : "kc-disabled opacity-60 cursor-not-allowed")"
+                                id="btnRegenSecret"
+                                title="Перегенерировать"
+                                aria-label="Перегенерировать"
+                                disabled="@(canManageClient ? null : "disabled")"
+                                aria-disabled="@(canManageClient ? "false" : "true")">
                             <!-- refresh icon -->
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 12a9 9 0 1 1-3-6.7" />

@@ -161,5 +161,23 @@ public class UserClientsRepository : IUserClientsRepository
 
         return list;
     }
+
+    public async Task<bool> HasAccessAsync(string username, string realm, string clientId, CancellationToken ct = default)
+    {
+        await EnsureCreatedAsync(ct);
+
+        await using var conn = new NpgsqlConnection(_connString);
+        await conn.OpenAsync(ct);
+
+        await using var cmd = new NpgsqlCommand(
+            "select exists(select 1 from user_clients where username=@u and client_id=@cid and realm=@r);",
+            conn);
+        cmd.Parameters.AddWithValue("u", username);
+        cmd.Parameters.AddWithValue("cid", clientId);
+        cmd.Parameters.AddWithValue("r", realm);
+
+        var result = await cmd.ExecuteScalarAsync(ct);
+        return result is bool exists && exists;
+    }
 }
 

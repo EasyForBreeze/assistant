@@ -7,4 +7,6 @@ namespace Assistant.Interfaces;
 public interface IUserClientsRepository
 {
     Task<List<ClientSummary>> GetForUserAsync(string username, bool isAdmin, CancellationToken ct = default);
+
+    Task<bool> HasAccessAsync(string username, string realm, string clientId, CancellationToken ct = default);
 }

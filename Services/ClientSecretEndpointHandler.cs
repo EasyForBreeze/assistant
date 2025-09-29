@@ -43,9 +43,7 @@ public static class ClientSecretEndpointHandler
             return false;
         }
 
-        var clients = await userClients.GetForUserAsync(username, isAdmin: false, ct).ConfigureAwait(false);
-        return clients.Any(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase)
-                                && string.Equals(c.Realm, realm, StringComparison.OrdinalIgnoreCase));
+        return await userClients.HasAccessAsync(username, realm, clientId, ct).ConfigureAwait(false);
     }
 
     private static string? GetUserName(ClaimsPrincipal user)
