@@ -26,23 +26,20 @@ else if (Model.Clients.Any())
             var subtitle = string.Equals(displayName, c.ClientId, StringComparison.OrdinalIgnoreCase)
                 ? $"Realm: {c.Realm}"
                 : displayName;
-            var initialSource = string.IsNullOrWhiteSpace(displayName)
-                ? c.ClientId
-                : displayName;
-            var clientInitial = string.IsNullOrWhiteSpace(initialSource)
-                ? "?"
-                : char.ToUpperInvariant(initialSource.Trim()[0]).ToString();
-            var hasEnvironments = envList.Any();
 
             <a asp-page="/Clients/Details" asp-route-realm="@c.Realm" asp-route-clientId="@c.ClientId"
                asp-route-returnUrl="@returnUrl"
                class="block group client-card"
-               data-search="@($"{c.ClientId} {c.Realm} {displayName}")">
-                <div class="kc-card kc-card--hover client-card__surface p-5 min-h-[210px] overflow-hidden transition relative">
-                    <span class="client-card__glare" aria-hidden="true"></span>
+                data-search="@($"{c.ClientId} {c.Realm} {displayName}")">
+                <div class="kc-card kc-card--hover p-5 h-44 overflow-hidden transition relative">
+                    <!-- лёгкая подсветка по ховеру -->
+                    <div class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500"
+                         style="background:
+                                         radial-gradient(480px 140px at 60% 18%, rgba(45,212,191,.12), transparent 70%),
+                                         radial-gradient(520px 180px at 10% 100%, rgba(99,102,241,.10), transparent 75%)"></div>
 
                     <!-- Контур-линия окружений (внизу карточки) -->
-                    @if (hasEnvironments)
+                    @if (envList.Any())
                     {
                         <div class="absolute inset-x-0 top-0 h-[4px] flex overflow-hidden">
                             @foreach (var e in envList)
@@ -54,40 +51,23 @@ else if (Model.Clients.Any())
 
                     <div class="relative h-full flex flex-col">
                         <!-- Заголовок + статус -->
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex items-start gap-3 min-w-0">
-                                <div class="client-card__avatar" aria-hidden="true">@clientInitial</div>
-                                <div class="min-w-0">
-                                    <div class="text-slate-100 font-semibold text-lg truncate">@c.ClientId</div>
-                                    <div class="client-card__realm">@c.Realm</div>
-                                </div>
-                            </div>
-                            <span class="client-card__status @(c.Enabled ? "client-card__status--enabled" : "client-card__status--disabled")">
+                        <div class="flex items-start justify-between">
+                            <div class="text-slate-100 font-semibold text-lg truncate">@c.ClientId</div>
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] border border-white/10 @(c.Enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")">
                                 @(c.Enabled ? "Enabled" : "Disabled")
                             </span>
                         </div>
 
                         <!-- Описание -->
-                        <div class="client-card__subtitle mt-3 line-clamp-2">
+                        <div class="text-slate-300/90 text-[15px] mt-1 line-clamp-2">
                             @subtitle
                         </div>
 
                         <!-- Окружения (чипы) -->
-                        <div class="mt-auto">
-                            <div class="client-card__divider mt-5 mb-3"></div>
-                            @if (hasEnvironments)
+                        <div class="mt-auto pt-3 flex items-center gap-2 flex-wrap">
+                            @foreach (var e in envList)
                             {
-                                <div class="client-card__envs-label">Окружения</div>
-                                <div class="mt-2 flex items-center gap-2 flex-wrap">
-                                    @foreach (var e in envList)
-                                    {
-                                        <span class="kc-chip client-card__chip">@e</span>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="client-card__empty">Нет окружений</div>
+                                <span class="kc-chip">@e</span>
                             }
                         </div>
                     </div>
