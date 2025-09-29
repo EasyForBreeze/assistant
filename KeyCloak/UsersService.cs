@@ -106,7 +106,7 @@ public sealed class UsersService
         var urlLegacy = $"{BaseUrl}/auth/admin/realms/{UR(_primaryRealm)}/users?search={UR(query)}&first={first}&max={max}";
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
 
         var raw = await resp.Content.ReadFromJsonAsync<List<UserRepresentation>>(JsonOpts, ct)
                   ?? new List<UserRepresentation>();

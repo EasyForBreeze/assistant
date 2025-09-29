@@ -254,7 +254,7 @@ public sealed class ClientsService
 
         using (var resp = await http.GetWithLegacyFallbackAsync(urlExactNew, urlExactLegacy, ct))
         {
-            resp.EnsureAdminSuccess();
+            await resp.EnsureAdminSuccessAsync(ct);
             var exact = await ReadJsonAsync<List<ClientRep>>(resp, ct) ?? new();
 
             static bool ContainsCi(string? s, string needle)
@@ -278,7 +278,7 @@ public sealed class ClientsService
             $"clients?search=true&clientId={UR(query)}&first={first}&max={max}&briefRepresentation=true");
 
         using var resp2 = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp2.EnsureAdminSuccess();
+        await resp2.EnsureAdminSuccessAsync(ct);
         var list = await ReadJsonAsync<List<ClientRep>>(resp2, ct) ?? new();
 
         var mapped = list
@@ -320,7 +320,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"clients?clientId={UR(clientId)}&briefRepresentation=true");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var list = await ReadJsonAsync<List<ClientRep>>(resp, ct) ?? new();
 
         var rep = list
@@ -343,7 +343,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"clients?first={first}&max={max}&briefRepresentation=true");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var list = await ReadJsonAsync<List<ClientRep>>(resp, ct) ?? new();
 
         var mapped = list
@@ -363,7 +363,7 @@ public sealed class ClientsService
         var (urlNew, urlLegacy) = BuildAdminUrls(realm, $"clients?clientId={UR(clientId)}");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var list = await ReadJsonAsync<List<ClientFullRep>>(resp, ct) ?? new();
         var rep = list.FirstOrDefault(c => string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
         if (rep == null || string.IsNullOrWhiteSpace(rep.Id) || string.IsNullOrWhiteSpace(rep.ClientId))
@@ -409,7 +409,7 @@ public sealed class ClientsService
         var (urlNew, urlLegacy) = BuildAdminUrls(realm, $"users?username={UR(username)}");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var users = await ReadJsonAsync<List<KcUserRep>>(resp, ct) ?? new();
 
         var match = users
@@ -460,7 +460,7 @@ public sealed class ClientsService
                 continue;
             }
 
-            resp.EnsureAdminSuccess();
+            await resp.EnsureAdminSuccessAsync(ct);
             return await resp.Content.ReadAsStringAsync();
         }
 
@@ -480,7 +480,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"clients/{UR(client.Id)}/client-secret");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var rep = await ReadJsonAsync<ClientSecretRep>(resp, ct);
         return rep?.Value;
     }
@@ -499,7 +499,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"clients/{UR(client.Id)}/client-secret");
 
         using var resp = await http.PostWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var rep = await ReadJsonAsync<ClientSecretRep>(resp, ct);
         var secret = rep?.Value;
         await AuditAsync("CLIENT:secret-regenerate", realm, client.ClientId, ct);
@@ -520,7 +520,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"clients/{UR(clientUuid)}/roles?{qs}");
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var roles = await ReadJsonAsync<List<RoleRep>>(resp, ct) ?? new();
 
         return roles
@@ -587,7 +587,7 @@ public sealed class ClientsService
             throw new InvalidOperationException($"Client '{spec.ClientId}' already exists.");
         }
 
-        createResp.EnsureAdminSuccess();
+        await createResp.EnsureAdminSuccessAsync(ct);
 
         string? createdId = null;
         if (createResp.Headers.Location is Uri loc)
@@ -680,7 +680,7 @@ public sealed class ClientsService
         var (putNew, putLegacy) = BuildAdminUrls(spec.Realm, $"clients/{UR(existingDetails.Id)}");
 
         using var resp = await http.PutJsonWithLegacyFallbackAsync(putNew, putLegacy, body, JsonOpts, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
 
         var desiredLocalRoles = spec.LocalRoles
             .Where(r => !string.IsNullOrWhiteSpace(r))
@@ -729,7 +729,7 @@ public sealed class ClientsService
         var (delNew, delLegacy) = BuildAdminUrls(realm, $"clients/{UR(existing.Id)}");
 
         using var resp = await http.DeleteWithLegacyFallbackAsync(delNew, delLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var target = string.IsNullOrWhiteSpace(existing.Id)
             ? (string.IsNullOrWhiteSpace(existing.ClientId) ? clientId : existing.ClientId)
             : $"{existing.Id}:{existing.ClientId}";
@@ -756,7 +756,7 @@ public sealed class ClientsService
                     continue;
                 }
 
-                resp.EnsureAdminSuccess();
+                await resp.EnsureAdminSuccessAsync(ct);
                 created = true;
             }
             catch (Exception ex)
@@ -814,7 +814,7 @@ public sealed class ClientsService
                     continue;
                 }
 
-                resp.EnsureAdminSuccess();
+                await resp.EnsureAdminSuccessAsync(ct);
             }
             catch (Exception ex)
             {
@@ -843,7 +843,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"clients/{UR(newClientUuid)}/service-account-user");
 
         using var userResp = await http.GetWithLegacyFallbackAsync(getSvcUserNew, getSvcUserLegacy, ct);
-        userResp.EnsureAdminSuccess();
+        await userResp.EnsureAdminSuccessAsync(ct);
         var svcUser = await ReadJsonAsync<KcUserRep>(userResp, ct) ?? throw new InvalidOperationException("Service account user not found.");
         if (string.IsNullOrWhiteSpace(svcUser.Id))
         {
@@ -905,7 +905,7 @@ public sealed class ClientsService
                 try
                 {
                     using var mapResp = await http.PostJsonWithLegacyFallbackAsync(mapNewBase, mapLegacyBase, new[] { rep }, JsonOpts, ct);
-                    mapResp.EnsureAdminSuccess();
+                    await mapResp.EnsureAdminSuccessAsync(ct);
                 }
                 catch (Exception ex)
                 {
@@ -940,7 +940,7 @@ public sealed class ClientsService
             return;
         }
 
-        userResp.EnsureAdminSuccess();
+        await userResp.EnsureAdminSuccessAsync(ct);
         var svcUser = await ReadJsonAsync<KcUserRep>(userResp, ct);
         if (svcUser?.Id == null)
         {
@@ -1009,7 +1009,7 @@ public sealed class ClientsService
                         continue;
                     }
 
-                    deleteResp.EnsureAdminSuccess();
+                    await deleteResp.EnsureAdminSuccessAsync(ct);
                 }
                 catch (Exception ex)
                 {
@@ -1034,7 +1034,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"clients/{UR(clientUuid)}/service-account-user");
 
         using var userResp = await http.GetWithLegacyFallbackAsync(getSvcUserNew, getSvcUserLegacy, ct);
-        userResp.EnsureAdminSuccess();
+        await userResp.EnsureAdminSuccessAsync(ct);
         var svcUser = await ReadJsonAsync<KcUserRep>(userResp, ct);
         if (svcUser?.Id == null)
         {
@@ -1045,7 +1045,7 @@ public sealed class ClientsService
             BuildAdminUrls(realm, $"users/{UR(svcUser.Id)}/role-mappings");
 
         using var mapResp = await http.GetWithLegacyFallbackAsync(mapUrlNew, mapUrlLegacy, ct);
-        mapResp.EnsureAdminSuccess();
+        await mapResp.EnsureAdminSuccessAsync(ct);
         var mappings = await ReadJsonAsync<RoleMappingsRep>(mapResp, ct);
 
         var list = new List<(string ClientId, string Role)>();
@@ -1134,7 +1134,7 @@ public sealed class ClientsService
             var (urlNew, urlLegacy) = BuildAdminUrls(realm, $"clients/{UR(clientUuid)}/roles?first={first}&max={pageSize}");
 
             using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-            resp.EnsureAdminSuccess();
+            await resp.EnsureAdminSuccessAsync(ct);
             var batch = await ReadJsonAsync<List<KcRoleRep>>(resp, ct) ?? new List<KcRoleRep>();
             if (batch.Count == 0)
             {
