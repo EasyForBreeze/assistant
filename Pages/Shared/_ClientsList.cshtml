@@ -1,5 +1,3 @@
-@using System
-@using System.Linq
 @model Assistant.Pages.ClientsPageModel
 
 @{
@@ -25,113 +23,51 @@ else if (Model.Clients.Any())
             // один раз материализуем, чтобы не итерировать несколько раз
             var envList = Model.Envs(c.Realm).ToList();
             var displayName = c.DisplayName;
-            var hasCustomName = !string.Equals(displayName, c.ClientId, StringComparison.OrdinalIgnoreCase);
-            var customName = hasCustomName ? displayName : null;
-            var baseForInitials = hasCustomName ? displayName : c.ClientId;
-            baseForInitials ??= string.Empty;
-            var trimmed = baseForInitials.Trim();
-            var parts = trimmed.Split(new[] { ' ', '-', '_', '.', '/' }, StringSplitOptions.RemoveEmptyEntries);
-            var initials = string.Concat(parts.Take(2).Select(part => char.ToUpperInvariant(part[0])));
-
-            if (string.IsNullOrWhiteSpace(initials))
-            {
-                var fallback = trimmed.Length > 0 ? trimmed : (c.ClientId ?? string.Empty);
-                fallback = fallback.Trim();
-
-                if (fallback.Length == 0)
-                {
-                    fallback = "KC";
-                }
-
-                initials = fallback.Substring(0, System.Math.Min(2, fallback.Length)).ToUpperInvariant();
-            }
+            var subtitle = string.Equals(displayName, c.ClientId, StringComparison.OrdinalIgnoreCase)
+                ? $"Realm: {c.Realm}"
+                : displayName;
 
             <a asp-page="/Clients/Details" asp-route-realm="@c.Realm" asp-route-clientId="@c.ClientId"
                asp-route-returnUrl="@returnUrl"
                class="block group client-card"
                 data-search="@($"{c.ClientId} {c.Realm} {displayName}")">
-                <span class="client-card__halo" aria-hidden="true"></span>
-                <div class="kc-card kc-card--hover client-card__body">
+                <div class="kc-card kc-card--hover p-5 h-44 overflow-hidden transition relative">
+                    <!-- лёгкая подсветка по ховеру -->
+                    <div class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500"
+                         style="background:
+                                         radial-gradient(480px 140px at 60% 18%, rgba(45,212,191,.12), transparent 70%),
+                                         radial-gradient(520px 180px at 10% 100%, rgba(99,102,241,.10), transparent 75%)"></div>
+
+                    <!-- Контур-линия окружений (внизу карточки) -->
                     @if (envList.Any())
                     {
-                        <div class="client-card__env-stripe" aria-hidden="true">
+                        <div class="absolute inset-x-0 top-0 h-[4px] flex overflow-hidden">
                             @foreach (var e in envList)
                             {
-                                <span class="client-card__env-segment bg-gradient-to-r @Model.EnvBarGradient(e)"></span>
+                                <span class="flex-1 h-full bg-gradient-to-r @Model.EnvBarGradient(e)"></span>
                             }
                         </div>
                     }
 
-                    <div class="client-card__background" aria-hidden="true"></div>
-                    <div class="client-card__glare" aria-hidden="true"></div>
-
-                    <div class="client-card__content">
-                        <div class="client-card__header">
-                            <div class="client-card__avatar" aria-hidden="true">
-                                <span class="client-card__avatar-text">@initials</span>
-                            </div>
-
-                            <div class="client-card__title-block">
-                                <div class="client-card__id" title="@c.ClientId">@c.ClientId</div>
-                                @if (!string.IsNullOrEmpty(customName))
-                                {
-                                    <div class="client-card__name" title="@customName">@customName</div>
-                                }
-                            </div>
-
-                            <span class="client-card__status @(c.Enabled ? "is-enabled" : "is-disabled")">
-                                <span class="client-card__status-dot" aria-hidden="true"></span>
-                                @(c.Enabled ? "Активен" : "Отключен")
+                    <div class="relative h-full flex flex-col">
+                        <!-- Заголовок + статус -->
+                        <div class="flex items-start justify-between">
+                            <div class="text-slate-100 font-semibold text-lg truncate">@c.ClientId</div>
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] border border-white/10 @(c.Enabled ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200")">
+                                @(c.Enabled ? "Enabled" : "Disabled")
                             </span>
                         </div>
 
-                        <div class="client-card__realm-row">
-                            <span class="client-card__realm-chip" title="Realm">
-                                <svg class="client-card__realm-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                    <path d="M3 7.5L10 3l7 4.5v5L10 17l-7-4.5v-5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
-                                    <path d="M3 7.5l7 4.5 7-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity=".7"></path>
-                                    <path d="M10 17V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".7"></path>
-                                </svg>
-                                <span>@c.Realm</span>
-                            </span>
+                        <!-- Описание -->
+                        <div class="text-slate-300/90 text-[15px] mt-1 line-clamp-2">
+                            @subtitle
                         </div>
 
-                        <div class="client-card__flows" role="list" aria-label="Активные потоки">
-                            <span class="client-card__flow @(c.FlowStandard ? "is-active" : "is-muted")" role="listitem" title="Authorization Code Flow">
-                                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                    <rect x="4" y="8" width="12" height="8" rx="2.5" stroke="currentColor" stroke-width="1.4" opacity=".85"></rect>
-                                    <path d="M7 8V6.5a3 3 0 116 0V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                    <circle cx="10" cy="12" r="1" fill="currentColor"></circle>
-                                </svg>
-                                <span>Auth Code</span>
-                            </span>
-                            <span class="client-card__flow @(c.FlowService ? "is-active" : "is-muted")" role="listitem" title="Client Credentials Flow">
-                                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                    <rect x="3" y="4" width="14" height="4.5" rx="1.8" stroke="currentColor" stroke-width="1.4" opacity=".85"></rect>
-                                    <rect x="3" y="10" width="14" height="4.5" rx="1.8" stroke="currentColor" stroke-width="1.4" opacity=".65"></rect>
-                                    <path d="M6 6.25h1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
-                                    <path d="M6 12.25h1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".7"></path>
-                                    <path d="M10 12.25h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".7"></path>
-                                </svg>
-                                <span>Service</span>
-                            </span>
-                        </div>
-
-                        <div class="client-card__footer">
-                            @if (envList.Any())
+                        <!-- Окружения (чипы) -->
+                        <div class="mt-auto pt-3 flex items-center gap-2 flex-wrap">
+                            @foreach (var e in envList)
                             {
-                                <div class="client-card__envs" aria-label="Окружения">
-                                    @foreach (var e in envList)
-                                    {
-                                        <span class="kc-chip">@e</span>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="client-card__envs client-card__envs--empty" aria-label="Окружения">
-                                    <span class="kc-chip kc-chip--ghost">Окружения не указаны</span>
-                                </div>
+                                <span class="kc-chip">@e</span>
                             }
                         </div>
                     </div>
