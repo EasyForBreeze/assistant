@@ -497,24 +497,13 @@ public sealed class ConfluenceWikiService
 
         if (roles.Count == 0)
         {
-            sb.Append("<td>");
-            sb.Append("—");
-            sb.Append("</td>");
-            sb.Append("<td>");
-            sb.Append("—");
-            sb.Append("</td>");
-            sb.Append("<td>");
-            sb.Append("—");
-            sb.Append("</td>");
-            //sb.Append("<tr><td colspan=\"3\">—</td></tr>");
+            AppendTableRow(sb, ("—", false), ("—", false), ("—", false));
         }
         else
         {
             foreach (var role in roles)
             {
-                sb.Append("<tr><td>");
-                sb.Append(WebUtility.HtmlEncode(role));
-                sb.Append("</td><td></td><td>TEST</td></tr>");
+                AppendTableRow(sb, (role, true), (string.Empty, false), ("TEST", false));
             }
         }
 
@@ -533,30 +522,35 @@ public sealed class ConfluenceWikiService
 
         if (serviceRoles.Count == 0)
         {
-            sb.Append("<td>");
-            sb.Append("—");
-            sb.Append("</td>");
-            sb.Append("<td>");
-            sb.Append("—");
-            sb.Append("</td>");
-            sb.Append("<td>");
-            sb.Append("—");
-            sb.Append("</td>");
+            AppendTableRow(sb, ("—", false), ("—", false), ("—", false));
         }
         else
         {
             foreach (var (clientId, role) in serviceRoles)
             {
-                sb.Append("<tr><td>");
-                sb.Append(WebUtility.HtmlEncode(role));
-                sb.Append("</td><td>");
-                sb.Append(WebUtility.HtmlEncode(clientId));
-                sb.Append("</td><td>TEST</td></tr>");
+                AppendTableRow(sb, (role, true), (clientId, true), ("TEST", false));
             }
         }
 
         sb.Append("</tbody></table>");
         return sb.ToString();
+    }
+
+    private static void AppendTableRow(StringBuilder sb, params (string? Value, bool Encode)[] cells)
+    {
+        sb.Append("<tr>");
+        foreach (var (value, encode) in cells)
+        {
+            sb.Append("<td>");
+            if (!string.IsNullOrEmpty(value))
+            {
+                sb.Append(encode ? WebUtility.HtmlEncode(value) : value);
+            }
+
+            sb.Append("</td>");
+        }
+
+        sb.Append("</tr>");
     }
 
     private sealed record ConfluenceContentResponse(string? Id);
