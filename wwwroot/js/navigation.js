@@ -58,20 +58,9 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
     const ADMIN_INACTIVE_CLASSES = ['text-slate-300', 'hover:bg-white/5'];
 
     function executeSoftScripts(container) {
-        if (!container) {
-            return;
-        }
-        container.querySelectorAll('script[data-soft-nav]').forEach(script => {
-            const clone = document.createElement('script');
-            for (const attr of script.attributes) {
-                if (attr.name === 'data-soft-nav') {
-                    continue;
-                }
-                clone.setAttribute(attr.name, attr.value);
-            }
-            clone.textContent = script.textContent;
-            script.replaceWith(clone);
-        });
+        // CSP-safe: do not execute inline scripts; require external scripts
+        // Scripts should be provided via src with proper CSP nonce if needed
+        return;
     }
 
     function refreshScriptHost(doc) {
@@ -83,7 +72,8 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
         if (!incoming) {
             return;
         }
-        incoming.querySelectorAll('script[data-soft-nav]').forEach(script => {
+        // Only adopt external scripts; skip inline content to comply with CSP
+        incoming.querySelectorAll('script[data-soft-nav][src]').forEach(script => {
             const clone = document.createElement('script');
             for (const attr of script.attributes) {
                 if (attr.name === 'data-soft-nav') {
@@ -91,7 +81,6 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
                 }
                 clone.setAttribute(attr.name, attr.value);
             }
-            clone.textContent = script.textContent;
             scriptHost.appendChild(clone);
         });
     }
@@ -247,6 +236,18 @@ export function initNavigation({ body, root, app, toastsHost, scriptHost }) {
                 'X-Soft-Nav': '1'
             }
         };
+        // Attach CSRF header for non-GET
+        if (method !== 'GET') {
+            try {
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const antiCsrf = tokenInput ? tokenInput.value : null;
+                if (antiCsrf) {
+                    fetchInit.headers['X-CSRF-TOKEN'] = antiCsrf;
+                }
+            } catch (_) {
+                // ignore
+            }
+        }
         if (options.body) {
             fetchInit.body = options.body;
         }
