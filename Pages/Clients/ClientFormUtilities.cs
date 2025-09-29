@@ -104,7 +104,7 @@ internal static class ClientFormUtilities
     public static IEnumerable<string> FindInvalidLocalRoles(IEnumerable<string> localRoles)
         => localRoles.Where(role => !RoleNameRegex.IsMatch(role));
 
-    public static IEnumerable<string> FindInvalidServiceRoleEntries(IEnumerable<string> entries, ISet<string> restrictedClients)
+    public static IEnumerable<string> FindInvalidServiceRoleEntries(IEnumerable<string> entries, IReadOnlySet<string> restrictedClients)
     {
         foreach (var entry in entries)
         {
