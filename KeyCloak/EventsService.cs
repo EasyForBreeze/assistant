@@ -40,7 +40,7 @@ public class EventsService
         var urlLegacy = $"{BaseUrl}/auth/admin/realms/{Uri.EscapeDataString(realm)}/events/config";
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var cfg = await resp.Content.ReadFromJsonAsync<EventConfigRep>(cancellationToken: ct);
         return cfg?.EnabledEventTypes ?? new List<string>();
     }
@@ -68,7 +68,7 @@ public class EventsService
         var urlLegacy = $"{BaseUrl}/auth/admin/realms/{Uri.EscapeDataString(realm)}/events?{query}";
 
         using var resp = await http.GetWithLegacyFallbackAsync(urlNew, urlLegacy, ct);
-        resp.EnsureAdminSuccess();
+        await resp.EnsureAdminSuccessAsync(ct);
         var reps = await resp.Content.ReadFromJsonAsync<List<EventRep>>(cancellationToken: ct) ?? new List<EventRep>();
         return reps
             .Where(r => string.Equals(r.ClientId, clientId, StringComparison.OrdinalIgnoreCase))

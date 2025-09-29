@@ -59,7 +59,7 @@ internal static class KeycloakAdminHttpClientExtensions
         CancellationToken ct)
         => await SendWithFallbackAsync(http, modernUrl, legacyUrl, static (client, url, token) => client.DeleteAsync(url, token), ct);
 
-    public static void EnsureAdminSuccess(this HttpResponseMessage response)
+    public static async Task EnsureAdminSuccessAsync(this HttpResponseMessage response, CancellationToken ct)
     {
         if (response.StatusCode == HttpStatusCode.Forbidden)
         {
@@ -68,7 +68,7 @@ internal static class KeycloakAdminHttpClientExtensions
 
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            var body = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             throw new InvalidOperationException($"Запрос отклонён (400). Детали: {body}");
         }
 
