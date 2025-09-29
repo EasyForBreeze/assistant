@@ -471,7 +471,7 @@ public sealed class UserClientsModel : PageModel
         return normalizedOperation[(separatorIndex + 1)..];
     }
 
-    protected virtual string FormatAssignmentChangeDetails(
+    private string FormatAssignmentChangeDetails(
         string actionSuffix,
         string normalizedTargetUser,
         string clientDisplay)
