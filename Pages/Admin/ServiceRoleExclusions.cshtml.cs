@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Assistant.Pages.Admin;
 
@@ -27,6 +29,7 @@ public sealed class ServiceRoleExclusionsModel : PageModel
     private const int ValidationFetchLimit = 200;
     private const int SearchResultsPageSize = 10;
     private const int SearchFetchPerRealm = 200;
+    private const int RealmSearchConcurrencyLimit = 4;
 
     public ServiceRoleExclusionsModel(
         ServiceRoleExclusionsRepository repository,
@@ -302,25 +305,50 @@ public sealed class ServiceRoleExclusionsModel : PageModel
         var list = new List<ClientSummary>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var realm in realms)
-        {
-            if (string.IsNullOrWhiteSpace(realm.Realm))
-            {
-                continue;
-            }
+        var validRealms = realms
+            .Where(realm => !string.IsNullOrWhiteSpace(realm.Realm))
+            .Select(realm => realm.Realm!)
+            .ToList();
 
-            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, SearchFetchPerRealm, ct);
-            foreach (var hit in hits)
+        if (validRealms.Count == 0)
+        {
+            return list;
+        }
+
+        var concurrencyLimit = Math.Max(1, RealmSearchConcurrencyLimit);
+        using var semaphore = new SemaphoreSlim(concurrencyLimit, concurrencyLimit);
+
+        var searchTasks = validRealms
+            .Select(async realmName =>
+            {
+                await semaphore.WaitAsync(ct);
+                try
+                {
+                    var hits = await _clients.SearchClientsAsync(realmName, query, 0, SearchFetchPerRealm, ct);
+                    return (Realm: realmName, Hits: hits);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            })
+            .ToList();
+
+        var results = await Task.WhenAll(searchTasks);
+
+        foreach (var result in results)
+        {
+            foreach (var hit in result.Hits)
             {
                 if (string.IsNullOrWhiteSpace(hit.ClientId))
                 {
                     continue;
                 }
 
-                var key = $"{realm.Realm}|{hit.ClientId}";
+                var key = $"{result.Realm}|{hit.ClientId}";
                 if (seen.Add(key))
                 {
-                    list.Add(ClientSummary.ForLookup(realm.Realm!, hit.ClientId));
+                    list.Add(ClientSummary.ForLookup(result.Realm, hit.ClientId));
                 }
             }
         }

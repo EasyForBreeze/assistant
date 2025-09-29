@@ -130,24 +130,25 @@ public sealed class UserClientsModel : PageModel
         }
 
         var realms = await _realms.GetRealmsAsync(ct);
-        var list = new List<ClientSummary>();
-
         var pageSize = PageSize;
         var skip = (ClientPage - 1) * pageSize;
         var fetchLimit = SearchFetchLimit;
 
-        foreach (var realm in realms)
-        {
-            if (string.IsNullOrWhiteSpace(realm.Realm))
+        var searchTasks = realms
+            .Where(realm => !string.IsNullOrWhiteSpace(realm.Realm))
+            .Select(async realm =>
             {
-                continue;
-            }
+                var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, fetchLimit, ct);
+                return hits
+                    .Select(hit => ClientSummary.ForLookup(realm.Realm!, hit.ClientId))
+                    .ToList();
+            })
+            .ToList();
 
-            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, fetchLimit, ct);
-            list.AddRange(hits.Select(hit => ClientSummary.ForLookup(realm.Realm!, hit.ClientId)));
-        }
+        var collected = await Task.WhenAll(searchTasks);
 
-        var ordered = list
+        var ordered = collected
+            .SelectMany(summary => summary)
             .OrderBy(c => c.Realm, StringComparer.OrdinalIgnoreCase)
             .ThenBy(c => c.ClientId, StringComparer.OrdinalIgnoreCase)
             .ToList();
