@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace Assistant.Pages.Clients;
@@ -67,6 +68,12 @@ public class DetailsModel : PageModel
             return NotFound();
         }
 
+        var accessResult = await EnsureClientAccessAsync(Realm!, ClientId!, ct, redirectOnFailure: true);
+        if (accessResult is not null)
+        {
+            return accessResult;
+        }
+
         var details = await _clients.GetClientDetailsAsync(Realm!, ClientId!, ct);
         if (details == null)
         {
@@ -108,6 +115,12 @@ public class DetailsModel : PageModel
         if (string.IsNullOrWhiteSpace(Realm) || string.IsNullOrWhiteSpace(ClientId))
         {
             return NotFound();
+        }
+
+        var accessResult = await EnsureClientAccessAsync(Realm!, ClientId!, ct, redirectOnFailure: true);
+        if (accessResult is not null)
+        {
+            return accessResult;
         }
 
         var newId = NewClientId?.Trim() ?? ClientId!;
@@ -208,6 +221,12 @@ public class DetailsModel : PageModel
             return NotFound();
         }
 
+        var accessResult = await EnsureClientAccessAsync(Realm!, ClientId!, ct, redirectOnFailure: true);
+        if (accessResult is not null)
+        {
+            return accessResult;
+        }
+
         await _clients.DeleteClientAsync(Realm!, ClientId!, ct);
         await _repo.RemoveAsync(ClientId!, Realm!, ct);
         try
@@ -225,21 +244,91 @@ public class DetailsModel : PageModel
 
     public async Task<IActionResult> OnGetEventsAsync(string realm, string clientId, string? type, DateTime? from, DateTime? to, string? user, string? ip, CancellationToken ct)
     {
+        var accessResult = await EnsureClientAccessAsync(realm, clientId, ct);
+        if (accessResult is not null)
+        {
+            return accessResult;
+        }
+
         var list = await _events.GetEventsAsync(realm, clientId, type, from, to, user, ip, ct: ct);
         return new JsonResult(list);
     }
 
     public async Task<IActionResult> OnGetRoleLookupAsync(string realm, string q, int clientFirst = 0, int clientsToScan = 25, int rolesPerClient = 10, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(ClientId))
+        {
+            return Forbid();
+        }
+
+        var accessResult = await EnsureClientAccessAsync(realm, ClientId!, ct);
+        if (accessResult is not null)
+        {
+            return accessResult;
+        }
+
         var (hits, next) = await _clients.FindRolesAcrossClientsAsync(realm, q, clientFirst, clientsToScan, rolesPerClient, ct);
         return new JsonResult(new { hits, nextClientFirst = next });
     }
 
     public async Task<IActionResult> OnGetClientsSearchAsync(string realm, string q, int first = 0, int max = 20, CancellationToken ct = default)
-        => new JsonResult(await _clients.SearchClientsAsync(realm, q ?? string.Empty, first, max, ct));
+    {
+        if (string.IsNullOrWhiteSpace(ClientId))
+        {
+            return Forbid();
+        }
+
+        var accessResult = await EnsureClientAccessAsync(realm, ClientId!, ct);
+        if (accessResult is not null)
+        {
+            return accessResult;
+        }
+
+        return new JsonResult(await _clients.SearchClientsAsync(realm, q ?? string.Empty, first, max, ct));
+    }
 
     public async Task<IActionResult> OnGetClientRolesAsync(string realm, string id, int first = 0, int max = 50, string? q = null, CancellationToken ct = default)
-        => new JsonResult(await _clients.GetClientRolesAsync(realm, id, first, max, q, ct));
+    {
+        var accessResult = await EnsureClientAccessAsync(realm, id, ct);
+        if (accessResult is not null)
+        {
+            return accessResult;
+        }
+
+        return new JsonResult(await _clients.GetClientRolesAsync(realm, id, first, max, q, ct));
+    }
+
+    private async Task<IActionResult?> EnsureClientAccessAsync(string realm, string clientId, CancellationToken ct, bool redirectOnFailure = false)
+    {
+        if (User.IsInRole("assistant-admin"))
+        {
+            return null;
+        }
+
+        if (!User.IsInRole("assistant-user"))
+        {
+            return Forbid();
+        }
+
+        var username = GetUserName();
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return Forbid();
+        }
+
+        var hasAccess = await _repo.HasAccessAsync(username, realm, clientId, ct);
+        if (hasAccess)
+        {
+            return null;
+        }
+
+        if (redirectOnFailure)
+        {
+            return RedirectToPage("AccessDenied");
+        }
+
+        return Forbid();
+    }
 
     private string BuildClientUpdatedFlashMessage(string? wikiLink)
     {
@@ -264,6 +353,12 @@ public class DetailsModel : PageModel
         if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(clientId))
         {
             return BadRequest(new { error = "Параметры realm и clientId обязательны." });
+        }
+
+        var accessResult = await EnsureClientAccessAsync(realm, clientId, ct);
+        if (accessResult is not null)
+        {
+            return accessResult;
         }
 
         username = (username ?? string.Empty).Trim();
@@ -348,6 +443,14 @@ public class DetailsModel : PageModel
             payload,
             isJson
         });
+    }
+
+    private string? GetUserName()
+    {
+        return User.Identity?.Name
+               ?? User.FindFirst("preferred_username")?.Value
+               ?? User.FindFirst(ClaimTypes.Name)?.Value
+               ?? User.FindFirst(ClaimTypes.Email)?.Value;
     }
 
     public class ClientVm
