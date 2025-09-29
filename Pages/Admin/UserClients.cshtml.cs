@@ -380,7 +380,7 @@ public sealed class UserClientsModel : PageModel
             await _repo.RemoveForUserAsync(username, clientId, realm, ct);
             var actor = GetCurrentActorLogin();
             await AuditAssignmentChangeAsync(
-                "CLIENT:REVOKE",
+                "USER:REVOKE",
                 actor,
                 realm,
                 clientId,
@@ -443,12 +443,8 @@ public sealed class UserClientsModel : PageModel
             ? $"{normalizedClientId}"
             : $"{clientName}";
         var normalizedOperation = operationType;
-        string details = normalizedOperation switch
-        {
-            "GRANT" => $"Пользователю {normalizedTargetUser} присвоено: {clientDisplay}",
-            "REVOKE" => $"Пользователю {normalizedTargetUser} удалены клиенты: {clientDisplay}",
-            _ => $"Пользователю {normalizedTargetUser} обновлены клиенты: {clientDisplay}"
-        };
+        var actionSuffix = ExtractOperationSuffix(normalizedOperation);
+        var details = FormatAssignmentChangeDetails(actionSuffix, normalizedTargetUser, clientDisplay);
 
         return _logs.LogAsync(
             operationType,
@@ -457,5 +453,34 @@ public sealed class UserClientsModel : PageModel
             normalizedTargetUser,
             details,
             ct);
+    }
+
+    private static string ExtractOperationSuffix(string normalizedOperation)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedOperation))
+        {
+            return normalizedOperation;
+        }
+
+        var separatorIndex = normalizedOperation.LastIndexOf(':');
+        if (separatorIndex < 0 || separatorIndex == normalizedOperation.Length - 1)
+        {
+            return normalizedOperation;
+        }
+
+        return normalizedOperation[(separatorIndex + 1)..];
+    }
+
+    private string FormatAssignmentChangeDetails(
+        string actionSuffix,
+        string normalizedTargetUser,
+        string clientDisplay)
+    {
+        return actionSuffix switch
+        {
+            "GRANT" => $"Пользователю {normalizedTargetUser} присвоено: {clientDisplay}",
+            "REVOKE" => $"Пользователю {normalizedTargetUser} удалены клиенты: {clientDisplay}",
+            _ => $"Пользователю {normalizedTargetUser} обновлены клиенты: {clientDisplay}"
+        };
     }
 }
