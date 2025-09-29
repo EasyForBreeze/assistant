@@ -65,6 +65,12 @@ public abstract class ClientsPageModel : PageModel
     {
         TotalPages = Math.Max(1, (int)Math.Ceiling(list.Count / (double)PageSize));
         PageNumber = Math.Clamp(pageNumber, 1, TotalPages);
-        Clients = list.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+        var startIndex = (PageNumber - 1) * PageSize;
+        var remainingItems = Math.Max(0, list.Count - startIndex);
+        var count = Math.Min(PageSize, remainingItems);
+
+        Clients = count > 0
+            ? list.GetRange(startIndex, count)
+            : [];
     }
 }
