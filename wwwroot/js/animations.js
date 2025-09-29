@@ -74,7 +74,7 @@ export function animateAppVisibility(target, shouldShow) {
     let animation;
     try {
         animation = target.animate(keyframes, {
-            duration: shouldShow ? 460 : 360,
+            duration: shouldShow ? 260 : 160,
             easing: shouldShow ? 'cubic-bezier(0.33, 1, 0.68, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)',
             fill: 'forwards'
         });
