@@ -315,17 +315,27 @@ export function initServiceRoles(root, options = {}) {
             return null;
         }
 
+        const tryParseJson = () => {
+            try {
+                return JSON.parse(rawBody);
+            } catch (error) {
+                const snippet = createSnippet();
+                throw new Error(snippet ? `Не удалось разобрать ответ сервера (${snippet})` : 'Не удалось разобрать ответ сервера.');
+            }
+        };
+
         if (!contentType.includes('json')) {
-            const snippet = createSnippet();
-            throw new Error(snippet ? `Некорректный ответ сервера (${snippet})` : 'Некорректный ответ сервера.');
+            try {
+                const data = tryParseJson();
+                console.warn('[ServiceRolesUI] Unexpected content type for JSON payload:', contentType || '<empty>');
+                return data;
+            } catch (error) {
+                const snippet = createSnippet();
+                throw new Error(snippet ? `Некорректный ответ сервера (${snippet})` : 'Некорректный ответ сервера.');
+            }
         }
 
-        try {
-            return JSON.parse(rawBody);
-        } catch (error) {
-            const snippet = createSnippet();
-            throw new Error(snippet ? `Не удалось разобрать ответ сервера (${snippet})` : 'Не удалось разобрать ответ сервера.');
-        }
+        return tryParseJson();
     };
 
     const ensureMoreHitsButton = (token) => {
