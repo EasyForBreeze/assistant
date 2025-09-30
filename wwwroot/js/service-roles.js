@@ -294,11 +294,48 @@ export function initServiceRoles(root, options = {}) {
         if (signal && !finalInit.signal) {
             finalInit.signal = signal;
         }
+
         const response = await fetch(url, finalInit);
+        const contentType = (response.headers.get('content-type') || '').toLowerCase();
+        const rawBody = await response.text();
+        const createSnippet = () => {
+            const trimmed = rawBody.trim();
+            if (!trimmed) {
+                return '';
+            }
+            return trimmed.replace(/\s+/g, ' ').slice(0, 120);
+        };
+
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            const snippet = createSnippet();
+            throw new Error(snippet ? `HTTP ${response.status} (${snippet})` : `HTTP ${response.status}`);
         }
-        return response.json();
+
+        if (rawBody === '') {
+            return null;
+        }
+
+        const tryParseJson = () => {
+            try {
+                return JSON.parse(rawBody);
+            } catch (error) {
+                const snippet = createSnippet();
+                throw new Error(snippet ? `Не удалось разобрать ответ сервера (${snippet})` : 'Не удалось разобрать ответ сервера.');
+            }
+        };
+
+        if (!contentType.includes('json')) {
+            try {
+                const data = tryParseJson();
+                console.warn('[ServiceRolesUI] Unexpected content type for JSON payload:', contentType || '<empty>');
+                return data;
+            } catch (error) {
+                const snippet = createSnippet();
+                throw new Error(snippet ? `Некорректный ответ сервера (${snippet})` : 'Некорректный ответ сервера.');
+            }
+        }
+
+        return tryParseJson();
     };
 
     const ensureMoreHitsButton = (token) => {
