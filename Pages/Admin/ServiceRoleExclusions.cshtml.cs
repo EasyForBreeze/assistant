@@ -206,8 +206,8 @@ public sealed class ServiceRoleExclusionsModel : PageModel
 
     private async Task LoadExclusionsAsync(CancellationToken ct)
     {
-        var snapshot = await _repository.GetAllAsync(ct);
-        Exclusions = snapshot.ClientIds
+        var set = await _repository.GetAllAsync(ct);
+        Exclusions = set
             .OrderBy(clientId => clientId, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -373,74 +373,46 @@ public sealed class ServiceRoleExclusionsModel : PageModel
         var query = clientId.Trim();
         var realms = await _realms.GetRealmsAsync(ct);
 
-        var validRealms = realms
-            .Where(r => !string.IsNullOrWhiteSpace(r.Realm))
-            .Select(r => r.Realm!)
-            .ToList();
-
-        if (validRealms.Count == 0)
+        foreach (var realm in realms)
         {
-            return false;
+            if (string.IsNullOrWhiteSpace(realm.Realm))
+            {
+                continue;
+            }
+
+            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, ValidationFetchLimit, ct);
+            if (hits.Any(hit => string.Equals(hit.ClientId, query, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
         }
 
-        var concurrencyLimit = Math.Max(1, RealmSearchConcurrencyLimit);
-        using var semaphore = new SemaphoreSlim(concurrencyLimit, concurrencyLimit);
-
-        var tasks = validRealms.Select(async realmName =>
-        {
-            await semaphore.WaitAsync(ct);
-            try
-            {
-                var hits = await _clients.SearchClientsAsync(realmName, query, 0, ValidationFetchLimit, ct);
-                return hits.Any(hit => string.Equals(hit.ClientId, query, StringComparison.OrdinalIgnoreCase));
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        }).ToList();
-
-        var results = await Task.WhenAll(tasks);
-        return results.Any(found => found);
+        return false;
     }
 
     private async Task<List<string>> LookupClientsAsync(string query, CancellationToken ct)
     {
         var realms = await _realms.GetRealmsAsync(ct);
-        var validRealms = realms
-            .Where(r => !string.IsNullOrWhiteSpace(r.Realm))
-            .Select(r => r.Realm!)
-            .ToList();
+        var collected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (validRealms.Count == 0)
+        foreach (var realm in realms)
         {
-            return new List<string>();
+            if (string.IsNullOrWhiteSpace(realm.Realm))
+            {
+                continue;
+            }
+
+            var hits = await _clients.SearchClientsAsync(realm.Realm!, query, 0, LookupFetchPerRealm, ct);
+            foreach (var hit in hits)
+            {
+                if (!string.IsNullOrWhiteSpace(hit.ClientId))
+                {
+                    collected.Add(hit.ClientId);
+                }
+            }
         }
 
-        var concurrencyLimit = Math.Max(1, RealmSearchConcurrencyLimit);
-        using var semaphore = new SemaphoreSlim(concurrencyLimit, concurrencyLimit);
-
-        var searchTasks = validRealms.Select(async realmName =>
-        {
-            await semaphore.WaitAsync(ct);
-            try
-            {
-                var hits = await _clients.SearchClientsAsync(realmName, query, 0, LookupFetchPerRealm, ct);
-                return hits
-                    .Where(h => !string.IsNullOrWhiteSpace(h.ClientId))
-                    .Select(h => h.ClientId)
-                    .ToList();
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        }).ToList();
-
-        var results = await Task.WhenAll(searchTasks);
-        return results
-            .SelectMany(x => x)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        return collected
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .Take(LookupMaxResults)
             .ToList();

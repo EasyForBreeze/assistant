@@ -34,17 +34,7 @@ public class ClientsServiceTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(configValues).Build();
 
         var exclusions = new ServiceRoleExclusionsRepository(configuration, cache);
-        var initialToken = exclusions.CreateChangeToken();
-        var initialSnapshot = new ServiceRoleExclusionsSnapshot(
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
-            initialToken);
-        cache.Set(
-            "service-role-exclusions",
-            initialSnapshot,
-            new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            }.AddExpirationToken(initialToken.Token));
+        cache.Set("service-role-exclusions", new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         var apiLogs = new ApiLogRepository(configuration);
 
         var service = new ClientsService(
@@ -61,7 +51,7 @@ public class ClientsServiceTests
         var initial = await service.SearchClientsAsync(realm, clientId, 0, 20, CancellationToken.None);
         Assert.Empty(initial);
 
-        var cacheKey = BuildCacheKey(realm, clientId, 0, 20, exclusions.GetVersion());
+        var cacheKey = BuildCacheKey(realm, clientId, 0, 20);
         Assert.False(cache.TryGetValue(cacheKey, out _));
 
         cache.Set(cacheKey, Array.Empty<ClientShort>(), new MemoryCacheEntryOptions
@@ -87,91 +77,11 @@ public class ClientsServiceTests
         Assert.True(handler.TotalRequests > requestsBeforeBypass);
     }
 
-    [Fact]
-    public async Task SearchClientsAsync_RefreshesCachedResults_WhenExclusionsChange()
-    {
-        var cache = new MemoryCache(new MemoryCacheOptions());
-        var handler = new FakeKeycloakHandler();
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
-        var factory = new FakeHttpClientFactory(httpClient);
-
-        var configValues = new Dictionary<string, string?>
-        {
-            ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Username=test;Password=test;Database=test"
-        };
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configValues).Build();
-
-        var exclusions = new ServiceRoleExclusionsRepository(configuration, cache);
-        const string blockedClientId = "blocked-client";
-
-        var initialToken = exclusions.CreateChangeToken();
-        var initialSnapshot = new ServiceRoleExclusionsSnapshot(
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { blockedClientId },
-            initialToken);
-        cache.Set(
-            "service-role-exclusions",
-            initialSnapshot,
-            new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            }.AddExpirationToken(initialToken.Token));
-
-        var apiLogs = new ApiLogRepository(configuration);
-
-        var service = new ClientsService(
-            factory,
-            Options.Create(new AdminApiOptions { BaseUrl = "http://localhost" }),
-            exclusions,
-            apiLogs,
-            new HttpContextAccessor(),
-            cache);
-
-        handler.SetClients(new[]
-        {
-            new ClientShort("uuid-allowed", "allowed-client"),
-            new ClientShort("uuid-blocked", blockedClientId)
-        });
-
-        const string realm = "test-realm";
-        const string query = "client";
-
-        var initial = await service.SearchClientsAsync(realm, query, 0, 20, CancellationToken.None);
-        Assert.Single(initial);
-        Assert.DoesNotContain(initial, c => string.Equals(c.ClientId, blockedClientId, StringComparison.OrdinalIgnoreCase));
-
-        var requestsAfterInitial = handler.TotalRequests;
-        Assert.True(requestsAfterInitial > 0);
-
-        var cached = await service.SearchClientsAsync(realm, query, 0, 20, CancellationToken.None);
-        Assert.Single(cached);
-        Assert.Equal(requestsAfterInitial, handler.TotalRequests);
-
-        exclusions.InvalidateCache();
-        var updatedToken = exclusions.CreateChangeToken();
-        var updatedSnapshot = new ServiceRoleExclusionsSnapshot(
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
-            updatedToken);
-        cache.Set(
-            "service-role-exclusions",
-            updatedSnapshot,
-            new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            }.AddExpirationToken(updatedToken.Token));
-
-        var requestsBeforeRefresh = handler.TotalRequests;
-        var refreshed = await service.SearchClientsAsync(realm, query, 0, 20, CancellationToken.None);
-
-        Assert.Equal(2, refreshed.Count);
-        Assert.Contains(refreshed, c => string.Equals(c.ClientId, blockedClientId, StringComparison.OrdinalIgnoreCase));
-        Assert.True(handler.TotalRequests > requestsBeforeRefresh);
-    }
-
-    private static string BuildCacheKey(string realm, string query, int first, int max, long version)
+    private static string BuildCacheKey(string realm, string query, int first, int max)
     {
         var method = typeof(ClientsService)
             .GetMethod("BuildClientSearchCacheKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        return (string)method!.Invoke(null, new object[] { realm, query, first, max, version })!;
+        return (string)method!.Invoke(null, new object[] { realm, query, first, max })!;
     }
 
     private sealed class FakeHttpClientFactory : IHttpClientFactory

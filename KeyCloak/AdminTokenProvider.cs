@@ -16,7 +16,7 @@ namespace Assistant.KeyCloak
         private DateTimeOffset _expiresAt;
 
         private bool TokenValid =>
-            !string.IsNullOrEmpty(_token) && DateTimeOffset.UtcNow < _expiresAt.AddSeconds(-60); // Increased buffer for clock skew
+            !string.IsNullOrEmpty(_token) && DateTimeOffset.UtcNow < _expiresAt.AddSeconds(-30);
 
         public AdminTokenProvider(IOptions<AdminApiOptions> opt, IHttpClientFactory factory)
         {
@@ -51,11 +51,6 @@ namespace Assistant.KeyCloak
                     Content = new FormUrlEncodedContent(form)
                 };
                 var resp = await _http.SendAsync(req, ct);
-                if (!resp.IsSuccessStatusCode)
-                {
-                    var errorContent = await resp.Content.ReadAsStringAsync(ct);
-                    throw new HttpRequestException($"Token request failed with status {resp.StatusCode}: {errorContent}");
-                }
                 resp.EnsureSuccessStatusCode();
 
                 var payload = await resp.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct) ?? throw new InvalidOperationException("Invalid token response");

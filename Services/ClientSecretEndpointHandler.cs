@@ -22,14 +22,7 @@ public static class ClientSecretEndpointHandler
         }
 
         var secret = await secretFactory(ct).ConfigureAwait(false);
-        if (secret is null)
-        {
-            return Results.NotFound();
-        }
-
-        return Results.Json(new { secret }, new System.Text.Json.JsonSerializerOptions(),
-            contentType: "application/json",
-            statusCode: StatusCodes.Status200OK);
+        return secret is not null ? Results.Ok(new { secret }) : Results.NotFound();
     }
 
     internal static async Task<bool> HasAccessAsync(

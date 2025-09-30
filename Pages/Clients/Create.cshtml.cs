@@ -247,8 +247,8 @@ public class CreateModel : PageModel
 
         var svcEntries = ClientFormUtilities.NormalizeDistinct(ClientFormUtilities.ParseStringList(ServiceRolesJson));
         ServiceRolesJson = JsonSerializer.Serialize(svcEntries);
-        var restrictedSnapshot = await _exclusions.GetAllAsync(ct);
-        var badSvc = ClientFormUtilities.FindInvalidServiceRoleEntries(svcEntries, restrictedSnapshot.ClientIds).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var restrictedClients = await _exclusions.GetAllAsync(ct);
+        var badSvc = ClientFormUtilities.FindInvalidServiceRoleEntries(svcEntries, restrictedClients).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (badSvc.Any())
         {
             ModelState.AddModelError(nameof(ServiceRolesJson), $"Некорректные сервисные роли: {string.Join(", ", badSvc)}");

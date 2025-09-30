@@ -36,16 +36,6 @@ public class UserClientsRepository : IUserClientsRepository
                 return;
             }
 
-            // In production, schema should be managed by migrations
-            // This is only for development convenience
-            var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
-            if (!isDevelopment)
-            {
-                // In production, assume schema exists
-                _initialized = true;
-                return;
-            }
-
             await using var conn = new NpgsqlConnection(_connString);
             await conn.OpenAsync(ct);
 
