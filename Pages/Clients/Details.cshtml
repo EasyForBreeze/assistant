@@ -12,7 +12,7 @@
     bool serviceInit = client.ServiceAccount;
     string description = client.Description ?? "";
     string baseUrl = Config["Keycloak:BaseUrl"]!.TrimEnd('/');
-    bool canManageClient = User.IsInRole("assistant-admin");
+    bool canManageClient = Model.CanManageClient;
 }
 
 
@@ -63,7 +63,7 @@
                 class="btn-danger @(canManageClient ? string.Empty : "kc-disabled opacity-60 cursor-not-allowed")"
                 id="btnDelete"
                 form="deleteForm"
-                title="@(canManageClient ? "Удалить клиента" : "Удаление доступно только администраторам")"
+                title="@(canManageClient ? "Удалить клиента" : "Недостаточно прав для управления этим клиентом")"
                 aria-label="Delete"
                 disabled="@(canManageClient ? null : "disabled")"
                 aria-disabled="@(canManageClient ? "false" : "true")">
@@ -80,7 +80,7 @@
                 class="btn-primary @(canManageClient ? string.Empty : "kc-disabled opacity-60 cursor-not-allowed")"
                 id="btnSave"
                 form="saveForm"
-                title="@(canManageClient ? "Сохранить изменения" : "Редактирование доступно только администраторам")"
+                title="@(canManageClient ? "Сохранить изменения" : "Недостаточно прав для управления этим клиентом")"
                 aria-label="Save"
                 disabled="@(canManageClient ? null : "disabled")"
                 aria-disabled="@(canManageClient ? "false" : "true")">

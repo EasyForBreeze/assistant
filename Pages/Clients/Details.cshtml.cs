@@ -45,6 +45,7 @@ public class DetailsModel : PageModel
     [BindProperty(SupportsGet = true)] public string? ClientId { get; set; }
 
     public ClientVm Client { get; set; } = default!;
+    public bool CanManageClient { get; private set; }
 
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
@@ -73,6 +74,8 @@ public class DetailsModel : PageModel
         {
             return accessResult;
         }
+
+        CanManageClient = await CanCurrentUserManageClientAsync(Realm!, ClientId!, ct);
 
         var details = await _clients.GetClientDetailsAsync(Realm!, ClientId!, ct);
         if (details == null)
@@ -328,6 +331,27 @@ public class DetailsModel : PageModel
         }
 
         return Forbid();
+    }
+
+    private async Task<bool> CanCurrentUserManageClientAsync(string realm, string clientId, CancellationToken ct)
+    {
+        if (User.IsInRole("assistant-admin"))
+        {
+            return true;
+        }
+
+        if (!User.IsInRole("assistant-user"))
+        {
+            return false;
+        }
+
+        var username = GetUserName();
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return false;
+        }
+
+        return await _repo.HasAccessAsync(username, realm, clientId, ct);
     }
 
     private string BuildClientUpdatedFlashMessage(string? wikiLink)
