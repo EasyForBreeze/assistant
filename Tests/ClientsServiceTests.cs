@@ -77,6 +77,69 @@ public class ClientsServiceTests
         Assert.True(handler.TotalRequests > requestsBeforeBypass);
     }
 
+    [Fact]
+    public async Task SearchClientsAsync_RefreshesCachedResults_WhenExclusionsChange()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var handler = new FakeKeycloakHandler();
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
+        var factory = new FakeHttpClientFactory(httpClient);
+
+        var configValues = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Username=test;Password=test;Database=test"
+        };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configValues).Build();
+
+        var exclusions = new ServiceRoleExclusionsRepository(configuration, cache);
+        var apiLogs = new ApiLogRepository(configuration);
+
+        var service = new ClientsService(
+            factory,
+            Options.Create(new AdminApiOptions { BaseUrl = "http://localhost" }),
+            exclusions,
+            apiLogs,
+            new HttpContextAccessor(),
+            cache);
+
+        const string realm = "test-realm";
+        const string query = "client";
+
+        handler.SetClients(new[]
+        {
+            new ClientShort("uuid-1", "client-alpha"),
+            new ClientShort("uuid-2", "client-beta")
+        });
+
+        var initialExclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "client-alpha" };
+        var initialOptions = new MemoryCacheEntryOptions();
+        initialOptions.AddExpirationToken(exclusions.CreateChangeToken());
+        cache.Set("service-role-exclusions", initialExclusions, initialOptions);
+
+        var firstResults = await service.SearchClientsAsync(realm, query, 0, 20, CancellationToken.None);
+
+        Assert.Single(firstResults);
+        Assert.Equal("client-beta", firstResults[0].ClientId);
+
+        var cacheKey = BuildCacheKey(realm, query, 0, 20);
+        Assert.True(cache.TryGetValue(cacheKey, out ClientShort[] cachedAfterFirst));
+        Assert.Single(cachedAfterFirst);
+        var requestsAfterFirst = handler.TotalRequests;
+
+        exclusions.InvalidateCache();
+
+        var updatedOptions = new MemoryCacheEntryOptions();
+        updatedOptions.AddExpirationToken(exclusions.CreateChangeToken());
+        cache.Set("service-role-exclusions", new HashSet<string>(StringComparer.OrdinalIgnoreCase), updatedOptions);
+
+        var secondResults = await service.SearchClientsAsync(realm, query, 0, 20, CancellationToken.None);
+
+        Assert.Equal(2, secondResults.Count);
+        Assert.Contains(secondResults, c => c.ClientId == "client-alpha");
+        Assert.Contains(secondResults, c => c.ClientId == "client-beta");
+        Assert.True(handler.TotalRequests > requestsAfterFirst);
+    }
+
     private static string BuildCacheKey(string realm, string query, int first, int max)
     {
         var method = typeof(ClientsService)

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 using System.Collections.Generic;
 using System.Threading;
@@ -16,6 +17,8 @@ public sealed class ServiceRoleExclusionsRepository
     private readonly IMemoryCache _cache;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
+    private long _version;
+    private CancellationTokenSource _changeToken = new();
 
     private const string CacheKey = "service-role-exclusions";
 
@@ -101,10 +104,12 @@ public sealed class ServiceRoleExclusionsRepository
             return cached;
 
         var set = await LoadAllAsync(ct);
-        _cache.Set(CacheKey, set, new MemoryCacheEntryOptions
+        var options = new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        });
+        };
+        options.AddExpirationToken(CreateChangeToken());
+        _cache.Set(CacheKey, set, options);
         return set;
     }
 
@@ -186,5 +191,27 @@ public sealed class ServiceRoleExclusionsRepository
         return null;
     }
 
-    public void InvalidateCache() => _cache.Remove(CacheKey);
+    public long GetVersion() => Volatile.Read(ref _version);
+
+    public IChangeToken CreateChangeToken()
+    {
+        var tokenSource = Volatile.Read(ref _changeToken);
+        return new CancellationChangeToken(tokenSource.Token);
+    }
+
+    public void InvalidateCache()
+    {
+        _cache.Remove(CacheKey);
+        Interlocked.Increment(ref _version);
+
+        var previous = Interlocked.Exchange(ref _changeToken, new CancellationTokenSource());
+        try
+        {
+            previous.Cancel();
+        }
+        finally
+        {
+            previous.Dispose();
+        }
+    }
 }

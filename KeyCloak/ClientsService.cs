@@ -3,6 +3,7 @@ using Assistant.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Net;
 using System.Net.Http.Json;
@@ -246,6 +247,7 @@ public sealed class ClientsService
         max = Math.Clamp(max <= 0 ? 20 : max, 1, 200);
 
         var cacheKey = BuildClientSearchCacheKey(realm, query, first, max);
+        IChangeToken? exclusionsChangeToken = skipCache ? null : _exclusions.CreateChangeToken();
         if (!skipCache && _cache.TryGetValue(cacheKey, out ClientShort[] cachedClients))
         {
             return new List<ClientShort>(cachedClients);
@@ -274,7 +276,7 @@ public sealed class ClientsService
             var filteredExact = FilterExcluded(mappedExact, excluded);
             if (filteredExact.Count > 0)
             {
-                return CacheSearchResult(cacheKey, filteredExact);
+                return CacheSearchResult(cacheKey, filteredExact, exclusionsChangeToken);
             }
         }
 
@@ -293,19 +295,24 @@ public sealed class ClientsService
             .ToList();
 
         var filtered = FilterExcluded(mapped, excluded);
-        return CacheSearchResult(cacheKey, filtered);
+        return CacheSearchResult(cacheKey, filtered, exclusionsChangeToken);
 
         static ClientShort MapClient(ClientRep c) => new(c.Id ?? string.Empty, c.ClientId ?? string.Empty);
 
-        List<ClientShort> CacheSearchResult(string key, List<ClientShort> result)
+        List<ClientShort> CacheSearchResult(string key, List<ClientShort> result, IChangeToken? changeToken)
         {
             if (!skipCache && result.Count > 0)
             {
                 var snapshot = result.ToArray();
-                _cache.Set(key, snapshot, new MemoryCacheEntryOptions
+                var options = new MemoryCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = ClientSearchCacheDuration
-                });
+                };
+                if (changeToken is not null)
+                {
+                    options.AddExpirationToken(changeToken);
+                }
+                _cache.Set(key, snapshot, options);
 
                 return new List<ClientShort>(snapshot);
             }
