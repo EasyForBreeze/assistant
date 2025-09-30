@@ -87,6 +87,16 @@ export function initServiceRoles(root, options = {}) {
 
     const hiddenInput = options.hiddenInput instanceof HTMLElement ? options.hiddenInput : null;
     const realmInput = options.realmInput instanceof HTMLElement ? options.realmInput : null;
+    const getPageClientId = typeof options.getPageClientId === 'function'
+        ? () => {
+            try {
+                return (options.getPageClientId() || '').trim();
+            } catch (error) {
+                console.error('[ServiceRolesUI] getPageClientId failed', error);
+                return '';
+            }
+        }
+        : () => (typeof options.pageClientId === 'string' ? options.pageClientId.trim() : '');
     const minQueryLength = typeof options.minQueryLength === 'number' ? Math.max(1, options.minQueryLength) : DEFAULT_MIN_QUERY;
     const pageSize = typeof options.pageSize === 'number' && options.pageSize > 0 ? options.pageSize : DEFAULT_PAGE_SIZE;
 
@@ -294,11 +304,48 @@ export function initServiceRoles(root, options = {}) {
         if (signal && !finalInit.signal) {
             finalInit.signal = signal;
         }
+
         const response = await fetch(url, finalInit);
+        const contentType = (response.headers.get('content-type') || '').toLowerCase();
+        const rawBody = await response.text();
+        const createSnippet = () => {
+            const trimmed = rawBody.trim();
+            if (!trimmed) {
+                return '';
+            }
+            return trimmed.replace(/\s+/g, ' ').slice(0, 120);
+        };
+
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            const snippet = createSnippet();
+            throw new Error(snippet ? `HTTP ${response.status} (${snippet})` : `HTTP ${response.status}`);
         }
-        return response.json();
+
+        if (rawBody === '') {
+            return null;
+        }
+
+        const tryParseJson = () => {
+            try {
+                return JSON.parse(rawBody);
+            } catch (error) {
+                const snippet = createSnippet();
+                throw new Error(snippet ? `Не удалось разобрать ответ сервера (${snippet})` : 'Не удалось разобрать ответ сервера.');
+            }
+        };
+
+        if (!contentType.includes('json')) {
+            try {
+                const data = tryParseJson();
+                console.warn('[ServiceRolesUI] Unexpected content type for JSON payload:', contentType || '<empty>');
+                return data;
+            } catch (error) {
+                const snippet = createSnippet();
+                throw new Error(snippet ? `Некорректный ответ сервера (${snippet})` : 'Некорректный ответ сервера.');
+            }
+        }
+
+        return tryParseJson();
     };
 
     const ensureMoreHitsButton = (token) => {
@@ -410,7 +457,9 @@ export function initServiceRoles(root, options = {}) {
         if (cachedClients) {
             return token === state.searchToken ? cachedClients : null;
         }
-        const url = `${pageUrl}?handler=ClientsSearch&realm=${encodeURIComponent(realmValue)}&q=${encodeURIComponent(queryText)}&first=0&max=12`;
+        const pageClientId = getPageClientId();
+        const baseUrl = `${pageUrl}?handler=ClientsSearch&realm=${encodeURIComponent(realmValue)}&q=${encodeURIComponent(queryText)}&first=0&max=12`;
+        const url = pageClientId ? `${baseUrl}&clientId=${encodeURIComponent(pageClientId)}` : baseUrl;
         const clients = await fetchJson(url, { signal: requestSignal });
         const finalClients = Array.isArray(clients) ? clients : [];
         if (token !== state.searchToken) {
@@ -431,8 +480,10 @@ export function initServiceRoles(root, options = {}) {
             }
             return;
         }
-        const url = `${pageUrl}?handler=RoleLookup&realm=${encodeURIComponent(currentRealm)}`
+        const pageClientId = getPageClientId();
+        const baseUrl = `${pageUrl}?handler=RoleLookup&realm=${encodeURIComponent(currentRealm)}`
             + `&q=${encodeURIComponent(queryText)}&clientFirst=${state.roleScanCursor}&clientsToScan=25&rolesPerClient=10`;
+        const url = pageClientId ? `${baseUrl}&clientId=${encodeURIComponent(pageClientId)}` : baseUrl;
         let response;
         try {
             response = await fetchJson(url, { signal: requestSignal });
